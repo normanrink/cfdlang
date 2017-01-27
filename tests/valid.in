@@ -1,0 +1,3 @@
+var foo : 2 2 4
+type bar : 3 4 5
+var fubar : bar
