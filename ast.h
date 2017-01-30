@@ -77,11 +77,11 @@ public:
 
   virtual void print(unsigned int indent = 0) const final;
 
-  static const NodeList *create() {
+  static NodeList *create() {
     return new NodeList();
   }
 
-  static const NodeList *create(T *t) {
+  static NodeList *create(T *t) {
     return new NodeList(t);
   }
 

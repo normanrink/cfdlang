@@ -9,22 +9,44 @@
   /* make 'yytext' a character pointer: */
 %option pointer
 
-  /* generate C++ output: */
-  /* %option c++ */
+  /* generate a re-entrant scanner: */
+%option reentrant bison-bridge
+
+  /* generate a C header file: */
+%option header-file="lex.yy.h"
 
 %{
   /******************/
   /* C DECLARATION: */
   /******************/
 
+  #include "assert.h"
   #include <stdio.h>
   #include <stdlib.h>
 
-  #include "token.h"
-  #ifndef _LEXER_STANDALONE_
-    #include "ast_c.h"
-    #include "lang.tab.h"
-  #endif /* _LEXER_STANDALONE_ */
+  #include "ast.h"
+
+  #include "lang.tab.hh"
+
+  const char *token_string(int tok) {
+    switch(tok) {
+    case KW_VAR: return "KW_VAR";
+    case KW_TYPE: return "KW_TYPE";
+    case COLON: return "COLON";
+    case LPAREN: return "LPAREN";
+    case RPAREN: return "RPAREN";
+    case LBRACK: return "LBRACK";
+    case RBRACK: return "RBRACK";
+    case STAR: return "STAR";
+    case DOT: return "DOT";
+    case EQUAL: return "EQUAL";
+    case INT: return "INT";
+    case ID: return "ID";
+    default:
+      assert(0 && "invalid token");
+      return NULL;
+    }
+  }
 %}
 
 KW_VAR    "var"
@@ -57,18 +79,14 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
 {DOT}     { return DOT; }
 {EQUAL}   { return EQUAL; }
 {INT}     { 
-            #ifndef _LEXER_STANDALONE_
-            yylval.integer = atoi(yytext);
-            #endif /* _LEXER_STANDALONE_ */
+            yylval->integer_literal = atoi(yytext);
             return INT;
           }
 {ID}      {
-            #ifndef _LEXER_STANDALONE_
-            yylval.string = yytext;
-            #endif /* _LEXER_STANDALONE_ */
+            yylval->string_literal = yytext;
             return ID;
           }
-<<EOF>>   { return end_of_file; }
+<<EOF>>   { return EOF; }
 [ \t\n]+  /* ignore whitespace */ 
 
 %%
@@ -82,6 +100,8 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
 int main(int argc, char* argv[]) {
   FILE *in;
   int tok;
+  yyscan_t scanner;
+  YYSTYPE lval;
 
   if (argc != 2) {
     return 1;
@@ -91,15 +111,21 @@ int main(int argc, char* argv[]) {
       return 2;
   }
 
-  yyin = in;
+  if (yylex_init(&scanner)) {
+    return 3;
+  }
+
+  yyset_in(in, scanner);
   while(1) {
-    tok = yylex();
-    if (tok == end_of_file)
+    tok = yylex(&lval, scanner);
+    if (tok == EOF)
       break;
 
-    printf("%s ", token_string[tok]);
+    printf("%s ", token_string(tok));
   }
   printf("\n");
+
+  yylex_destroy(scanner);
 
   fclose(in);
 
