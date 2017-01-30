@@ -3,3 +3,5 @@ lang.tab.*
 lex.yy.*
 parser
 lexer
+Parse
+Lex
