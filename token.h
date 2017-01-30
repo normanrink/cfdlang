@@ -2,9 +2,10 @@
 #ifndef __TOKEN_H__
 #define __TOKEN_H__
 
-const int end_of_file = -1;
-
 #ifdef _LEXER_STANDALONE_
+
+#include <string>
+
 enum Token {
   KW_VAR,
   KW_TYPE,
@@ -21,7 +22,7 @@ enum Token {
   TOKEN_COUNT
 };
 
-char* token_string[TOKEN_COUNT] = {
+const std::string token_string[TOKEN_COUNT] = {
   "KW_VAR",
   "KW_TYPE",
   "COLON",

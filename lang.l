@@ -10,21 +10,40 @@
 %option pointer
 
   /* generate C++ output: */
-  /* %option c++ */
+%option c++
+
+%option yyclass="myFlexLexer"
 
 %{
   /******************/
   /* C DECLARATION: */
   /******************/
 
-  #include <stdio.h>
-  #include <stdlib.h>
+  #include <fstream>
+  #include <iostream>
+  #include <map>
+  #include <string>
 
-  #include "token.h"
-  #ifndef _LEXER_STANDALONE_
-    #include "ast_c.h"
-    #include "lang.tab.h"
-  #endif /* _LEXER_STANDALONE_ */
+  #include "ast.h"
+
+  #include "lang.tab.hh"
+
+  #define TOKEN(t) (yy::parser::token::t)
+
+  std::map<const int,  const std::string> token_string = {
+    { TOKEN(KW_VAR), "KW_VAR" },
+    { TOKEN(KW_TYPE), "KW_TYPE" },
+    { TOKEN(COLON), "COLON" },
+    { TOKEN(LPAREN), "LPAPREN" },
+    { TOKEN(RPAREN), "RPAREN" },
+    { TOKEN(LBRACK), "LBRACK" },
+    { TOKEN(RBRACK), "RBRACK" },
+    { TOKEN(STAR), "STAR" },
+    { TOKEN(DOT), "DOT" },
+    { TOKEN(EQUAL), "EQUAL" },
+    { TOKEN(INT), "INT" },
+    { TOKEN(ID), "ID" }
+  };
 %}
 
 KW_VAR    "var"
@@ -46,30 +65,20 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
   /* RULES: */
   /**********/
 
-{KW_VAR}  { return KW_VAR; }
-{KW_TYPE} { return KW_TYPE; }
-{COLON}   { return COLON; }
-{LPAREN}  { return LPAREN; }
-{RPAREN}  { return RPAREN; }
-{LBRACK}  { return LBRACK; }
-{RBRACK}  { return RBRACK; }
-{STAR}    { return STAR; }
-{DOT}     { return DOT; }
-{EQUAL}   { return EQUAL; }
-{INT}     { 
-            #ifndef _LEXER_STANDALONE_
-            yylval.integer = atoi(yytext);
-            #endif /* _LEXER_STANDALONE_ */
-            return INT;
-          }
-{ID}      {
-            #ifndef _LEXER_STANDALONE_
-            yylval.string = yytext;
-            #endif /* _LEXER_STANDALONE_ */
-            return ID;
-          }
-<<EOF>>   { return end_of_file; }
+{KW_VAR}  { return TOKEN(KW_VAR); }
+{KW_TYPE} { return TOKEN(KW_TYPE); }
+{COLON}   { return TOKEN(COLON); }
+{LPAREN}  { return TOKEN(LPAREN); }
+{RPAREN}  { return TOKEN(RPAREN); }
+{LBRACK}  { return TOKEN(LBRACK); }
+{RBRACK}  { return TOKEN(RBRACK); }
+{STAR}    { return TOKEN(STAR); }
+{DOT}     { return TOKEN(DOT); }
+{EQUAL}   { return TOKEN(EQUAL); }
+{INT}     { return TOKEN(INT); }
+{ID}      { return TOKEN(ID); }
 [ \t\n]+  /* ignore whitespace */ 
+<<EOF>>   { return EOF; }
 
 %%
 
@@ -80,28 +89,25 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
 #ifdef _LEXER_STANDALONE_
 
 int main(int argc, char* argv[]) {
-  FILE *in;
+  myFlexLexer lexer;
   int tok;
+
+  std::ifstream in;
 
   if (argc != 2) {
     return 1;
   } else {
-    in = fopen(argv[1], "r");
-    if (!in)
+    in.open(argv[1]);
+    if (!in.is_open())
       return 2;
   }
 
-  yyin = in;
-  while(1) {
-    tok = yylex();
-    if (tok == end_of_file)
-      break;
+  lexer.switch_streams(&in);
+  while((tok = lexer.yylex()) != EOF)
+    std::cout << token_string[tok] << " ";
+  std::cout << "\n";
 
-    printf("%s ", token_string[tok]);
-  }
-  printf("\n");
-
-  fclose(in);
+  in.close();
 
   return 0;
 }

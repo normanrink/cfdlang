@@ -1,18 +1,22 @@
 GCC=clang
-GXX=clang++
+GXX=clang++ -v
 DEBUG=-g
+PARSER_TRACE=1
 
-lex.yy.c: lang.l
+
+lex.yy.cc: lang.l
 	flex lang.l
 
-lang.tab.c: lang.y
-	bison lang.y
+lang.tab.cc: lang.yy
+	bison -Dparse.trace --debug -t lang.yy
 
-lexer: lex.yy.c
-	$(GCC) $(DEBUG) -D_LEXER_STANDALONE_ -o lexer lex.yy.c
+lang.tab.hh: lang.tab.cc
 
-parser: lang.tab.c lex.yy.c ast_c.o ast.o
-	$(GXX) -std=c++11 $(DEBUG) -D_PARSER_STANDALONE_ -DYYDEBUG=1 -o parser lang.tab.c lex.yy.c ast_c.o ast.o
+lexer: lex.yy.cc lang.tab.cc lang.tab.hh ast.o
+	$(GXX) $(DEBUG) -std=c++11 -D_LEXER_STANDALONE_ -o lexer lex.yy.cc lang.tab.cc ast.o
+
+parser: lang.tab.cc lang.tab.hh lex.yy.cc ast.o
+	$(GXX) -std=c++11 $(DEBUG) -D_PARSER_STANDALONE_ -DYYDEBUG=$(PARSER_TRACE) -o parser lang.tab.cc lex.yy.cc ast.o
 
 %.o: %.c
 	$(GCC) $(DEBUG) -c -o $@ $<
@@ -21,5 +25,8 @@ parser: lang.tab.c lex.yy.c ast_c.o ast.o
 	$(GXX) -std=c++11 $(DEBUG) -c -o $@ $<
 
 clean:
-	rm -f *.o lex.yy.c lang.tab.c lang.tab.h lexer parser
+	rm -f *.o
+	rm -f lex.yy.*
+	rm -f lang.tab.* stack.hh
+	rm -f lexer parser
 

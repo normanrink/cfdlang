@@ -41,9 +41,9 @@ private:
 
 protected:
   Node(NodeType nt) : NdType(nt) {}
-  virtual ~Node() {}
 
 public:
+  virtual ~Node() {}
   NodeType getNodeType() const { return NdType; };
 
   virtual void deepDelete() const = 0;
@@ -67,7 +67,10 @@ public:
   NodeList(T *);
   virtual ~NodeList() {}
 
-  void append(T *t) { elements.push_back(t); }
+  NodeList * append(T *t) {
+    elements.push_back(t);
+    return this;
+  }
  
   int size() const { return elements.size(); } 
   
@@ -138,7 +141,7 @@ public:
 
 class Identifier : public Factor {
 private:
-  const std::string Name;
+  std::string Name;
 
 public:
   Identifier(const std::string name)
