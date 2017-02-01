@@ -20,6 +20,9 @@ parser: lang.tab.cc lex.yy.c ast.o
 Parse: lang.tab.cc lex.yy.c Parse.o Lexer.o ast.o
 	$(GXX) $(DEBUG) -o Parse lang.tab.cc lex.yy.c Parse.o Lexer.o ast.o
 
+Compile: lang.tab.cc lex.yy.c Compile.o Lexer.o ast.o sema.o
+	$(GXX) $(DEBUG) -o Compile lang.tab.cc lex.yy.c Compile.o Lexer.o ast.o sema.o
+
 %.o: %.c
 	$(GCC) $(DEBUG) -c -o $@ $<
 

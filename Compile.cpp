@@ -4,6 +4,7 @@
 
 
 #include "Parser.h"
+#include "sema.h"
 
 
 int main(int argc, char* argv[]) {
@@ -35,7 +36,10 @@ int main(int argc, char* argv[]) {
     return 3;
   }
 
-  parser.getAST()->print();
+  //parser.getAST()->print();
+
+  Sema().visitProgram(parser.getAST());
+
   Program::destroy(parser.getAST());
 
   delete [] input;

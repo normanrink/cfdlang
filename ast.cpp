@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <string>
 #include <iostream>
 
@@ -32,11 +33,25 @@ static std::map<NodeType, std::string> NodeLabel = {
 };
 
 
+void Expr::visit(ASTVisitor *v) const {
+  assert(0 && "internal error: base class 'Expr' should not be visited");
+}
+
+
+void Factor::visit(ASTVisitor *v) const {
+  assert(0 && "internal error: base class 'Factor' should not be visited");
+}
+
+
 void Identifier::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
   EMIT_INDENT(indent)
   std::cout << "(" << str << " \"" << getName() << "\")\n";
+}
+
+void Identifier::visit(ASTVisitor *v) const {
+  v->visitIdentifier(this);
 }
 
 
@@ -45,6 +60,10 @@ void Integer::print(unsigned indent) const {
 
   EMIT_INDENT(indent)
   std::cout << "(" << str << " \"" << getValue() << "\")\n";
+}
+
+void Integer::visit(ASTVisitor *v) const {
+  v->visitInteger(this);
 }
 
 
@@ -67,14 +86,19 @@ void BinaryExpr::deepDelete() const {
   delete RightFactor;
 }
 
-template<typename T, NodeType nt>
-NodeList<T, nt>::NodeList(T *t)
+void BinaryExpr::visit(ASTVisitor *v) const {
+  v->visitBinaryExpr(this);
+}
+
+
+template<typename T, NodeType nt, typename Derived>
+NodeList<T, nt, Derived>::NodeList(T *t)
   : NodeList() {
   append(t);
 }
 
-template<typename T, NodeType nt>
-void NodeList<T, nt>::print(unsigned indent) const {
+template<typename T, NodeType nt, typename Derived>
+void NodeList<T, nt, Derived>::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
   EMIT_INDENT(indent)
@@ -87,8 +111,8 @@ void NodeList<T, nt>::print(unsigned indent) const {
   std::cout << ")\n";
 }
 
-template<typename T, NodeType nt>
-void NodeList<T, nt>::deepDelete() const {
+template<typename T, NodeType nt, typename Derived>
+void NodeList<T, nt, Derived>::deepDelete() const {
   for (int i = 0; i < size(); i++) {
     elements[i]->deepDelete();
     delete elements[i];
@@ -96,9 +120,25 @@ void NodeList<T, nt>::deepDelete() const {
 }
 
 
-template class NodeList<const Decl, NT_DeclList>;
-template class NodeList<const Stmt, NT_StmtList>;
-template class NodeList<const Expr, NT_ExprList>;
+template class NodeList<Decl, NT_DeclList, DeclList>;
+
+void DeclList::visit(ASTVisitor *v) const {
+  v->visitDeclList(this);
+}
+
+
+template class NodeList<Stmt, NT_StmtList, StmtList>;
+
+void StmtList::visit(ASTVisitor *v) const {
+  v->visitStmtList(this);
+}
+
+
+template class NodeList<Expr, NT_ExprList, ExprList>;
+
+void ExprList::visit(ASTVisitor *v) const {
+  v->visitExprList(this);
+}
 
 
 void Decl::print(unsigned indent) const {
@@ -118,6 +158,10 @@ void Decl::deepDelete() const {
 
   TypeExpr->deepDelete();
   delete TypeExpr;
+}
+
+void Decl::visit(ASTVisitor *v) const {
+  v->visitDecl(this);
 }
 
 
@@ -140,6 +184,10 @@ void Program::deepDelete() const {
   delete Stmts;
 }
 
+void Program::visit(ASTVisitor *v) const {
+  v->visitProgram(this);
+}
+
 
 void BrackExpr::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
@@ -156,6 +204,10 @@ void BrackExpr::deepDelete() const {
   delete Exprs;
 }
 
+void BrackExpr::visit(ASTVisitor *v) const {
+  v->visitBrackExpr(this);
+}
+
 
 void ParenExpr::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
@@ -170,6 +222,10 @@ void ParenExpr::print(unsigned indent) const {
 void ParenExpr::deepDelete() const {
   NestedExpr->deepDelete();
   delete NestedExpr;
+}
+
+void ParenExpr::visit(ASTVisitor *v) const {
+  v->visitParenExpr(this);
 }
 
 
@@ -192,4 +248,7 @@ void Stmt::deepDelete() const {
   delete RightExpr;
 }
 
+void Stmt::visit(ASTVisitor *v) const {
+  v->visitStmt(this);
+}
 

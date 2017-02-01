@@ -32,8 +32,12 @@ enum NodeType {
   NT_BrackExpr,
   NT_ParenExpr,
 
-  NT_DECLTYPE_COUNT
+  NT_NODETYPE_COUNT
 };
+
+
+class ASTVisitor;
+
 
 class Node {
 private:
@@ -49,6 +53,8 @@ public:
   virtual void deepDelete() const = 0;
 
   virtual void print(unsigned indent = 0) const = 0;
+
+  virtual void visit(ASTVisitor *v) const = 0;
 };
 
 
@@ -57,10 +63,13 @@ public:
 /* template for lists: */
 /***********************/
 
-template <typename T, NodeType nt>
+template <typename T, NodeType nt, typename Derived>
 class NodeList : public Node {
+public:
+  typedef std::vector<T *> Container;
+
 private:
-  std::vector<T *> elements;
+  Container elements;
 
 public:
   NodeList() : Node(nt) {}
@@ -77,18 +86,23 @@ public:
 
   virtual void print(unsigned int indent = 0) const final;
 
-  static NodeList *create() {
-    return new NodeList();
+  static Derived *create() {
+    return new Derived();
   }
 
-  static NodeList *create(T *t) {
-    return new NodeList(t);
+  static Derived *create(T *t) {
+    return new Derived(t);
   }
 
-  static NodeList *append(NodeList *l, T *t) {
+  static Derived *append(Derived *l, T *t) {
     l->append(t);
     return l;
   }
+
+  typename Container::const_iterator begin() const { return elements.begin(); }
+  typename Container::const_iterator end() const { return elements.end(); }
+
+  virtual void visit(ASTVisitor *v) const override {}
 };
 
 
@@ -103,6 +117,8 @@ protected:
 
 public:
   virtual ~Expr() {}
+
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
@@ -112,6 +128,8 @@ protected:
 
 public:
   virtual ~Factor() {}
+
+  virtual void visit(ASTVisitor *v) const override = 0;
 };
 
 
@@ -122,9 +140,12 @@ private:
 
 public:
   BinaryExpr(NodeType nt, const Expr *left, const Factor *right)
-    : Expr(NT_TensorExpr), LeftExpr(left), RightFactor(right) {
+    : Expr(nt), LeftExpr(left), RightFactor(right) {
     assert(nt == NT_TensorExpr || nt == NT_DotExpr);
   }
+
+  const Expr *getLeft() const { return LeftExpr; }
+  const Factor *getRight() const { return RightFactor; }
 
   virtual void deepDelete() const final;
 
@@ -133,6 +154,8 @@ public:
   static BinaryExpr *create(NodeType nt, const Expr *left, const Factor *right) {
     return new BinaryExpr(nt, left, right);
   }
+
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
@@ -153,6 +176,8 @@ public:
   static const Identifier *create(const std::string &name) {
     return new Identifier(name);
   }
+  
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
@@ -173,10 +198,18 @@ public:
   static const Integer *create(int value) {
     return new Integer(value);
   }
+
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
-typedef NodeList<const Expr, NT_ExprList> ExprList;
+class ExprList : public NodeList<const Expr, NT_ExprList, ExprList> {
+public:
+  ExprList() : NodeList() {}
+  ExprList(const Expr *e) : NodeList(e) {}
+
+  virtual void visit(ASTVisitor *v) const override;
+};
 
 
 class BrackExpr : public Factor {
@@ -187,6 +220,8 @@ public:
   BrackExpr(const ExprList *exprs)
     : Factor(NT_BrackExpr), Exprs(exprs) {}
 
+  const ExprList *getExprs() const { return Exprs; }
+
   virtual void deepDelete() const final;
 
   virtual void print(unsigned indent = 0) const final;
@@ -194,6 +229,8 @@ public:
   static const BrackExpr *create(const ExprList *exprs) {
     return new BrackExpr(exprs);
   }
+
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
@@ -205,6 +242,8 @@ public:
   ParenExpr(const Expr *expr)
     : Factor(NT_ParenExpr), NestedExpr(expr) {}
 
+  const Expr *getExpr() const { return NestedExpr; }
+
   virtual void deepDelete() const final;
 
   virtual void print(unsigned indent = 0) const final;
@@ -212,6 +251,8 @@ public:
   static const ParenExpr *create(const Expr *expr) {
     return new ParenExpr(expr);
   }
+
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
@@ -229,6 +270,9 @@ public:
   Stmt(const Identifier *id, const Expr *expr)
     : Node(NT_Stmt), Id(id), RightExpr(expr) {}
 
+  const Identifier *getIdentifier() const { return Id; }
+  const Expr *getExpr() const { return RightExpr; }
+
   virtual void deepDelete() const final;
 
   virtual void print(unsigned int indent = 0) const final;
@@ -236,10 +280,18 @@ public:
   static Stmt *create(const Identifier *id, const Expr *expr) {
     return new Stmt(id, expr);
   }
+
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
-typedef NodeList<const Stmt, NT_StmtList> StmtList;
+class StmtList : public NodeList<const Stmt, NT_StmtList, StmtList> {
+public:
+  StmtList() : NodeList() {}
+  StmtList(const Stmt *s) : NodeList(s) {}
+
+  virtual void visit(ASTVisitor *v) const override;
+};
 
 
 
@@ -258,6 +310,9 @@ public:
     assert(nt == NT_VarDecl || nt == NT_TypeDecl);
   }
 
+  const Identifier *getIdentifier() const { return Id; }
+  const Expr *getTypeExpr() const { return TypeExpr; }
+
   virtual void deepDelete() const final;
 
   virtual void print(unsigned int indent = 0) const final;
@@ -265,10 +320,18 @@ public:
   static const Decl *create(NodeType nt, const Identifier *id, const Expr *expr) {
     return new Decl(nt, id, expr);
   }
+  
+  virtual void visit(ASTVisitor *v) const override;
 };
 
 
-typedef NodeList<const Decl, NT_DeclList> DeclList;
+class DeclList : public NodeList<const Decl, NT_DeclList, DeclList> {
+public:
+  DeclList() : NodeList() {}
+  DeclList(const Decl *d) : NodeList(d) {}
+
+  virtual void visit(ASTVisitor *v) const override;
+};
 
 
 
@@ -285,6 +348,9 @@ public:
   Program(const DeclList *decls, const StmtList *stmts)
     : Node(NT_Program), Decls(decls), Stmts(stmts) {}
   
+  const DeclList *getDecls()  const { return Decls; }
+  const StmtList *getStmts()  const { return Stmts; }
+
   virtual void print(unsigned indent = 0) const final;
 
   virtual void deepDelete() const final;
@@ -297,6 +363,35 @@ public:
     p->deepDelete();
     delete p;
   }
+
+  virtual void visit(ASTVisitor *v) const override;
+};
+
+
+
+/****************************/
+/* visitor class/interface: */
+/****************************/
+
+class ASTVisitor {
+public:
+  virtual void visitProgram(const Program *) = 0;
+
+  virtual void visitDeclList(const DeclList *) = 0;
+  virtual void visitStmtList(const StmtList *) = 0;
+  virtual void visitExprList(const ExprList *) = 0;
+
+  virtual void visitDecl(const Decl *) = 0;
+
+  virtual void visitStmt(const Stmt *) = 0;
+
+  virtual void visitExpr(const Expr *) = 0;
+  virtual void visitFactor(const Factor *) = 0;
+  virtual void visitBinaryExpr(const BinaryExpr *) = 0;
+  virtual void visitIdentifier(const Identifier *) = 0;
+  virtual void visitInteger(const Integer *) = 0;
+  virtual void visitBrackExpr(const BrackExpr *) = 0;
+  virtual void visitParenExpr(const ParenExpr *) = 0;
 };
 
 #endif /* __AST_H__ */

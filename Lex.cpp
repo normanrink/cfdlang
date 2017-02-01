@@ -24,8 +24,9 @@ int main(int argc, char* argv[]) {
   size = buffer->pubseekoff(0, ifs.end, ifs.in);
   buffer->pubseekpos(0, ifs.in);
 
-  input = new char [size];
+  input = new char [size + 1];
   buffer->sgetn(input, size);
+  input[size] = 0;
 
   ifs.close();
 
