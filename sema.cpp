@@ -166,16 +166,13 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
       if (!list.size())
         continue;
 
-      int dim = type0->getDim(list[0] - 1);
-      for (int index: list) {
-        // account for the fact that indices into
-        // tensor dimensions start at '1': 
-        int i = index - 1;
+      int dim = type0->getDim(list[0]);
+      for (int i: list) {
         if (type0->getDim(i) != dim) {
           assert(0 && "semantic error: incompatible indices in contraction");
         }
         if (index_set_to_erase.count(i)) {
-          assert(0 && ("semantic error: index \'" + std::to_string(index)
+          assert(0 && ("semantic error: index \'" + std::to_string(i)
                        + "\' appears multiple times").c_str());
         }
         index_set_to_erase.insert(i);

@@ -5,6 +5,7 @@ type tensor6 : [12 17 12 34 28 42]
 var a : tensor3
 var b : tensor3
 var u : tensor4
+var v : tensor6
 
-v = a * b * u . [[2 7] [6 8]]
+v = a * b * u . [[1 6] [5 7]]
 

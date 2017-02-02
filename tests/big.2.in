@@ -7,5 +7,5 @@ var b : tensor3
 var u : tensor4
 var v : tensor6
 
-v = a * b * u . [[2 7] [3 8]]
+v = a * b * u . [[1 6] [2 7]]
 
