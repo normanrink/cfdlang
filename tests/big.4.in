@@ -1,0 +1,9 @@
+type tensor3 : [12 34 17]
+type tensor4 : [34 17 28 42]
+
+var a : tensor3
+var u : tensor4
+var v : [12 28 42]
+
+v = a * u . [[2 4] [1 3]]
+

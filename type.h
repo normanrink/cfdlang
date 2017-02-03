@@ -3,6 +3,7 @@
 #define __TYPE_H__
 
 #include <vector>
+#include <string>
 
 
 class TensorType {
@@ -38,6 +39,16 @@ public:
 
   bool equals(const std::vector<int> &dims) const {
     return (*this == TensorType(dims));
+  }
+
+  const std::string getDimString() const {
+    std::string result = "";
+    for (unsigned i = 0; i < getRank(); i++) {
+      result += std::to_string(getDim(i));
+      if (i != (getRank()-1))
+        result += ", ";
+    }
+    return result;
   }
 };
 

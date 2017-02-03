@@ -5,6 +5,7 @@
 
 #include "Parser.h"
 #include "sema.h"
+#include "codegen.h"
 
 
 int main(int argc, char* argv[]) {
@@ -36,13 +37,16 @@ int main(int argc, char* argv[]) {
     return 3;
   }
 
-  //parser.getAST()->print();
+  delete [] input;
 
-  Sema().visitProgram(parser.getAST());
+  Sema sema;
+  sema.visitProgram(parser.getAST());
+
+  NumpyCodeGen cg(&sema);
+  cg.visitProgram(parser.getAST());
+  std::cout << cg.getCode();
 
   Program::destroy(parser.getAST());
-
-  delete [] input;
 
   return 0;
 }
