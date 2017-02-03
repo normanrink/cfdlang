@@ -17,8 +17,6 @@ public:
   typedef std::vector<Tuple> TupleList;
 
   // useful helpers:
-  static bool isPairList(const TupleList &list);
-
   enum Comparison {
     CMP_Less,
     CMP_LessEqual,
@@ -30,13 +28,16 @@ public:
   };
 
   static bool allCompare(const List &list, Comparison cmp, int pivot);
+
+  static bool isPairList(const TupleList &list);
   static bool partitionPairList(int pivot, const TupleList &list,
                                 TupleList &left, TupleList &right,
                                 TupleList &mixed);
-
   static void shiftList(int shiftAmount,List &list);
   static void shiftTupleList(int shiftAmount, TupleList &tuple);
   static void flattenTupleList(const TupleList &list, std::list<int> &result);
+  static void unpackPairList(const TupleList &list, List &left, List &right);
+  static void adjustForContractions(List &indices, const TupleList &contractions);
 };
 
 

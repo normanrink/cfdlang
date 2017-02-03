@@ -13,33 +13,6 @@
   }
 
 
-bool CodeGen::isPairList(const TupleList &list) {
-  for (const auto &l : list) {
-    if (l.size() != 2)
-      return false;
-  }
-  return true;
-}
-
-void CodeGen::shiftList(int shiftAmount, List &list) {
-  for (int i = 0; i < list.size(); i++)
-    list[i] += shiftAmount;
-}
-
-void CodeGen::shiftTupleList(int shiftAmount, TupleList &tuples) {
-  for (auto &t: tuples)
-    shiftList(shiftAmount, t);
-}
-
-void CodeGen::flattenTupleList(const TupleList &list, std::list<int> &result) {
-  result.clear();
-  for (const auto &tuple: list) {
-    for (int elem: tuple)
-      result.push_back(elem);
-  }
-  result.sort();
-}
-
 bool CodeGen::allCompare(const List &list, Comparison cmp, int pivot) {
   std::function<bool(int)> compare = [cmp, pivot](int i) {
     switch (cmp) {
@@ -55,6 +28,14 @@ bool CodeGen::allCompare(const List &list, Comparison cmp, int pivot) {
 
   for (const auto &i : list) {
     if (!compare(i))
+      return false;
+  }
+  return true;
+}
+
+bool CodeGen::isPairList(const TupleList &list) {
+  for (const auto &l : list) {
+    if (l.size() != 2)
       return false;
   }
   return true;
@@ -79,6 +60,56 @@ bool CodeGen::partitionPairList(int pivot, const TupleList &list,
   }
 
   return true;
+}
+
+void CodeGen::shiftList(int shiftAmount, List &list) {
+  for (int i = 0; i < list.size(); i++)
+    list[i] += shiftAmount;
+}
+
+void CodeGen::shiftTupleList(int shiftAmount, TupleList &tuples) {
+  for (auto &t: tuples)
+    shiftList(shiftAmount, t);
+}
+
+void CodeGen::flattenTupleList(const TupleList &list, std::list<int> &result) {
+  result.clear();
+  for (const auto &tuple: list) {
+    for (int elem: tuple)
+      result.push_back(elem);
+  }
+  result.sort();
+}
+
+void CodeGen::unpackPairList(const TupleList &list, List &left, List &right) {
+  assert(isPairList(list));
+
+  left.clear(); right.clear();
+  for (const auto &tuple: list) {
+    int l = (tuple[0] < tuple[1]) ? tuple[0] : tuple[1];
+    int r = (tuple[0] < tuple[1]) ? tuple[1] : tuple[0];
+
+    left.push_back(l); right.push_back(r);
+  }
+}
+
+void CodeGen::adjustForContractions(List &indices,
+                                    const TupleList &contractions) {
+  assert(isPairList(contractions));
+
+  // FIXME: The following nested loop has a runtime that
+  // is roughly quadratic in the size of 'contractions'
+  // (assuming 'indices.size()' ~ 'contractions.size()').
+  for (int i = 0; i < indices.size() ; i++) {
+    int index = indices[i];
+    // determine the number of contracted indices
+    // that are smaller than 'index':
+    int adj = 0;
+    for (const Tuple &t: contractions)
+      adj += (t[0] < index) + (t[1] < index);
+
+    indices[i] -= adj;
+  }
 }
 
 
@@ -112,53 +143,6 @@ void NumpyCodeGen::visitStmt(const Stmt *s) {
 
   const std::string &temp = getTempForExpr(expr);
   append(sym->getName() + " = " + temp + "\n");
-}
-
-static void orderLeftRight(CodeGen::TupleList &list) {
-  for (auto &tuple: list) {
-    assert(tuple.size() == 2);
-    if (tuple[0] > tuple[1]) {
-      int tmp = tuple[0];
-      tuple[0] = tuple[1];
-      tuple[1] = tmp;
-    }
-  }
-}
-
-static int countLess(const std::list<int> &contracted, int bound) {
-  int counter = 0;
-  for (int i : contracted)
-    counter += (i < bound);
-  return counter;
-}
-
-static void adjustIndices(CodeGen::List &indices,
-                          const std::list<int> &contracted) {
-  for (int i = 0; i < indices.size(); i++) {
-    int adj = countLess(contracted, indices[i]);
-    indices[i] -= adj;
-  }
-}
-
-static void adjustTuples(CodeGen::TupleList &tuples,
-                         const std::list<int> &contracted) {
-  for (auto &t: tuples)
-    adjustIndices(t, contracted);
-}
-
-static void zipPairs(const CodeGen::TupleList &pairs,
-                     CodeGen::TupleList &result) {
-  CodeGen::Tuple first, second;
-  
-  for (const auto pair: pairs) {
-    assert(pair.size() == 2);
-    first.push_back(pair[0]);
-    second.push_back(pair[1]);
-  }
-
-  result.clear();
-  result.push_back(first);
-  result.push_back(second);
 }
 
 static const std::string getTupleListString(const CodeGen::TupleList &list) {
@@ -203,19 +187,27 @@ const std::string NumpyCodeGen::visitContraction(const Expr *e,
     assert(0 && "internal error: only pairs of indices can be contracted");
 
   const Expr *tensorL = tensor->getLeft();
-  const TensorType *typeL = TheSema->getType(tensorL);
-      
   const Expr *tensorR = tensor->getRight();
-  const TensorType *typeR = TheSema->getType(tensorR);
+  const TensorType *typeL = TheSema->getType(tensorL);
+  int rankL = typeL->getRank();
 
-  int pivot = typeL->getRank();
   TupleList contrL, contrR, contrMixed;
-  partitionPairList(pivot, indices, contrL, contrR, contrMixed);
+  // classify index pairs into the following categories:
+  // - belonging to contractions of the left sub-expression ('contrL')
+  // - belonging to contractions of the right sub-expression ('contrR')
+  // - having one index from each sub-expression ('contrMixed')
+  partitionPairList(rankL, indices, contrL, contrR, contrMixed);
 
-  TupleList shiftedR = contrR;
-  shiftTupleList(-pivot, shiftedR);
-  
   const std::string tempL = visitContraction(tensorL, contrL);
+
+  // determine the rank of the resulting left sub-expression after
+  // contraction has been performed over the set of index pairs 'contrL':
+  int rankContractedL = rankL - 2*contrL.size();
+
+  // the index pairs of the right sub-expression must be adjusted by
+  // the rank of the left sub-expression:
+  TupleList shiftedR = contrR;
+  shiftTupleList(-rankL, shiftedR);
   const std::string tempR = visitContraction(tensorR, shiftedR);
 
   const std::string result = getTemp();
@@ -225,19 +217,23 @@ const std::string NumpyCodeGen::visitContraction(const Expr *e,
     return result;
   }
 
-  std::list<int> flatL, flatR;
-  flattenTupleList(contrL, flatL);
-  flattenTupleList(contrR, flatR);
-  flatL.merge(flatR);
-    
-  TupleList zipped;
-  adjustTuples(contrMixed, flatL);
-  orderLeftRight(contrMixed);
-  zipPairs(contrMixed, zipped);
-  shiftList(-(pivot-(2*contrL.size())), zipped[1]);
+  List indL, indR;
+  unpackPairList(contrMixed, indL, indR);
+  // only contractions in 'contrL' affect the adjustments
+  // of the left indices in 'indL':
+  adjustForContractions(indL, contrL);
+  // adjustments of the right indices in 'indR' are affected by
+  // the contractions in both 'contrL' and 'contrR':
+  adjustForContractions(indR, contrL); adjustForContractions(indR, contrR);
+  // the indices to be contracted over in the right sub-expression
+  // must be relative to the first index of the right sub-expresion:
+  shiftList(-rankContractedL, indR);
 
+  TupleList indicesLR;
+  indicesLR.push_back(indL);
+  indicesLR.push_back(indR);
   append(getTensorDotString(result, tempL, tempR,
-         getTupleListString(zipped)));
+                            getTupleListString(indicesLR)));
   return result;
 }
 
