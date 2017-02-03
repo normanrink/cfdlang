@@ -5,3 +5,4 @@ parser
 lexer
 Parse
 Lex
+Compile
