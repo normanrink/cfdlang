@@ -88,6 +88,7 @@ public:
   virtual void visitIdentifier(const Identifier *id) override;
   virtual void visitInteger(const Integer *i) override;
   virtual void visitBrackExpr(const BrackExpr *be) override;
+  virtual void visitParenExpr(const ParenExpr *pe) override;
 
   const std::string visitContraction(const Expr *e, const TupleList &indices);
 };

@@ -285,6 +285,27 @@ void NumpyCodeGen::visitInteger(const Integer *i) {
 }
 
 void NumpyCodeGen::visitBrackExpr(const BrackExpr *be) {
-  assert(0 && "codegen error: cannot generate code for list in expression");
+  const ExprList &exprs = *be->getExprs();
+  assert(exprs.size() &&
+         "internal error: tensor stack should not be empty here");
+
+  std::string result = addTempForExpr(be);
+  result += " =  np.stack([";
+  for (unsigned i = 0; i < exprs.size(); i++) {
+    const Expr *e = exprs[i];
+    if (i > 0)  result += ", ";
+    e->visit(this);
+    TEMP_MAP_ASSERT(e);
+    result += getTempForExpr(e);
+  }
+  result +=("], axis=0)\n");
+  append(result);
 } 
+
+void NumpyCodeGen::visitParenExpr(const ParenExpr *pe) {
+  const Expr *e = pe->getExpr();
+  e->visit(this);
+  TEMP_MAP_ASSERT(e);
+  addNameForExpr(pe, getTempForExpr(e));
+}
 

@@ -202,6 +202,33 @@ void Sema::visitInteger(const Integer *i) {
 }
 
 void Sema::visitBrackExpr(const BrackExpr *be) {
-  assert(0 && "semantic error: list cannot appear in typed expression");
+  const ExprList &exprs = *be->getExprs();
+  if (!exprs.size())
+    assert(0 && "semantic error: tensor stack cannot be empty");
+
+  exprs[0]->visit(this);
+  TYPE_MAP_ASSERT(exprs[0]);
+  const TensorType *type = getType(exprs[0]);
+
+  for (const auto &e: exprs) {
+    e->visit(this);
+    TYPE_MAP_ASSERT(e);
+    if (getType(e) != type)
+      assert(0 && "semantic error: type mismatch in tensor stack");
+  }
+
+  std::vector<int> dims;
+  dims.push_back(exprs.size());
+  for (unsigned i = 0; i < type->getRank(); i++)
+    dims.push_back(type->getDim(i));
+
+  ExprTypes[be] = getType(dims);
+}
+
+void Sema::visitParenExpr(const ParenExpr *pe) {
+  const Expr *e = pe->getExpr();
+  e->visit(this);
+  TYPE_MAP_ASSERT(e);
+  ExprTypes[pe] = getType(e);
 }
 
