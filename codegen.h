@@ -70,6 +70,7 @@ class NumpyCodeGen : public CodeGen {
   const std::string getTempForExpr(const Expr *e) const {
     return ExprTemps.at(e);
   }
+
 public:
   NumpyCodeGen(const Sema *sema)
     : TheSema(sema), Code(""), TempCounter(0) {}

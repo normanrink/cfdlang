@@ -113,10 +113,10 @@ void CodeGen::adjustForContractions(List &indices,
 }
 
 
-void NumpyCodeGen::visitProgram(const Program *d) {
+void NumpyCodeGen::visitProgram(const Program *p) {
   append("import numpy as np\n\n");
 
-  ASTVisitor::visitProgram(d);
+  ASTVisitor::visitProgram(p);
 }
 
 void NumpyCodeGen::visitDecl(const Decl *d) {
