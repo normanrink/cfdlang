@@ -210,7 +210,10 @@ void Sema::visitBrackExpr(const BrackExpr *be) {
   TYPE_MAP_ASSERT(exprs[0]);
   const TensorType *type = getType(exprs[0]);
 
-  for (const auto &e: exprs) {
+  // skip the first expression in the list,
+  // it has already been visited above:
+  for (unsigned i = 1; i < exprs.size(); i++) {
+    const Expr *e = exprs[i];
     e->visit(this);
     TYPE_MAP_ASSERT(e);
     if (getType(e) != type)
