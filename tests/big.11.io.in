@@ -1,0 +1,6 @@
+var input a : [3 3]
+var input b : [3 3]
+var output c : [2 3 3]
+
+c = [  a * b . [[0 2]] a * b . [[1 3]] ]
+
