@@ -114,7 +114,7 @@ void CodeGen::adjustForContractions(List &indices,
 
 
 void NumpyCodeGen::visitProgram(const Program *p) {
-  append("import numpy as np\n\n");
+  append("import numpy as " + getPrefix() + "\n\n");
 
   ASTVisitor::visitProgram(p);
 }
@@ -128,8 +128,8 @@ void NumpyCodeGen::visitDecl(const Decl *d) {
   append(sym->getName() + " = ");
   
   const TensorType &type = sym->getType();
-  const std::string init = "np.random.rand(" + type.getDimString()
-                           + ")\n";
+  const std::string init = getPrefix() + "random.rand("
+                           + type.getDimString() + ")\n";
   append(init);
 }
 
@@ -161,14 +161,16 @@ static const std::string getTupleListString(const CodeGen::TupleList &list) {
   return result;
 }
 
-static const std::string getTensorDotString(const std::string &r,
-                                            const std::string &t0,
-                                            const std::string &t1,
-                                            const std::string axes = "") {
+const std::string NumpyCodeGen::getTensorDotString(const std::string &r,
+                                                   const std::string &t0,
+                                                   const std::string &t1,
+                                                   const std::string axes) {
+  const std::string &prefix = r + " = " + getPrefix()
+                              + ".tensordot(" + t0 + ", " + t1 + ", ";
   if (!axes.length())
-    return r + " = np.tensordot(" + t0 + ", " + t1 + ", axes=0)\n";
+    return prefix + "axes=0)\n";
   else
-    return r + " = np.tensordot(" + t0 + ", " + t1 + ", axes=" + axes + ")\n";
+    return prefix + "axes=" + axes + ")\n";
 }
 
 const std::string NumpyCodeGen::visitContraction(const Expr *e,
@@ -290,7 +292,7 @@ void NumpyCodeGen::visitBrackExpr(const BrackExpr *be) {
          "internal error: tensor stack should not be empty here");
 
   std::string result = addTempForExpr(be);
-  result += " =  np.stack([";
+  result += " = " + getPrefix() + ".stack([";
   for (unsigned i = 0; i < exprs.size(); i++) {
     const Expr *e = exprs[i];
     if (i > 0)  result += ", ";
@@ -307,5 +309,71 @@ void NumpyCodeGen::visitParenExpr(const ParenExpr *pe) {
   e->visit(this);
   TEMP_MAP_ASSERT(e);
   addNameForExpr(pe, getTempForExpr(e));
+}
+
+
+void TheanoCodeGen::constructTypes() {
+  const Sema &sema = *getSema();
+
+  for (auto i = sema.types_begin(), e = sema.types_end();
+       i != e; i++) {
+    const TensorType *type = *i;
+    const std::string temp = getTemp();
+    append(temp + " = " + getPrefix()
+           + ".TensorType('float64', (False,)*"
+           + std::to_string(type->getRank()) + ")\n");
+    TypeTemps[type] = temp;
+  }
+}
+
+void TheanoCodeGen::visitProgram(const Program *p) {
+  append("from theano import *\n");
+  append("import theano.tensor as " + getPrefix() + "\n\n");
+
+  constructTypes();
+  append("\n"); 
+
+  ASTVisitor::visitProgram(p); 
+  append("\n");
+
+  const Sema &sema = *getSema();
+  if (sema.inputs_size() == 0 || sema.outputs_size() == 0)
+    return;
+
+  #define IO_SYMBOL_LIST(inout)              \
+    std::string inout##List;                 \
+    {                                        \
+      inout##List = "[";                     \
+      bool first = true;                     \
+      for (auto i = sema.inout##_begin(),    \
+                e = sema.inout##_end();      \
+           i != e; i++) {                    \
+        const Symbol *sym = *i;              \
+        if (!first) inout##List += ", ";     \
+        inout##List += sym->getName();       \
+        first = false;                       \
+      }                                      \
+      inout##List += "]";                    \
+    }
+  
+  IO_SYMBOL_LIST(inputs)
+  IO_SYMBOL_LIST(outputs)
+
+  append("f = function(" + inputsList + ", " + outputsList + ")\n");
+}
+
+void TheanoCodeGen::visitDecl(const Decl *d) {
+  // FIXME: perhaps the generated Python codes should
+  // reflect the user-defined type names
+  if (d->getNodeType() == NT_TypeDecl)
+   return;
+
+  const std::string &name = d->getIdentifier()->getName();
+  const Symbol *sym = getSema()->getSymbol(name);
+  const TensorType *type = &sym->getType();
+  const std::string &temp = TypeTemps[type];
+
+  append(sym->getName() + " = " + getPrefix()
+         + ".TensorVariable(" + temp + ")\n");
 }
 

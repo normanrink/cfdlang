@@ -56,9 +56,13 @@
 
   const char *string_literal;
   int integer_literal;
+
+  int iospec;
 }
 
 %token KW_VAR
+%token KW_INPUT
+%token KW_OUTPUT
 %token KW_TYPE
 %token COLON
 %token LPAREN
@@ -85,6 +89,7 @@
 %type <brack> brack_expr
 %type <paren> paren_expr
 %type <exprs> expr_list
+%type <iospec> iospec
 
 %%
 
@@ -100,7 +105,11 @@ decl_list : decl_list decl { $$ = DeclList::append($1, $2); }
 decl : var_decl
      | type_decl
 
-var_decl : KW_VAR identifier COLON type_expr { $$ = Decl::create(NT_VarDecl, $2, $4); }
+var_decl : KW_VAR iospec identifier COLON type_expr { $$ = Decl::create(NT_VarDecl, $3, $5, (Decl::IOSpecifier)$2); }
+
+iospec : /* empty */ { $$ = Decl::IO_Empty; }
+       | KW_INPUT iospec { $$ = Decl::IO_Input | $2; }
+       | KW_OUTPUT iospec { $$ = Decl::IO_Output | $2; }
 
 type_decl : KW_TYPE identifier COLON type_expr { $$ = Decl::create(NT_TypeDecl, $2, $4); }
 

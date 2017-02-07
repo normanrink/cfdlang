@@ -8,6 +8,8 @@
 
 std::map<int, const std::string> Lexer::TokenStrings = {
   { KW_VAR, "KW_VAR" },
+  { KW_INPUT, "KW_INPUT" },
+  { KW_OUTPUT, "KW_OUTPUT" },
   { KW_TYPE, "KW_TYPE" },
   { COLON, "COLON" },
   { LPAREN, "LPAREN" },

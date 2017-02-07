@@ -145,7 +145,16 @@ void Decl::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
   EMIT_INDENT(indent)
-  std::cout << "(" << str << "\n";
+  std::cout << "(" << str;
+  
+  if (getNodeType() == NT_VarDecl) {
+    if (getIOSpecifier() & IO_Input)
+      std::cout << " input";
+    if (getIOSpecifier() & IO_Output)
+      std::cout << " output";
+  }
+  std::cout << "\n";
+
   Id->print(indent + str.length() + 1);
   TypeExpr->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)

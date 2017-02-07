@@ -300,25 +300,38 @@ public:
 /****************/
 
 class Decl : public Node {
+public:
+  enum IOSpecifier {
+    IO_Empty  = 0,
+    IO_Input  = 1 << 0,
+    IO_Output = 1 << 1,
+  };
+
 private:
   const Identifier *Id;
   const Expr *TypeExpr;
 
+  const IOSpecifier IOSpec;
+
 public:
-  Decl(NodeType nt, const Identifier *id, const Expr *expr) 
-    : Node(nt), Id(id), TypeExpr(expr) {
+
+  Decl(NodeType nt, const Identifier *id, const Expr *expr,
+       IOSpecifier iospec = IO_Empty) 
+    : Node(nt), Id(id), TypeExpr(expr), IOSpec(iospec) {
     assert(nt == NT_VarDecl || nt == NT_TypeDecl);
   }
 
   const Identifier *getIdentifier() const { return Id; }
   const Expr *getTypeExpr() const { return TypeExpr; }
+  const IOSpecifier getIOSpecifier() const { return IOSpec; }
 
   virtual void deepDelete() const final;
 
   virtual void print(unsigned int indent = 0) const final;
 
-  static const Decl *create(NodeType nt, const Identifier *id, const Expr *expr) {
-    return new Decl(nt, id, expr);
+  static const Decl *create(NodeType nt, const Identifier *id,
+                            const Expr *expr, IOSpecifier iospec = IO_Empty) {
+    return new Decl(nt, id, expr, iospec);
   }
   
   virtual void visit(ASTVisitor *v) const override;

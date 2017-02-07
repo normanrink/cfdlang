@@ -4,6 +4,7 @@
 
 #include <list>
 #include <map>
+#include <set>
 
 #include "ast.h"
 #include "symbol.h"
@@ -19,6 +20,11 @@ private:
 
   // map 'Expr' nodes in the AST to types:
   std::map<const Expr *, const TensorType *> ExprTypes;
+
+  // record symbols of variables that are
+  // declared with IO specifiers:
+  std::set<const Symbol *> Inputs;
+  std::set<const Symbol *> Outputs;
 
 public:
   Sema() { 
@@ -80,6 +86,29 @@ public:
   virtual void visitInteger(const Integer *i) override;
   virtual void visitBrackExpr(const BrackExpr *be) override;
   virtual void visitParenExpr(const ParenExpr *pe) override;
+
+  std::list<const TensorType *>::const_iterator types_begin() const {
+    return Types.begin();
+  }
+  std::list<const TensorType *>::const_iterator types_end() const {
+    return Types.end();
+  }
+
+  std::set<const Symbol *>::const_iterator inputs_begin() const {
+    return Inputs.begin();
+  }
+  std::set<const Symbol *>::const_iterator inputs_end() const {
+    return Inputs.end();
+  }
+  int inputs_size() const { return Inputs.size(); }
+
+  std::set<const Symbol *>::const_iterator outputs_begin() const {
+    return Outputs.begin();
+  }
+  std::set<const Symbol *>::const_iterator outputs_end() const {
+    return Outputs.end();
+  }
+  int outputs_size() const { return Outputs.size(); }
 };
 
 #endif /* !__SEMA_H__ */

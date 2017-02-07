@@ -89,7 +89,12 @@ void Sema::visitDecl(const Decl *d) {
     return;
   }
 
-  createSymbol(k, name, *type, d);
+  const Symbol *sym = createSymbol(k, name, *type, d);
+
+  if (d->getIOSpecifier() & Decl::IO_Input)
+    Inputs.insert(sym);
+  if (d->getIOSpecifier() & Decl::IO_Output)
+    Outputs.insert(sym);
 }
 
 void Sema::visitStmt(const Stmt *s) {

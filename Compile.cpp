@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
   Sema sema;
   sema.visitProgram(parser.getAST());
 
-  NumpyCodeGen cg(&sema);
+  TheanoCodeGen cg(&sema);
   cg.visitProgram(parser.getAST());
   std::cout << cg.getCode();
 

@@ -51,6 +51,9 @@ class NumpyCodeGen : public CodeGen {
   // map 'Expr' nodes in the AST to temporary variables:
   std::map<const Expr *, std::string> ExprTemps;
 
+  const std::string ModulePrefix;
+
+protected:
   const std::string getTemp() {
     return "t" + std::to_string(TempCounter++);
   }
@@ -71,9 +74,11 @@ class NumpyCodeGen : public CodeGen {
     return ExprTemps.at(e);
   }
 
+  const std::string &getPrefix() const { return ModulePrefix; }
+
 public:
-  NumpyCodeGen(const Sema *sema)
-    : TheSema(sema), Code(""), TempCounter(0) {}
+  NumpyCodeGen(const Sema *sema, const std::string &prefix = "np")
+    : TheSema(sema), Code(""), TempCounter(0), ModulePrefix(prefix) {}
 
   const Sema *getSema() const { return TheSema; }
   const std::string &getCode() const { return Code; }
@@ -92,6 +97,27 @@ public:
   virtual void visitParenExpr(const ParenExpr *pe) override;
 
   const std::string visitContraction(const Expr *e, const TupleList &indices);
+
+  const std::string getTensorDotString(const std::string &r,
+                                       const std::string &t0,
+                                       const std::string &t1,
+                                       const std::string axes = "");
+};
+
+
+class TheanoCodeGen : public NumpyCodeGen {
+private:
+  std::map<const TensorType *, std::string> TypeTemps;
+
+  void constructTypes();
+
+public:
+  TheanoCodeGen(const Sema *sema, const std::string &prefix = "T")
+    : NumpyCodeGen(sema, prefix) {}
+
+  virtual void visitProgram(const Program *p) override;
+
+  virtual void visitDecl(const Decl *d) override;
 };
 
 #endif /* !__CODEGEN_H__ */
