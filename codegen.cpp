@@ -375,9 +375,15 @@ void TheanoCodeGen::visitProgram(const Program *p) {
     }
   
   IO_SYMBOL_LIST(inputs)
-  IO_SYMBOL_LIST(outputs)
 
-  append("f = function(" + inputsList + ", " + outputsList + ")\n");
+  std::string output;
+  if (sema.outputs_size() == 1) {
+    const Symbol *sym = *sema.outputs_begin();
+    append("f = function(" + inputsList + ", " + sym->getName() + ")\n");
+  } else {
+    IO_SYMBOL_LIST(outputs)
+    append("f = function(" + inputsList + ", " + outputsList + ")\n");
+  }
 }
 
 void TheanoCodeGen::visitDecl(const Decl *d) {
