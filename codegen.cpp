@@ -161,6 +161,24 @@ static const std::string getTupleListString(const CodeGen::TupleList &list) {
   return result;
 }
 
+static const BinaryExpr *extractTensorExprOrNull(const Expr *e) {
+  const BinaryExpr *tensor = dynamic_cast<const BinaryExpr *>(e);
+  if (!tensor) {
+    const ParenExpr *paren = dynamic_cast<const ParenExpr *>(e);
+    if (paren)
+      return extractTensorExprOrNull(paren->getExpr());
+    else
+      return nullptr;
+  }
+  // this should not be 'nullptr' if we get here:
+  assert(tensor);
+
+  if (tensor->getNodeType() != NT_TensorExpr)
+    return nullptr;
+
+  return tensor;
+}
+
 const std::string NumpyCodeGen::getTensorDotString(const std::string &r,
                                                    const std::string &t0,
                                                    const std::string &t1,
@@ -181,8 +199,8 @@ const std::string NumpyCodeGen::visitContraction(const Expr *e,
     return getTempForExpr(e);
   }
   
-  const BinaryExpr *tensor = dynamic_cast<const BinaryExpr *>(e);
-  if (!tensor || (tensor->getNodeType() != NT_TensorExpr))
+  const BinaryExpr *tensor = extractTensorExprOrNull(e);
+  if (!tensor)
     assert(0 && "internal error: cannot handle general contractions yet");
 
   if (!isPairList(indices))
@@ -257,8 +275,8 @@ void NumpyCodeGen::visitBinaryExpr(const BinaryExpr *be) {
     return;
   }
   case NT_DotExpr: {
-    const BinaryExpr *tensor = dynamic_cast<const BinaryExpr *>(be->getLeft());
-    if (!tensor || (tensor->getNodeType() != NT_TensorExpr))
+    const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
+    if (!tensor)
       assert(0 && "internal error: cannot handle general contractions yet");
 
     TupleList contractionsList;
