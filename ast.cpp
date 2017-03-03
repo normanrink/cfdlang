@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <sstream>
 #include <string>
 #include <iostream>
 
@@ -46,8 +47,11 @@ void Factor::visit(ASTVisitor *v) const {
 void Identifier::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << " \"" << getName() << "\")\n";
+  std::cout << "(" << str << ss.str() << " \"" << getName() << "\")\n";
 }
 
 void Identifier::visit(ASTVisitor *v) const {
@@ -58,8 +62,11 @@ void Identifier::visit(ASTVisitor *v) const {
 void Integer::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << " \"" << getValue() << "\")\n";
+  std::cout << "(" << str << ss.str() << " \"" << getValue() << "\")\n";
 }
 
 void Integer::visit(ASTVisitor *v) const {
@@ -70,8 +77,11 @@ void Integer::visit(ASTVisitor *v) const {
 void BinaryExpr::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << "\n";
+  std::cout << "(" << str << ss.str() << "\n";
   LeftExpr->print(indent + str.length() + 1);
   RightFactor->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)
@@ -101,8 +111,11 @@ template<typename T, NodeType nt, typename Derived>
 void NodeList<T, nt, Derived>::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << "\n";
+  std::cout << "(" << str << ss.str() << "\n";
  
   for (int i = 0; i < size(); i++)
     elements[i]->print(indent + str.length() + 1); 
@@ -144,8 +157,11 @@ void ExprList::visit(ASTVisitor *v) const {
 void Decl::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str;
+  std::cout << "(" << str << ss.str();
   
   if (getNodeType() == NT_VarDecl) {
     if (getIOSpecifier() & IO_Input)
@@ -177,8 +193,11 @@ void Decl::visit(ASTVisitor *v) const {
 void Program::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << "\n";
+  std::cout << "(" << str << ss.str() << "\n";
   Decls->print(indent + str.length() + 1);
   Stmts->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)
@@ -201,8 +220,11 @@ void Program::visit(ASTVisitor *v) const {
 void BrackExpr::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << "\n";
+  std::cout << "(" << str << ss.str() << "\n";
   Exprs->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)
   std::cout << ")\n";
@@ -221,8 +243,11 @@ void BrackExpr::visit(ASTVisitor *v) const {
 void ParenExpr::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << "\n";
+  std::cout << "(" << str << ss.str() << "\n";
   NestedExpr->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)
   std::cout << ")\n";
@@ -241,8 +266,11 @@ void ParenExpr::visit(ASTVisitor *v) const {
 void Stmt::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
   EMIT_INDENT(indent)
-  std::cout << "(" << str << "\n";
+  std::cout << "(" << str << ss.str() << "\n";
   Id->print(indent + str.length() + 1);
   RightExpr->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "ast.h"
+#include "graph2.h"
 #include "sema.h"
 
 
@@ -37,7 +38,9 @@ public:
   static void shiftTupleList(int shiftAmount, TupleList &tuple);
   static void flattenTupleList(const TupleList &list, std::list<int> &result);
   static void unpackPairList(const TupleList &list, List &left, List &right);
-  static void adjustForContractions(List &indices, const TupleList &contractions);
+  static void adjustForContractions(List &indices,
+                                    const TupleList &contractions,
+                                    bool up = false);
 };
 
 
@@ -118,6 +121,84 @@ public:
   virtual void visitProgram(const Program *p) override;
 
   virtual void visitDecl(const Decl *d) override;
+};
+
+
+class GraphCodeGen : public TheanoCodeGen {
+private:
+  std::map<const std::string, TensorGraph *> Graphs;
+  TensorGraph *cur;
+
+public:
+  GraphCodeGen(const Sema *sema) : TheanoCodeGen(sema) {}
+  ~GraphCodeGen();
+
+  virtual void visitProgram(const Program *p) override;
+
+  virtual void visitStmt(const Stmt *s) override;
+
+  virtual void visitBinaryExpr(const BinaryExpr *be) override;
+  virtual void visitIdentifier(const Identifier *id) override;
+  virtual void visitInteger(const Integer *i) override;
+  virtual void visitBrackExpr(const BrackExpr *be) override;
+  virtual void visitParenExpr(const ParenExpr *pe) override;
+
+  void visitContraction(const Expr *e, const TupleList &indices);
+};
+
+
+class NameExtractor : public CodeGen {
+private:
+  const Sema *TheSema;
+
+  int inheritedIndex;
+
+  const Identifier *idResult;
+  int indexResult;
+  int rankResult;
+
+public:
+  NameExtractor(const Sema *sema, int index)
+    : TheSema(sema), inheritedIndex(index) {}  
+
+  const Identifier *getId() const { return idResult; }
+  const std::string &getLabel() const { return getId()->getName(); }
+  int getIndex() const { return indexResult; }
+  int getRank() const { return rankResult; }
+
+  virtual void visitDecl(const Decl *d) override {}
+  virtual void visitStmt(const Stmt *s) override {}
+
+  virtual void visitBinaryExpr(const BinaryExpr *be) override;
+  virtual void visitIdentifier(const Identifier *id) override;
+  virtual void visitInteger(const Integer *i) override;
+  virtual void visitBrackExpr(const BrackExpr *be) override;
+  virtual void visitParenExpr(const ParenExpr *pe) override;
+};
+
+
+class BottomUpGraphCodeGen : public TheanoCodeGen {
+private:
+  std::vector<std::pair<const std::string, TensorGraph *>> Graphs;
+  TensorGraph *cur;
+
+  std::vector<GraphEdge::NdIdxPair> Legs;
+
+public:
+  BottomUpGraphCodeGen(const Sema *sema) : TheanoCodeGen(sema) {}
+  ~BottomUpGraphCodeGen();
+
+  virtual void visitProgram(const Program *p) override;
+
+  virtual void visitStmt(const Stmt *s) override;
+
+  virtual void visitBinaryExpr(const BinaryExpr *be) override;
+  virtual void visitIdentifier(const Identifier *id) override;
+  virtual void visitInteger(const Integer *i) override;
+  virtual void visitBrackExpr(const BrackExpr *be) override;
+  virtual void visitParenExpr(const ParenExpr *pe) override;
+
+  void visitContraction(const Expr *e, const TupleList &indices);
 };
 
 #endif /* !__CODEGEN_H__ */

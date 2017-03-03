@@ -42,9 +42,9 @@ int main(int argc, char* argv[]) {
   Sema sema;
   sema.visitProgram(parser.getAST());
 
-  TheanoCodeGen cg(&sema);
+  BottomUpGraphCodeGen cg(&sema);
   cg.visitProgram(parser.getAST());
-  std::cout << cg.getCode();
+  //std::cout << cg.getCode();
 
   Program::destroy(parser.getAST());
 
