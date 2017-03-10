@@ -6,12 +6,21 @@
 #include <map>
 #include <vector>
 
-#include "ast.h"
-#include "graph2.h"
-#include "sema.h"
+
+#include "AST/AST.h"
+#include "CodeGen/graph2.h"
+#include "Sema/Sema.h"
 
 
 class CodeGen : public ASTVisitor {
+private:
+  const Sema *TheSema;
+
+  int TempCounter;
+
+public:
+  CodeGen(const Sema *sema);
+
 public:
   typedef std::vector<int> List;
   typedef std::vector<int> Tuple;

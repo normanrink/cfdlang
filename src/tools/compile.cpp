@@ -3,7 +3,9 @@
 #include <iostream>
 
 
-#include "Parser.h"
+#include "CodeGen/PythonCodeGen.h"
+#include "Parse/Parser.h"
+#include "Sema/Sema.h"
 
 
 int main(int argc, char* argv[]) {
@@ -35,10 +37,16 @@ int main(int argc, char* argv[]) {
     return 3;
   }
 
-  parser.getAST()->print();
-  Program::destroy(parser.getAST());
-
   delete [] input;
+
+  Sema sema;
+  sema.visitProgram(parser.getAST());
+
+  NumpyDirectCodeGen cg(&sema);
+  cg.visitProgram(parser.getAST());
+  std::cout << cg.getCode();
+
+  Program::destroy(parser.getAST());
 
   return 0;
 }

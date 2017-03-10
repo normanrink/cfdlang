@@ -2,14 +2,17 @@
 /* generate C++ output: */ 
 /* %skeleton "lalr1.cc" */
 
-/* generate header file: */
-%defines
-
 /* generate a pure (i.e. re-entrant) parser: */
 %define api.pure full
 
 %param { yyscan_t yyscanner }
 %parse-param { const Program *&root }
+
+%code requires {
+  #include "AST/AST.h"
+
+  typedef void* yyscan_t;
+}
 
 %{
   /******************/
@@ -18,12 +21,10 @@
 
   #include <stdio.h>
 
-  #include "ast.h"
-
-  typedef void* yyscan_t;
 
   #include "lang.tab.hh"
   #include "lex.yy.h"
+
 
   void yyerror(yyscan_t scanner, const Program *root, const char *msg) {
     fprintf(stderr, "%s\n", msg);
@@ -145,44 +146,4 @@ expr_list : /* empty */ { $$ = ExprList::create(); }
   /**************/
   /* USER CODE: */
   /**************/
-
-#ifdef _PARSER_STANDALONE_
-
-int main(int argc, char* argv[]) {
-  FILE *in;
-  yyscan_t scanner;
-  int result;
-  const Program *program;
-  
-
-  if (argc != 2) {
-    return 1;
-  } else {
-    in = fopen(argv[1], "r");
-    if (!in)
-      return 2;
-  }
-
-  yydebug = 1;
-
-  if (yylex_init(&scanner)) {
-    return 3;
-  }
-
-  yyset_in(in, scanner);
-  result = yyparse(scanner, program);
-
-  fclose(in);
-  yylex_destroy(scanner);
-
-  if (result)
-    return result;
-
-  program->print();
-  Program::destroy(program);
-
-  return 0;
-}
-
-#endif /* _PARSER_STANDALONE_ */
 

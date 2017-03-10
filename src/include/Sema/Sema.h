@@ -6,9 +6,10 @@
 #include <map>
 #include <set>
 
-#include "ast.h"
-#include "symbol.h"
-#include "type.h"
+
+#include "AST/AST.h"
+#include "Sema/Symbol.h"
+#include "Sema/TensorType.h"
 
 
 class Sema : public ASTVisitor {
@@ -27,14 +28,22 @@ private:
   std::set<const Symbol *> Outputs;
 
 public:
+  Sema();
+  ~Sema();
 
+  const TensorType *createType(const std::vector<int> &dims);
+  const TensorType *getType(const std::vector<int> &dims);
+  const TensorType *getType(const Expr *e) const { return ExprTypes.at(e); }
 
-
-
+  const Symbol *createSymbol(Symbol::SymbolKind k, const std::string &name,
+                             const TensorType &type,
+                             const Decl *decl = nullptr);
+  const Symbol *getSymbol(const std::string &name) const;
 
   bool isTypeName(const Expr *e, const TensorType *&type) const;
-  bool isIntegerList(const Expr *e, std::vector<int> &ints) const;
-  bool isListOfLists(const Expr *e, std::vector<std::vector<int>> &lists) const;
+  static bool isIntegerList(const Expr *e, std::vector<int> &ints);
+  static bool isListOfLists(const Expr *e,
+                            std::vector<std::vector<int>> &lists);
 
   const TensorType *visitTypeExpr(const Expr *e);
 

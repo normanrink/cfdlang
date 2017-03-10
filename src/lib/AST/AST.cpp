@@ -5,7 +5,7 @@
 #include <iostream>
 
 
-#include "ast.h"
+#include "AST/AST.h"
 
 
 #define EMIT_INDENT(indent) { std::cout.width((indent)); \

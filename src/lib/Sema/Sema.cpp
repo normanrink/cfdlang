@@ -5,9 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "sema.h"
-#include "symbol.h"
-#include "type.h"
+
+#include "Sema/Sema.h"
 
 
 #define TYPE_MAP_ASSERT(expr) {                                    \
@@ -16,20 +15,60 @@
   }
 
 
+Sema::Sema() { 
+  scalar = new TensorType(std::vector<int>());
+  Types.push_back(scalar);
+}
+  
+Sema::~Sema() {
+  for (auto it : Types) delete it;
+  for (auto it : Symbols) delete it.second;
+}
+
+const TensorType *Sema::createType(const std::vector<int> &dims) {
+  const TensorType *type = new TensorType(dims);
+  Types.push_back(type);
+  return type;
+}
+
+const TensorType *Sema::getType(const std::vector<int> &dims) {
+  for (auto it : Types) {
+    if (it->equals(dims))
+      return it;
+  }
+
+  return createType(dims);
+}
+
+const Symbol *Sema::createSymbol(Symbol::SymbolKind k, const std::string &name,
+                                 const TensorType &type, const Decl *decl) {
+  Symbol *sym = new Symbol(k, name, type, decl);
+  Symbols.addSymbol(sym);
+  return sym;
+}
+
+const Symbol *Sema::getSymbol(const std::string &name) const {
+  Symbol *sym;
+  if (!Symbols.getSymbol(name, sym))
+    return nullptr;
+
+  return sym;
+}
+
 bool Sema::isTypeName(const Expr *e, const TensorType *&type) const {
   const Identifier *id = dynamic_cast<const Identifier *>(e);
   if (!id)
     return false;
 
   const Symbol *sym = getSymbol(id->getName());
-  if (!sym || (sym->getKind() != SK_Type))
+  if (!sym || (sym->getKind() != Symbol::SK_Type))
     return false;
 
   type = &sym->getType();
   return true;
 }
 
-bool Sema::isIntegerList(const Expr *e, std::vector<int> &ints) const {
+bool Sema::isIntegerList(const Expr *e, std::vector<int> &ints) {
   const BrackExpr *be = dynamic_cast<const BrackExpr *>(e);
   if (!be)
     return false;
@@ -47,7 +86,7 @@ bool Sema::isIntegerList(const Expr *e, std::vector<int> &ints) const {
   return true;
 }
 
-bool Sema::isListOfLists(const Expr *e, std::vector<std::vector<int>> &lists) const {
+bool Sema::isListOfLists(const Expr *e, std::vector<std::vector<int>> &lists) {
   const BrackExpr *be = dynamic_cast<const BrackExpr *>(e);
   if (!be)
     return false;
@@ -79,7 +118,8 @@ const TensorType *Sema::visitTypeExpr(const Expr *e) {
 }
 
 void Sema::visitDecl(const Decl *d) {
-  SymbolKind k = (d->getNodeType() == NT_VarDecl) ? SK_Variable : SK_Type;
+  Symbol::SymbolKind k = (d->getNodeType() == NT_VarDecl) ? Symbol::SK_Variable
+                                                          : Symbol::SK_Type;
   const std::string &name = d->getIdentifier()->getName();
   const TensorType *type = visitTypeExpr(d->getTypeExpr());
 

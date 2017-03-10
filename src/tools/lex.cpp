@@ -3,9 +3,7 @@
 #include <iostream>
 
 
-#include "Parser.h"
-#include "sema.h"
-#include "codegen.h"
+#include "Parse/Lexer.h"
 
 
 int main(int argc, char* argv[]) {
@@ -32,21 +30,17 @@ int main(int argc, char* argv[]) {
 
   ifs.close();
 
-  Parser parser(input);
-  if (parser.parse()) {
-    return 3;
+  Lexer lexer(input);
+  while(1) {
+    int token = lexer.lex();
+    if (token == EOF)
+      break;
+
+    std::cout << Lexer::getTokenString(token) << " ";
   }
+  std::cout << "\n";
 
   delete [] input;
-
-  Sema sema;
-  sema.visitProgram(parser.getAST());
-
-  BottomUpGraphCodeGen cg(&sema);
-  cg.visitProgram(parser.getAST());
-  //std::cout << cg.getCode();
-
-  Program::destroy(parser.getAST());
 
   return 0;
 }

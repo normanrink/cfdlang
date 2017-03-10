@@ -5,17 +5,20 @@
 #include <map>
 #include <string>
 
-#include "ast.h"
-#include "type.h"
 
+#include "AST/AST.h"
+#include "Sema/TensorType.h"
 
-enum SymbolKind {
-  SK_Variable,
-  SK_Type,
-  SK_SYMBOLKIND_COUNT
-};
 
 class Symbol {
+public:
+  enum SymbolKind {
+    SK_Variable,
+    SK_Type,
+
+    SK_SYMBOLKIND_COUNT
+  };
+
 private:
   const SymbolKind K;
 
@@ -34,36 +37,23 @@ public:
   const TensorType &getType() const { return Type; }
   const Decl *getDecl() const { return DeclNode; }
 
-  void setDecl(const Decl *decl) {
-    DeclNode = decl;
-  }
+  void setDecl(const Decl *decl) { DeclNode = decl; }
 };
+
 
 class SymbolTable {
 public:
   typedef std::map<const std::string, Symbol *> SymbolMap;
+
 private:
   SymbolMap Symbols;
 
 public:
   SymbolTable() {}
 
-  bool addSymbol(Symbol *sym) {
-    if (Symbols.count(sym->getName()))
-      return false;
+  bool addSymbol(Symbol *sym);
 
-    Symbols[sym->getName()] = sym;
-    return true;
-  }
-
-  bool getSymbol(const std::string &name, Symbol *&sym) const {
-    auto it = Symbols.find(name);
-    if (it == Symbols.end())
-      return false;
-
-    sym = it->second;
-    return true;
-  }
+  bool getSymbol(const std::string &name, Symbol *&sym) const;
 
   SymbolMap::iterator begin() { return Symbols.begin(); }
   SymbolMap::iterator end() { return Symbols.end(); }

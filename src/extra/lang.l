@@ -12,43 +12,13 @@
   /* generate a re-entrant scanner: */
 %option reentrant bison-bridge
 
-  /* generate a C header file: */
-%option header-file="lex.yy.h"
-
 %{
   /******************/
   /* C DECLARATION: */
   /******************/
 
-  #include "assert.h"
-  #include <stdio.h>
-  #include <stdlib.h>
-
-  #include "ast.h"
-
+  //#include "AST/AST.h"
   #include "lang.tab.hh"
-
-  const char *token_string(int tok) {
-    switch(tok) {
-    case KW_VAR: return "KW_VAR";
-    case KW_INPUT: return "KW_INPUT";
-    case KW_OUTPUT: return "KW_OUTPUT";
-    case KW_TYPE: return "KW_TYPE";
-    case COLON: return "COLON";
-    case LPAREN: return "LPAREN";
-    case RPAREN: return "RPAREN";
-    case LBRACK: return "LBRACK";
-    case RBRACK: return "RBRACK";
-    case STAR: return "STAR";
-    case DOT: return "DOT";
-    case EQUAL: return "EQUAL";
-    case INT: return "INT";
-    case ID: return "ID";
-    default:
-      assert(0 && "invalid token");
-      return NULL;
-    }
-  }
 %}
 
 KW_VAR    "var"
@@ -100,43 +70,4 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
   /**************/
   /* USER CODE: */
   /**************/
-
-#ifdef _LEXER_STANDALONE_
-
-int main(int argc, char* argv[]) {
-  FILE *in;
-  int tok;
-  yyscan_t scanner;
-  YYSTYPE lval;
-
-  if (argc != 2) {
-    return 1;
-  } else {
-    in = fopen(argv[1], "r");
-    if (!in)
-      return 2;
-  }
-
-  if (yylex_init(&scanner)) {
-    return 3;
-  }
-
-  yyset_in(in, scanner);
-  while(1) {
-    tok = yylex(&lval, scanner);
-    if (tok == EOF)
-      break;
-
-    printf("%s ", token_string(tok));
-  }
-  printf("\n");
-
-  yylex_destroy(scanner);
-
-  fclose(in);
-
-  return 0;
-}
-
-#endif /* _LEXER_STANDALONE_ */
 

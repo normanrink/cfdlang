@@ -6,3 +6,4 @@ lexer
 Parse
 Lex
 Compile
+*.sw?
