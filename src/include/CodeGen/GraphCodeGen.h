@@ -1,204 +1,47 @@
 
-#ifndef __CODEGEN_H__
-#define __CODEGEN_H__
+#ifndef __GRAPH_CODEGEN_H__
+#define __GRAPH_CODEGEN_H__
 
 #include <list>
-#include <map>
+#include <utility>
 #include <vector>
 
 
 #include "AST/AST.h"
-#include "CodeGen/graph2.h"
-#include "Sema/Sema.h"
+#include "CodeGen/CodeGen.h"
+#include "CodeGen/TensorGraph.h"
 
 
-class CodeGen : public ASTVisitor {
+//template class GraphNode<StringID, StringID>;
+//template class GraphEdge<StringID, StringID>;
+//template class TensorGraph<StringID, StringID>;
+
+
+class GraphCodeGen : public CodeGen {
+public:
+  typedef GraphNode<StringID, StringID> GCG_Node;
+  typedef GraphEdge<StringID, StringID> GCG_Edge;
+  typedef TensorGraph<StringID, StringID> GCG_Graph;
+
+  typedef std::pair<const std::string, GCG_Graph *> GCG_LabeledGraph;
+  typedef std::vector<GCG_Edge::NodeIndexPair> GCG_Legs;
+
 private:
-  const Sema *TheSema;
+  // "map" names of temporary variable to expressions represented by graphs:
+  // (Since the order is important, hence cannot use 'std::map'.)
+  std::list<GCG_LabeledGraph> Graphs;
 
-  int TempCounter;
-
-public:
-  CodeGen(const Sema *sema);
-
-public:
-  typedef std::vector<int> List;
-  typedef std::vector<int> Tuple;
-  typedef std::vector<Tuple> TupleList;
-
-  // useful helpers:
-  enum Comparison {
-    CMP_Less,
-    CMP_LessEqual,
-    CMP_Equal,
-    CMP_GreaterEqual,
-    CMP_Greater,
-
-    CMP_COMPARISON_COUNT
-  };
-
-  static bool allCompare(const List &list, Comparison cmp, int pivot);
-
-  static bool isPairList(const TupleList &list);
-  static bool partitionPairList(int pivot, const TupleList &list,
-                                TupleList &left, TupleList &right,
-                                TupleList &mixed);
-  static void shiftList(int shiftAmount,List &list);
-  static void shiftTupleList(int shiftAmount, TupleList &tuple);
-  static void flattenTupleList(const TupleList &list, std::list<int> &result);
-  static void unpackPairList(const TupleList &list, List &left, List &right);
-  static void adjustForContractions(List &indices,
-                                    const TupleList &contractions,
-                                    bool up = false);
-};
-
-
-class NumpyCodeGen : public CodeGen {
-  const Sema *TheSema;
-
-  std::string Code;
-  
-  int TempCounter;
-
-  // map 'Expr' nodes in the AST to temporary variables:
-  std::map<const Expr *, std::string> ExprTemps;
-
-  const std::string ModulePrefix;
-
-protected:
-  const std::string getTemp() {
-    return "t" + std::to_string(TempCounter++);
-  }
-
-  const std::string addTempForExpr(const Expr *e) {
-    const std::string t = getTemp();
-    ExprTemps[e] = t;
-    return t;
-  }
-
-  const std::string addNameForExpr(const Expr *e, const std::string &name) {
-    const std::string t = getTemp();
-    ExprTemps[e] = name;
-    return name;
-  }
-
-  const std::string getTempForExpr(const Expr *e) const {
-    return ExprTemps.at(e);
-  }
-
-  const std::string &getPrefix() const { return ModulePrefix; }
+  // helpers in building graphs:
+  GCG_Graph *curGraph;
+  GCG_Legs curLegs;
 
 public:
-  NumpyCodeGen(const Sema *sema, const std::string &prefix = "np")
-    : TheSema(sema), Code(""), TempCounter(0), ModulePrefix(prefix) {}
-
-  const Sema *getSema() const { return TheSema; }
-  const std::string &getCode() const { return Code; }
-
-  void append(const std::string &code) { Code += code; }
-
-  virtual void visitProgram(const Program *p) override;
-
-  virtual void visitDecl(const Decl *d) override;
-  virtual void visitStmt(const Stmt *s) override;
-
-  virtual void visitBinaryExpr(const BinaryExpr *be) override;
-  virtual void visitIdentifier(const Identifier *id) override;
-  virtual void visitInteger(const Integer *i) override;
-  virtual void visitBrackExpr(const BrackExpr *be) override;
-  virtual void visitParenExpr(const ParenExpr *pe) override;
-
-  const std::string visitContraction(const Expr *e, const TupleList &indices);
-
-  const std::string getTensorDotString(const std::string &r,
-                                       const std::string &t0,
-                                       const std::string &t1,
-                                       const std::string axes = "");
-};
-
-
-class TheanoCodeGen : public NumpyCodeGen {
-private:
-  std::map<const TensorType *, std::string> TypeTemps;
-
-  void constructTypes();
-
-public:
-  TheanoCodeGen(const Sema *sema, const std::string &prefix = "T")
-    : NumpyCodeGen(sema, prefix) {}
-
-  virtual void visitProgram(const Program *p) override;
-
-  virtual void visitDecl(const Decl *d) override;
-};
-
-
-class GraphCodeGen : public TheanoCodeGen {
-private:
-  std::map<const std::string, TensorGraph *> Graphs;
-  TensorGraph *cur;
-
-public:
-  GraphCodeGen(const Sema *sema) : TheanoCodeGen(sema) {}
+  GraphCodeGen(const Sema *sema);
   ~GraphCodeGen();
 
   virtual void visitProgram(const Program *p) override;
 
-  virtual void visitStmt(const Stmt *s) override;
-
-  virtual void visitBinaryExpr(const BinaryExpr *be) override;
-  virtual void visitIdentifier(const Identifier *id) override;
-  virtual void visitInteger(const Integer *i) override;
-  virtual void visitBrackExpr(const BrackExpr *be) override;
-  virtual void visitParenExpr(const ParenExpr *pe) override;
-
-  void visitContraction(const Expr *e, const TupleList &indices);
-};
-
-
-class NameExtractor : public CodeGen {
-private:
-  const Sema *TheSema;
-
-  int inheritedIndex;
-
-  const Identifier *idResult;
-  int indexResult;
-  int rankResult;
-
-public:
-  NameExtractor(const Sema *sema, int index)
-    : TheSema(sema), inheritedIndex(index) {}  
-
-  const Identifier *getId() const { return idResult; }
-  const std::string &getLabel() const { return getId()->getName(); }
-  int getIndex() const { return indexResult; }
-  int getRank() const { return rankResult; }
-
   virtual void visitDecl(const Decl *d) override {}
-  virtual void visitStmt(const Stmt *s) override {}
-
-  virtual void visitBinaryExpr(const BinaryExpr *be) override;
-  virtual void visitIdentifier(const Identifier *id) override;
-  virtual void visitInteger(const Integer *i) override;
-  virtual void visitBrackExpr(const BrackExpr *be) override;
-  virtual void visitParenExpr(const ParenExpr *pe) override;
-};
-
-
-class BottomUpGraphCodeGen : public TheanoCodeGen {
-private:
-  std::vector<std::pair<const std::string, TensorGraph *>> Graphs;
-  TensorGraph *cur;
-
-  std::vector<GraphEdge::NdIdxPair> Legs;
-
-public:
-  BottomUpGraphCodeGen(const Sema *sema) : TheanoCodeGen(sema) {}
-  ~BottomUpGraphCodeGen();
-
-  virtual void visitProgram(const Program *p) override;
-
   virtual void visitStmt(const Stmt *s) override;
 
   virtual void visitBinaryExpr(const BinaryExpr *be) override;
@@ -210,5 +53,5 @@ public:
   void visitContraction(const Expr *e, const TupleList &indices);
 };
 
-#endif /* !__CODEGEN_H__ */
+#endif /* !__GRAPH_CODEGEN_H__ */
 
