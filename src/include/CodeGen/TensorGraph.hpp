@@ -83,11 +83,11 @@ template<typename NodeID, typename EdgeID>
 TensorGraph<NodeID, EdgeID>::~TensorGraph() {
   bool success = true;
   
-  for (const auto &e : Edges)
-    success &= (bool)eraseEdge(e.first);
+  while (!Edges.empty())
+    success &= eraseEdge(Edges.begin()->first);
 
-  for (const auto &n : Nodes)
-    success &= (bool)eraseNode(n.first);
+  while (!Nodes.empty())
+    success &= eraseNode(Nodes.begin()->first);
 
   assert(success &&
          "internal error: erasing of graph components should not fail"); 
