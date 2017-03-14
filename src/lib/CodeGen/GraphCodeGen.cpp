@@ -155,7 +155,7 @@ void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
   GCG_Legs savedLegs = curLegs;
   curLegs.clear();
   visitContraction(tensorL, contrL);
-  GCG_Legs LeftLegs = curLegs;
+  //GCG_Legs LeftLegs = curLegs;
 
   // determine the rank of the resulting left sub-expression after
   // contraction has been performed over the set of index pairs 'contrL':
@@ -166,9 +166,9 @@ void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
   TupleList shiftedR = contrR;
   shiftTupleList(-rankContractedL, shiftedR);
 
-  curLegs.clear();
+  //curLegs.clear();
   visitContraction(tensorR, shiftedR);
-  GCG_Legs RightLegs = curLegs;
+  //GCG_Legs RightLegs = curLegs;
 
   if (contrMixed.empty())
     return;
@@ -177,13 +177,13 @@ void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
   unpackPairList(contrMixed, indL, indR);
   // only contractions in 'contrL' affect the adjustments
   // of the left indices in 'indL':
-  adjustForContractions(indL, contrL);
+  //adjustForContractions(indL, contrL);
   // adjustments of the right indices in 'indR' are affected by
   // the contractions in both 'contrL' and 'contrR':
-  adjustForContractions(indR, contrL); adjustForContractions(indR, contrR);
+  //adjustForContractions(indR, contrL); adjustForContractions(indR, contrR);
   // the indices to be contracted over in the right sub-expression
   // must be relative to the first index of the right sub-expresion:
-  shiftList(-rankContractedL, indR);
+  //shiftList(-rankContractedL, indR);
   
   assert(indL.size() == indR.size() &&
          "internal error: mis-matched numbers of indices to be contracted");
@@ -192,10 +192,16 @@ void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
     int iL = indL[k];
     int iR = indR[k];
 
+    /*
     const GCG_Node *srcNode = LeftLegs[iL].first;
     const int srcIndex = LeftLegs[iL].second;
     const GCG_Node *tgtNode = RightLegs[iR].first;
     const int tgtIndex = RightLegs[iR].second;
+    */
+    const GCG_Node *srcNode = curLegs[iL].first;
+    const int srcIndex = curLegs[iL].second;
+    const GCG_Node *tgtNode = curLegs[iR].first;
+    const int tgtIndex = curLegs[iR].second;
 
     std::stringstream ssID, ssLabel;
     ssID << std::hex << e << ":" << std::dec << k;
@@ -207,13 +213,17 @@ void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
     assert(result && "internal error: should not fail to add edge");
   }
 
+  int erased = 0;
   for (int k = 0; k < indL.size(); k++)
-    LeftLegs.erase(LeftLegs.begin() + indL[k] - k);
+    curLegs.erase(curLegs.begin() + indL[k] - (erased++));
   for (int k = 0; k < indR.size(); k++)
-    RightLegs.erase(RightLegs.begin() + indR[k] - k);
+    curLegs.erase(curLegs.begin() + indR[k] - (erased++));
 
-  curLegs = savedLegs;
+  /*curLegs = savedLegs;
   for (int k = 0; k < LeftLegs.size(); k++) curLegs.push_back(LeftLegs[k]);
   for (int k = 0; k < RightLegs.size(); k++) curLegs.push_back(RightLegs[k]);
+  */
+  for (int k = 0; k < curLegs.size(); k++) savedLegs.push_back(curLegs[k]);
+  curLegs = savedLegs;
 }
 
