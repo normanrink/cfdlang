@@ -22,7 +22,7 @@ public:
   CodeGen(const Sema *sema);
 
   const Sema *getSema() const { return TheSema; }
-  const std::string getTemp();
+  std::string getTemp();
   const std::string &getCode() const { return Code; }
 
   void append(const std::string &code) { Code += code; }

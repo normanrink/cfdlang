@@ -3,7 +3,7 @@
 #include <iostream>
 
 
-#include "CodeGen/GraphCodeGen.h"
+#include "CodeGen/PythonCodeGen.h"
 #include "Parse/Parser.h"
 #include "Sema/Sema.h"
 
@@ -42,9 +42,9 @@ int main(int argc, char* argv[]) {
   Sema sema;
   sema.visitProgram(parser.getAST());
 
-  GraphCodeGen cg(&sema);
+  TheanoGraphCG cg(&sema);
   cg.visitProgram(parser.getAST());
-  //std::cout << cg.getCode();
+  std::cout << cg.getCode();
 
   Program::destroy(parser.getAST());
 

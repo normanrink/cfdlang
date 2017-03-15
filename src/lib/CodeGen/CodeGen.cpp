@@ -12,7 +12,7 @@
 CodeGen::CodeGen(const Sema *sema)
   : TheSema(sema), TempCounter(0), Code("") {}
 
-const std::string CodeGen::getTemp() {
+std::string CodeGen::getTemp() {
   return "t" + std::to_string(TempCounter++);
 }
 

@@ -174,3 +174,137 @@ void TheanoDirectCodeGen::visitDeclEpilogue(const Decl *d) {
   append(name + " = " + getModulePrefix() + ".TensorVariable(" + temp + ")\n");
 }
 
+
+NumpyGraphCG::NumpyGraphCG(const Sema *sema, const std::string &prefix)
+  : GraphCodeGen(sema), ModulePrefix(prefix) {}
+
+void NumpyGraphCG::visitProgramPrologue(const Program *p) {
+  append("import numpy as " + getModulePrefix() + "\n\n");
+}
+
+void NumpyGraphCG::visitDeclEpilogue(const Decl *d) {
+  if (d->getNodeType() == NT_TypeDecl)
+    return;
+
+  const std::string &name = d->getIdentifier()->getName();
+  const Symbol *sym = getSema()->getSymbol(name);
+  const TensorType &type = sym->getType();
+  
+  const std::string initializer = getModulePrefix() + ".random.rand("
+                                  + type.getDimString() + ")\n";
+
+  append(name + " = " + initializer);
+}
+
+void NumpyGraphCG::emitContraction(const std::string &result,
+                                   const std::string &lhs,
+                                   const List &lhsIndices,
+                                   const std::string &rhs,
+                                   const List &rhsIndices) {
+  TupleList indices;
+  indices.push_back(lhsIndices);
+  indices.push_back(rhsIndices);
+
+  append(result + " = " + getModulePrefix() + ".tensordot("
+                        + lhs + ", " + rhs + ", "
+                        + "axes=" + getTupleListString(indices) + ")\n");
+}
+
+void NumpyGraphCG::emitTensorProduct(const std::string &result,
+                                     const std::string &lhs,
+                                     const std::string &rhs) {
+  append(result + " = " + getModulePrefix() + ".tensordot("
+                        + lhs + ", " + rhs + ")\n");
+}
+
+void NumpyGraphCG::emitTensorStack(const std::string &result,
+                                  const std::list<std::string> &temps) {
+  append(result + " = " + getModulePrefix() + ".stack([");
+  for (auto it = temps.begin(); it != temps.end(); it++) {
+    append(*it);
+    if (std::next(it) != temps.end())
+      append(", ");
+  }
+  append("])\n");
+}
+
+void NumpyGraphCG::emitAssignment(const std::string &result,
+                                  const std::string &expr) {
+  append(result + " = " + expr + "\n");
+}
+
+
+TheanoGraphCG::TheanoGraphCG(const Sema *sema, const std::string &prefix)
+  : NumpyGraphCG(sema, prefix) {}
+
+void TheanoGraphCG::constructTypes() {
+  const Sema *sema = getSema();
+
+  for (auto i = sema->types_begin(), e = sema->types_end();
+       i != e; i++) {
+    const TensorType *type = *i;
+    const std::string temp = getTemp();
+    append(temp + " = " + getModulePrefix()
+           + ".TensorType('float64', (False,)*"
+           + std::to_string(type->getRank()) + ")\n");
+    TypeTemps[type] = temp;
+  }
+}
+
+void TheanoGraphCG::visitProgramPrologue(const Program *p) {
+  append("from theano import function as theano_function\n");
+  append("import theano.tensor as " + getModulePrefix() + "\n\n");
+
+  constructTypes();
+  append("\n"); 
+}
+
+void TheanoGraphCG::visitProgramEpilogue(const Program *p) {
+  append("\n");
+
+  const Sema *sema = getSema();
+  if (sema->inputs_size() == 0 || sema->outputs_size() == 0)
+    return;
+
+  #define IO_SYMBOL_LIST(inout)              \
+    std::string inout##List;                 \
+    {                                        \
+      inout##List = "[";                     \
+      bool first = true;                     \
+      for (auto i = sema->inout##_begin(),    \
+                e = sema->inout##_end();      \
+           i != e; i++) {                    \
+        const Symbol *sym = *i;              \
+        if (!first) inout##List += ", ";     \
+        inout##List += sym->getName();       \
+        first = false;                       \
+      }                                      \
+      inout##List += "]";                    \
+    }
+  
+  IO_SYMBOL_LIST(inputs)
+
+  std::string output;
+  if (sema->outputs_size() == 1) {
+    const Symbol *sym = *sema->outputs_begin();
+    append("f = theano_function(" + inputsList + ", " + sym->getName() + ")\n");
+  } else {
+    IO_SYMBOL_LIST(outputs)
+    append("f = theano_function(" + inputsList + ", " + outputsList + ")\n");
+  }
+}
+
+void TheanoGraphCG::visitDeclEpilogue(const Decl *d) {
+  // FIXME: perhaps the generated Python code should
+  // reflect the user-defined type names
+  if (d->getNodeType() == NT_TypeDecl)
+   return;
+
+  const std::string &name = d->getIdentifier()->getName();
+  const Symbol *sym = getSema()->getSymbol(name);
+  const TensorType *type = &sym->getType();
+  const std::string &temp = TypeTemps[type];
+
+  append(name + " = " + getModulePrefix() + ".TensorVariable(" + temp + ")\n");
+}
+

@@ -6,8 +6,9 @@
 #include <map>
 #include <utility>
 #include <vector>
-#include <sstream>
-#include <string>
+
+
+#include "CodeGen/Comparable.h"
 
 
 template<typename NodeID, typename EdgeID> class GraphEdge;
@@ -15,13 +16,18 @@ template<typename NodeID, typename EdgeID> class TensorGraph;
 
 
 template<typename NodeID, typename EdgeID>
-class GraphNode {
+class GraphNode : public Comparable<GraphNode<NodeID, EdgeID>> {
 private:
   NodeID ID;
 
   const int Rank;
 
   std::vector<const GraphEdge<NodeID, EdgeID> *> Legs;
+
+  struct {
+    GraphNode<NodeID, EdgeID> *Pred;
+    GraphNode<NodeID, EdgeID> *Succ;
+  } Seq;
 
 public:
   GraphNode(NodeID &&id, int rank);
@@ -42,11 +48,34 @@ public:
   bool anyUnset() const;
   bool allSet() const { return !anyUnset(); }
   bool allUnset() const { return !anySet(); }
+
+  int countSet() const;
+
+  const GraphNode<NodeID, EdgeID> *getPred() const { return Seq.Pred; }
+  GraphNode<NodeID, EdgeID> *getPred() { return Seq.Pred; }
+  const GraphNode<NodeID, EdgeID> *getSucc() const { return Seq.Succ; }
+  GraphNode<NodeID, EdgeID> *getSucc() { return Seq.Succ; }
+
+  void setPred(GraphNode<NodeID, EdgeID> *n) { Seq.Pred = n; }
+  void setSucc(GraphNode<NodeID, EdgeID> *n) { Seq.Succ = n; }
+
+  void updateSequence(GraphNode<NodeID, EdgeID> *pred,
+                      GraphNode<NodeID, EdgeID> *succ);
+  
+  bool hasPred() const { return (getPred() != nullptr); }
+  bool hasSucc() const { return (getSucc() != nullptr); }
+
+  virtual bool operator==(const GraphNode<NodeID, EdgeID> &rhs) const final {
+    return getID() == rhs.getID();
+  }
+  virtual bool operator<(const GraphNode<NodeID, EdgeID> &rhs) const final {
+    return getID() < rhs.getID();
+  }
 };
 
 
 template<typename NodeID, typename EdgeID>
-class GraphEdge {
+class GraphEdge : public Comparable<GraphEdge<NodeID, EdgeID>> {
 public:
   typedef std::pair<const GraphNode<NodeID, EdgeID> *, int> NodeIndexPair;
     
@@ -69,11 +98,20 @@ public:
     return Edge.first.first;
   }
   int getSrcIndex() const { return Edge.first.second; }
+  const NodeID &getSrcID() const { return getSrcNode()->getID(); }
 
   const GraphNode<NodeID, EdgeID> *getTgtNode() const {
     return Edge.second.first;
   }
   int getTgtIndex() const { return Edge.second.second; }
+  const NodeID &getTgtID() const { return getTgtNode()->getID(); }
+
+  virtual bool operator==(const GraphEdge<NodeID, EdgeID> &rhs) const final {
+    return getID() == rhs.getID();
+  }
+  virtual bool operator<(const GraphEdge<NodeID, EdgeID> &rhs) const final {
+    return getID() < rhs.getID();
+  }
 };
 
 
@@ -91,10 +129,24 @@ public:
   TensorGraph() {}
   ~TensorGraph();
 
-  bool isNode(const NodeID &id);
-  bool isEdge(const EdgeID &id);
+  const NodeMap &getNodes() const { return Nodes; }
+  const EdgeMap &getEdges() const { return Edges; }
+
+  bool empty() const;
+  int getNumEdges() const;
+  int getNumEdges(const NodeID &id) const;
+
+  void getEdgesAtNode(EdgeMap &result,
+                      const GraphNode<NodeID, EdgeID> *n) const;
+  void getEdgesBetweenNodes(EdgeMap &result,
+                            const GraphNode<NodeID, EdgeID> *src,
+                            const GraphNode<NodeID, EdgeID> *tgt) const;
+
+  bool isNode(const NodeID &id) const;
+  bool isEdge(const EdgeID &id) const;
 
   bool addNode(const NodeID &id, int rank);
+  const GraphNode<NodeID, EdgeID> *getNode(const NodeID &id) const;
   GraphNode<NodeID, EdgeID> *getNode(const NodeID &id);
   GraphNode<NodeID, EdgeID> *getNode(const NodeID &id, int rank);
   bool eraseNode(const NodeID &id);
@@ -102,94 +154,26 @@ public:
   bool addEdge(const EdgeID &id,
                const GraphNode<NodeID, EdgeID> *srcNode, int srcIndex,
                const GraphNode<NodeID, EdgeID> *tgtNode, int tgtIndex);
+  bool addEdge(const GraphEdge<NodeID, EdgeID> &e);
+  const GraphEdge<NodeID, EdgeID> *getEdge(const EdgeID &id) const;
   GraphEdge<NodeID, EdgeID> *getEdge(const EdgeID &id);
   GraphEdge<NodeID, EdgeID> *getEdge(const EdgeID &id,
                                      const GraphNode<NodeID, EdgeID> *srcNode,
                                      int srcIndex,
                                      const GraphNode<NodeID, EdgeID> *tgtNode,
                                      int tgtIndex);
-
-
   bool eraseEdge(const EdgeID &id);
 
-
   void plot(std::ofstream &of) const;
+
+  typename NodeMap::const_iterator nodes_begin() const { return Nodes.begin(); }
+  typename NodeMap::const_iterator nodes_end() const { return Nodes.end(); }
+  typename EdgeMap::const_iterator edges_begin() const { return Edges.begin(); }
+  typename EdgeMap::const_iterator edges_end() const { return Edges.end(); }
+
+  const GraphNode<NodeID, EdgeID> *getStartNode() const;
 };
 
-
-template<typename Derived>
-class GraphComponentID {
-private:
-  const std::string Label;
-
-public:
-  GraphComponentID(const std::string label = "")
-    : Label(label) {}
-
-  const std::string &getLabel() const { return Label; }
-
-  virtual const std::string str() const = 0;
-
-  virtual bool operator==(const Derived &id) const = 0;
-  virtual bool operator!=(const Derived &id) const {
-    return !(*this == id);
-  }
-  virtual bool operator<(const Derived &id) const = 0;
-  virtual bool operator<=(const Derived &id) const {
-    return (*this < id) || (*this == id);
-  }
-  virtual bool operator>=(const Derived &id) const {
-    return !(*this < id);
-  }
-  virtual bool operator>(const Derived &id) const {
-    return (*this >= id) && (*this != id);
-  }
-};
-
-
-class StringID : public GraphComponentID<StringID> {
-private:
-  const std::string ID;
-
-public:
-  StringID(std::string &&id, const std::string label = "")
-    : GraphComponentID<StringID>(label), ID(id) {}
-
-  StringID(const StringID &rhs)
-    : GraphComponentID<StringID>(rhs.getLabel()), ID(rhs.str()) {}
-
-  const std::string str() const final { return ID; }
-  bool operator==(const StringID &id) const final {
-    return ID == id.str();
-  }
-  bool operator<(const StringID &id) const final {
-    return ID < id.str();
-  }
-};
-
-
-class AddressID : public GraphComponentID<AddressID> {
-private:
-  const void *ID;
-
-public:
-  AddressID(const void *id, const std::string label = "")
-    : GraphComponentID<AddressID>(label), ID(id) {}
-
-  const void *get() const { return ID; }
-
-  AddressID(const AddressID &rhs, const std::string label = "")
-    : GraphComponentID<AddressID>(rhs.getLabel()), ID(rhs.get()) {}
-
-  const std::string str() const {
-    std::stringstream ss;
-    ss << std::hex << ID;
-    return ss.str();
-  }
-
-  bool operator==(const AddressID &id) const final { return ID == id.get(); }
-  bool operator<(const AddressID &id) const final { return ID < id.get(); }
-};
 
 #include "CodeGen/TensorGraph.hpp"
 
