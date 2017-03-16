@@ -10,6 +10,11 @@ add_executable(parse parse.cpp)
 target_link_libraries(parse AST
                             Parser)
 
+add_executable(check check.cpp)
+target_link_libraries(check AST
+                            Parser
+                            Sema)
+
 add_executable(compile compile.cpp)
 target_link_libraries(compile AST
                               CodeGen

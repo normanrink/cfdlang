@@ -163,28 +163,9 @@ void Sema::visitStmt(const Stmt *s) {
 }
 
 void Sema::visitBinaryExpr(const BinaryExpr *be) {
-  switch (be->getNodeType()) {
-  case ASTNode::NT_TensorExpr: {
-    const Expr *left = be->getLeft();
-    left->visit(this);
-    TYPE_MAP_ASSERT(left);
-    const TensorType *type0 = ExprTypes[left];
+  const ASTNode::NodeType nt = be->getNodeType();
 
-    const Expr *right = be->getRight();
-    right->visit(this);
-    TYPE_MAP_ASSERT(right);
-    const TensorType *type1 = ExprTypes[right];
-
-    std::vector<int> dims;
-    for (int i0 = 0; i0 < type0->getRank(); i0++)
-      dims.push_back(type0->getDim(i0));
-    for (int i1 = 0; i1 < type1->getRank(); i1++)
-      dims.push_back(type1->getDim(i1));
-
-    ExprTypes[be] = getType(dims);
-    return;
-  }
-  case ASTNode::NT_DotExpr: {
+  if (nt == ASTNode::NT_ContractionExpr) {
     const Expr *left = be->getLeft();
     left->visit(this);
     TYPE_MAP_ASSERT(left);
@@ -231,9 +212,78 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
     return;
   }
 
+  // binary expression is NOT a contraction:
+  assert(nt != ASTNode::NT_ContractionExpr &&
+         "internal error: should not be here");
+
+  const Expr *left = be->getLeft();
+  left->visit(this);
+  TYPE_MAP_ASSERT(left);
+  const TensorType &leftType = *ExprTypes[left];
+
+  const Expr *right = be->getRight();
+  right->visit(this);
+  TYPE_MAP_ASSERT(right);
+  const TensorType &rightType = *ExprTypes[right];
+
+  const TensorType *resultType;
+  switch (be->getNodeType()) {
+  case ASTNode::NT_AddExpr:
+  case ASTNode::NT_SubExpr: {
+    if (leftType != rightType) {
+      assert(0 && "semantic error: adding/subtracting non-equal types");
+      return;
+    }
+    resultType = &leftType;
+    break;
+  }
+  case ASTNode::NT_MulExpr: {
+    if (isScalar(leftType)) {
+      resultType = &rightType;
+    } else {
+      if (leftType != rightType) {
+        assert(0 && "semantic error: multiplying non-equal types");
+        return;
+      }
+      resultType = &leftType;
+    }
+    break;
+  }
+  case ASTNode::NT_DivExpr: {
+    if (isScalar(rightType)) {
+      resultType = &leftType;
+    } else {
+      if (leftType != rightType) {
+        assert(0 && "semantic error: dividing non-equal types");
+        return;
+      }
+      resultType = &leftType;
+    }
+    break;
+  }
+  case ASTNode::NT_ProductExpr: {
+    std::vector<int> dims;
+
+    if (isScalar(leftType) || isScalar(rightType)) {
+      assert(0 &&
+             "semantic error: cannot form the tensor product with a scalar");
+      return;
+    }
+
+    for (int i0 = 0; i0 < leftType.getRank(); i0++)
+      dims.push_back(leftType.getDim(i0));
+    for (int i1 = 0; i1 < rightType.getRank(); i1++)
+      dims.push_back(rightType.getDim(i1));
+
+    resultType = getType(dims);
+    break;
+  }
   default:
     assert(0 && "internal error: invalid binary expression");
   }
+
+  ExprTypes[be] = resultType;
+  return;
 }
 
 void Sema::visitIdentifier(const Identifier *id) {
