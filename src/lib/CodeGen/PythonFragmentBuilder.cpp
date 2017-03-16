@@ -79,7 +79,7 @@ void PythonFragBuilder::buildTensorDotString(const std::string &result,
                                              const std::string &rhs,
                                              const std::string &axes) {
   Fragment = (result + " = " + getModulePrefix() + ".tensordot("
-                             + lhs + ", " + lhs + ", ");
+                             + lhs + ", " + rhs + ", ");
   if (!axes.length())
     Fragment += ("axes=0)\n");
   else

@@ -34,7 +34,8 @@ const std::string NumpyDirectCG::visitContractionEpilogue(
 {
   const std::string result = getTemp();
   Builder.buildContractionEpilogue(result, lhs, rhs, LeftAndRightIndices);
-  return Builder.getFragment();
+  append(Builder.getFragment());
+  return result;
 }
 
 void NumpyDirectCG::visitTensorExprEpilogue(const BinaryExpr *be) {
