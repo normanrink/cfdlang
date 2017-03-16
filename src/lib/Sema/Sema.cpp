@@ -189,8 +189,12 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
       if (!list.size())
         continue;
 
-      int dim = type0->getDim(list[0]);
+      const int dim = type0->getDim(list[0]);
+      const int rank = type0->getRank();
       for (int i: list) {
+        if (!(i < rank)) {
+          assert(0 && "semantic error: contracted index out of range");
+        }
         if (type0->getDim(i) != dim) {
           assert(0 && "semantic error: incompatible indices in contraction");
         }
@@ -227,7 +231,7 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
   const TensorType &rightType = *ExprTypes[right];
 
   const TensorType *resultType;
-  switch (be->getNodeType()) {
+  switch (nt) {
   case ASTNode::NT_AddExpr:
   case ASTNode::NT_SubExpr: {
     if (leftType != rightType) {
