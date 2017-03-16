@@ -135,6 +135,9 @@ void Sema::visitDecl(const Decl *d) {
     Inputs.insert(sym);
   if (d->getIOSpecifier() & Decl::IO_Output)
     Outputs.insert(sym);
+
+  if (k == Symbol::SK_Type)
+    NamedTypes[type] = sym;
 }
 
 void Sema::visitStmt(const Stmt *s) {
@@ -280,3 +283,14 @@ void Sema::visitParenExpr(const ParenExpr *pe) {
   ExprTypes[pe] = getType(e);
 }
 
+bool Sema::isNamedType(const TensorType *type) const {
+  return NamedTypes.count(type);
+}
+
+const Symbol *Sema::getTypeSymbol(const TensorType *type) const {
+  if (!isNamedType(type))
+    return nullptr;
+
+  return NamedTypes.at(type);
+}
+  

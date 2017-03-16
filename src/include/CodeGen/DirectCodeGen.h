@@ -17,6 +17,8 @@ class DirectCodeGen : public CodeGen {
 protected:
   const std::string addTempForExpr(const Expr *e);
   const std::string addNameForExpr(const Expr *e, const std::string &name);
+
+public:
   const std::string getTempForExpr(const Expr *e) const;
 
 public:

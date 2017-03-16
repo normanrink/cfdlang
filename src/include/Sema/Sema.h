@@ -27,6 +27,10 @@ private:
   std::set<const Symbol *> Inputs;
   std::set<const Symbol *> Outputs;
 
+  // map user-defined types (i.e. named types) to the
+  // corresponding symbols (which hold the type names):
+  std::map<const TensorType *, const Symbol *> NamedTypes;
+
 public:
   Sema();
   ~Sema();
@@ -78,6 +82,9 @@ public:
     return Outputs.end();
   }
   int outputs_size() const { return Outputs.size(); }
+
+  bool isNamedType(const TensorType *type) const;
+  const Symbol *getTypeSymbol(const TensorType *type) const;
 };
 
 #endif /* !__SEMA_H__ */

@@ -16,6 +16,20 @@ std::string CodeGen::getTemp() {
   return "t" + std::to_string(TempCounter++);
 }
 
+bool CodeGen::typeEmitted(const TensorType *type) const {
+  return EmittedTypes.count(type);
+}
+
+const std::string &CodeGen::getEmittedTypeName(const TensorType *type) const {
+  assert(typeEmitted(type));
+  return EmittedTypes.at(type);
+}
+
+void CodeGen::addEmittedType(const TensorType *type, const std::string &name) {
+  assert(!typeEmitted(type));
+  EmittedTypes[type] = name;
+}
+
 bool CodeGen::allCompare(const List &list, Comparison cmp, int pivot) {
   std::function<bool(int)> compare = [cmp, pivot](int i) {
     switch (cmp) {

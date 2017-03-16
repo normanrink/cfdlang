@@ -2,24 +2,20 @@
 #ifndef __PYTHON_CODEGEN_H__
 #define __PYTHON_CODEGEN_H__
 
-#include <map>
 #include <string>
 
 
 #include "CodeGen/DirectCodeGen.h"
 #include "CodeGen/GraphCodeGen.h"
-#include "Sema/TensorType.h"
+#include "CodeGen/PythonFragmentBuilder.h"
 
 
-class NumpyDirectCodeGen : public DirectCodeGen {
-private:
-  const std::string ModulePrefix;
-
+class NumpyDirectCG : public DirectCodeGen {
 protected:
-  const std::string &getModulePrefix() const { return ModulePrefix; }
+  PythonFragBuilder Builder;
 
 public:
-  NumpyDirectCodeGen(const Sema *sema, const std::string &prefix = "np");
+  NumpyDirectCG(const Sema *sema, const std::string &prefix = "np");
 
   virtual void visitProgramPrologue(const Program *p) override;
 
@@ -29,27 +25,17 @@ public:
   virtual const std::string
   visitContractionEpilogue(const Expr *e,
                            const std::string &lhs, const std::string &rhs,
-                           const TupleList &LeftAndRightInds);
+                           const TupleList &LeftAndRightIndices);
 
   virtual void visitTensorExprEpilogue(const BinaryExpr *be) override;
-  virtual void visitIntegerEpilogue(const Integer *i) override;
+  //virtual void visitIntegerEpilogue(const Integer *i) override;
   virtual void visitBrackExprEpilogue(const BrackExpr *be) override;
-
-  const std::string getTensorDotString(const std::string &r,
-                                       const std::string &t0,
-                                       const std::string &t1,
-                                       const std::string axes = "") const;
 };
 
 
-class TheanoDirectCodeGen : public NumpyDirectCodeGen {
-private:
-  std::map<const TensorType *, std::string> TypeTemps;
-
-  void constructTypes();
-
+class TheanoDirectCG : public NumpyDirectCG {
 public:
-  TheanoDirectCodeGen(const Sema *sema, const std::string &prefix = "T");
+  TheanoDirectCG(const Sema *sema, const std::string &prefix = "T");
 
   virtual void visitProgramPrologue(const Program *p) override;
   virtual void visitProgramEpilogue(const Program *p) override;
@@ -59,11 +45,8 @@ public:
 
 
 class NumpyGraphCG : public GraphCodeGen {
-private:
-  const std::string ModulePrefix;
-
 protected:
-  const std::string &getModulePrefix() const { return ModulePrefix; }
+  PythonFragBuilder Builder;
 
 public:
   NumpyGraphCG(const Sema *sema, const std::string &prefix = "np");
@@ -88,11 +71,6 @@ public:
 
 
 class TheanoGraphCG : public NumpyGraphCG {
-private:
-  std::map<const TensorType *, std::string> TypeTemps;
-
-  void constructTypes();
-
 public:
   TheanoGraphCG(const Sema *sema, const std::string &prefix = "T");
 

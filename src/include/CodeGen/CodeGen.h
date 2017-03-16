@@ -3,11 +3,13 @@
 #define __CODEGEN_H__
 
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
 
 #include "Sema/Sema.h"
+#include "Sema/TensorType.h"
 
 
 class CodeGen : public ASTVisitor {
@@ -17,6 +19,8 @@ private:
   int TempCounter;
 
   std::string Code;
+  
+  std::map<const TensorType *, std::string> EmittedTypes;
 
 public:
   CodeGen(const Sema *sema);
@@ -26,6 +30,10 @@ public:
   const std::string &getCode() const { return Code; }
 
   void append(const std::string &code) { Code += code; }
+
+  bool typeEmitted(const TensorType *type) const;
+  const std::string &getEmittedTypeName(const TensorType *type) const;
+  void addEmittedType(const TensorType *type, const std::string &name);
 
 // useful helpers:
 public:
