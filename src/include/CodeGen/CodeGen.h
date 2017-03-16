@@ -62,8 +62,7 @@ public:
   static void flattenTupleList(const TupleList &list, std::list<int> &result);
   static void unpackPairList(const TupleList &list, List &left, List &right);
   static void adjustForContractions(List &indices,
-                                    const TupleList &contractions,
-                                    bool up = false);
+                                    const TupleList &contractions);
 
   static const std::string getTupleListString(const TupleList &list);
 

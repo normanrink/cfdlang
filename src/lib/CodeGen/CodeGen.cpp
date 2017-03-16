@@ -111,34 +111,21 @@ void CodeGen::unpackPairList(const TupleList &list, List &left, List &right) {
 }
 
 void CodeGen::adjustForContractions(List &indices,
-                                    const TupleList &contractions,
-                                    bool up) {
+                                    const TupleList &contractions) {
   assert(isPairList(contractions));
 
   // FIXME: The following nested loop has a runtime that
   // is roughly quadratic in the size of 'contractions'
   // (assuming 'indices.size()' ~ 'contractions.size()').
-  if (!up) {
-    for (int i = 0; i < indices.size() ; i++) {
-      int index = indices[i];
-      // determine the number of contracted indices
-      // that are smaller than 'index':
-      int adj = 0;
-      for (const Tuple &t: contractions)
-        adj += (t[0] < index) + (t[1] < index);
+  for (int i = 0; i < indices.size() ; i++) {
+    int index = indices[i];
+    // determine the number of contracted indices
+    // that are smaller than 'index':
+    int adj = 0;
+    for (const Tuple &t: contractions)
+      adj += (t[0] < index) + (t[1] < index);
 
-      indices[i] -= adj;
-    }
-  } else {
-    for (int i = 0; i < indices.size() ; i++) {
-      int index = indices[i];
-
-      int adj = 0;
-      for (const Tuple &t: contractions)
-        adj += (t[0] <= index) + (t[1] <= index);
-
-      indices[i] += adj;
-    }
+    indices[i] -= adj;
   }
 }
 
