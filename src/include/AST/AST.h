@@ -9,43 +9,45 @@
 #include <map>
 
 
-
-enum NodeType {
-  NT_Program,
-
-  NT_DeclList,
-  NT_StmtList,
-  NT_ExprList,
-
-  /* declarations: */
-  NT_VarDecl,
-  NT_TypeDecl,
-
-  /* statement: */
-  NT_Stmt,
-
-  /* expressions: */
-  NT_TensorExpr,
-  NT_DotExpr,
-  NT_Identifier, 
-  NT_Integer,
-  NT_BrackExpr,
-  NT_ParenExpr,
-
-  NT_NODETYPE_COUNT
-};
-
-
 class ASTVisitor;
 
 
-class Node {
+class ASTNode {
+public:
+  enum NodeType {
+    NT_Program,
+
+    NT_DeclList,
+    NT_StmtList,
+    NT_ExprList,
+
+    /* declarations: */
+    NT_VarDecl,
+    NT_TypeDecl,
+
+    /* statement: */
+    NT_Stmt,
+
+    /* expressions: */
+    NT_TensorExpr,
+    NT_DotExpr,
+    NT_Identifier, 
+    NT_Integer,
+    NT_BrackExpr,
+    NT_ParenExpr,
+
+    NT_NODETYPE_COUNT
+  };
+
 private:
   NodeType NdType;
 
 protected:
-  Node(NodeType nt) : NdType(nt) {}
-  virtual ~Node() {}
+  ASTNode(NodeType nt) : NdType(nt) {}
+  virtual ~ASTNode() {}
+
+protected:
+  static std::map<NodeType, std::string> NodeLabel;
 
 public:
   NodeType getNodeType() const { return NdType; };
@@ -63,8 +65,8 @@ public:
 /* template for lists: */
 /***********************/
 
-template <typename T, NodeType nt, typename Derived>
-class NodeList : public Node {
+template <typename T, ASTNode::NodeType nt, typename Derived>
+class ASTNodeList : public ASTNode {
 public:
   typedef std::vector<T *> Container;
 
@@ -72,9 +74,9 @@ private:
   Container elements;
 
 public:
-  NodeList() : Node(nt) {}
-  NodeList(T *);
-  virtual ~NodeList() {}
+  ASTNodeList() : ASTNode(nt) {}
+  ASTNodeList(T *);
+  virtual ~ASTNodeList() {}
 
   void append(T *t) { elements.push_back(t); }
  
@@ -111,9 +113,9 @@ public:
 /* expressions: */
 /****************/
 
-class Expr : public Node {
+class Expr : public ASTNode {
 protected:
-  Expr(NodeType nt) : Node(nt) {}
+  Expr(NodeType nt) : ASTNode(nt) {}
 
 public:
   virtual ~Expr() {}
@@ -151,7 +153,8 @@ public:
 
   virtual void print(unsigned indent = 0) const final;
 
-  static BinaryExpr *create(NodeType nt, const Expr *left, const Factor *right) {
+  static BinaryExpr *create(NodeType nt,
+                            const Expr *left, const Factor *right) {
     return new BinaryExpr(nt, left, right);
   }
 
@@ -203,10 +206,12 @@ public:
 };
 
 
-class ExprList : public NodeList<const Expr, NT_ExprList, ExprList> {
+class ExprList : public ASTNodeList<const Expr,
+                                    ASTNode::NT_ExprList,
+                                    ExprList> {
 public:
-  ExprList() : NodeList() {}
-  ExprList(const Expr *e) : NodeList(e) {}
+  ExprList() : ASTNodeList() {}
+  ExprList(const Expr *e) : ASTNodeList(e) {}
 
   virtual void visit(ASTVisitor *v) const override;
 };
@@ -261,14 +266,14 @@ public:
 /* statement: */
 /**************/
 
-class Stmt : public Node {
+class Stmt : public ASTNode {
 private:
   const Identifier *Id;
   const Expr *RightExpr;
 
 public:
   Stmt(const Identifier *id, const Expr *expr)
-    : Node(NT_Stmt), Id(id), RightExpr(expr) {}
+    : ASTNode(NT_Stmt), Id(id), RightExpr(expr) {}
 
   const Identifier *getIdentifier() const { return Id; }
   const Expr *getExpr() const { return RightExpr; }
@@ -285,10 +290,12 @@ public:
 };
 
 
-class StmtList : public NodeList<const Stmt, NT_StmtList, StmtList> {
+class StmtList : public ASTNodeList<const Stmt,
+                                    ASTNode::NT_StmtList,
+                                    StmtList> {
 public:
-  StmtList() : NodeList() {}
-  StmtList(const Stmt *s) : NodeList(s) {}
+  StmtList() : ASTNodeList() {}
+  StmtList(const Stmt *s) : ASTNodeList(s) {}
 
   virtual void visit(ASTVisitor *v) const override;
 };
@@ -299,7 +306,7 @@ public:
 /* declaration: */
 /****************/
 
-class Decl : public Node {
+class Decl : public ASTNode {
 public:
   enum IOSpecifier {
     IO_Empty  = 0,
@@ -314,10 +321,9 @@ private:
   const IOSpecifier IOSpec;
 
 public:
-
   Decl(NodeType nt, const Identifier *id, const Expr *expr,
        IOSpecifier iospec = IO_Empty) 
-    : Node(nt), Id(id), TypeExpr(expr), IOSpec(iospec) {
+    : ASTNode(nt), Id(id), TypeExpr(expr), IOSpec(iospec) {
     assert(nt == NT_VarDecl || nt == NT_TypeDecl);
   }
 
@@ -338,10 +344,12 @@ public:
 };
 
 
-class DeclList : public NodeList<const Decl, NT_DeclList, DeclList> {
+class DeclList : public ASTNodeList<const Decl,
+                                    ASTNode::NT_DeclList,
+                                    DeclList> {
 public:
-  DeclList() : NodeList() {}
-  DeclList(const Decl *d) : NodeList(d) {}
+  DeclList() : ASTNodeList() {}
+  DeclList(const Decl *d) : ASTNodeList(d) {}
 
   virtual void visit(ASTVisitor *v) const override;
 };
@@ -352,14 +360,14 @@ public:
 /* program:: */
 /*************/
 
-class Program : public Node {
+class Program : public ASTNode {
 private:
   const DeclList *Decls;
   const StmtList *Stmts;
 
 public:
   Program(const DeclList *decls, const StmtList *stmts)
-    : Node(NT_Program), Decls(decls), Stmts(stmts) {}
+    : ASTNode(NT_Program), Decls(decls), Stmts(stmts) {}
   
   const DeclList *getDecls()  const { return Decls; }
   const StmtList *getStmts()  const { return Stmts; }
@@ -390,8 +398,8 @@ class ASTVisitor {
 public:
   virtual void visitProgram(const Program *);
 
-  template<typename T, NodeType nt, typename Derived>
-  void visitNodeList(const NodeList<T, nt, Derived> *list);
+  template<typename T, ASTNode::NodeType nt, typename Derived>
+  void visitASTNodeList(const ASTNodeList<T, nt, Derived> *list);
 
   #define DECL_VISIT_LIST(Derived)                    \
     virtual void visit##Derived(const Derived *list);

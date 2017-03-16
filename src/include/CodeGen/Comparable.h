@@ -34,14 +34,14 @@ class GraphComponentID : public Comparable<Derived> {
 private:
   const std::string Label;
 
-  const Node *AST; /* AST node */
+  const ASTNode *AST; /* AST node */
 
 public:
-  GraphComponentID(const std::string label = "", const Node *ast = nullptr)
+  GraphComponentID(const std::string label = "", const ASTNode *ast = nullptr)
     : Label(label), AST(ast) {}
 
   const std::string &getLabel() const { return Label; }
-  const Node *getAST() const { return AST; }
+  const ASTNode *getAST() const { return AST; }
 
   virtual const std::string str() const = 0;
 };
@@ -53,7 +53,7 @@ private:
 
 public:
   StringID(const std::string &id, const std::string label = "",
-           const Node *ast = nullptr)
+           const ASTNode *ast = nullptr)
     : GraphComponentID<StringID>(label, ast), ID(id) {}
 
   StringID(const StringID &rhs)
@@ -76,7 +76,7 @@ private:
 
 public:
   AddressID(const void *const id, const std::string label = "",
-            const Node *ast = nullptr)
+            const ASTNode *ast = nullptr)
     : GraphComponentID<AddressID>(label, ast), ID(id) {}
 
   const void *const get() const { return ID; }

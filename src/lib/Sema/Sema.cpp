@@ -118,8 +118,9 @@ const TensorType *Sema::visitTypeExpr(const Expr *e) {
 }
 
 void Sema::visitDecl(const Decl *d) {
-  Symbol::SymbolKind k = (d->getNodeType() == NT_VarDecl) ? Symbol::SK_Variable
-                                                          : Symbol::SK_Type;
+  Symbol::SymbolKind k = (d->getNodeType() == ASTNode::NT_VarDecl)
+                         ? Symbol::SK_Variable
+                         : Symbol::SK_Type;
   const std::string &name = d->getIdentifier()->getName();
   const TensorType *type = visitTypeExpr(d->getTypeExpr());
 
@@ -163,7 +164,7 @@ void Sema::visitStmt(const Stmt *s) {
 
 void Sema::visitBinaryExpr(const BinaryExpr *be) {
   switch (be->getNodeType()) {
-  case NT_TensorExpr: {
+  case ASTNode::NT_TensorExpr: {
     const Expr *left = be->getLeft();
     left->visit(this);
     TYPE_MAP_ASSERT(left);
@@ -183,7 +184,7 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
     ExprTypes[be] = getType(dims);
     return;
   }
-  case NT_DotExpr: {
+  case ASTNode::NT_DotExpr: {
     const Expr *left = be->getLeft();
     left->visit(this);
     TYPE_MAP_ASSERT(left);

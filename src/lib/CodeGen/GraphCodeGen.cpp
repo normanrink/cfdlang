@@ -125,14 +125,14 @@ void GraphCodeGen::visitBrackExpr(const BrackExpr *be) {
 
 void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
   switch (be->getNodeType()) {
-  case NT_TensorExpr: {
+  case ASTNode::NT_TensorExpr: {
     const Expr *left = be->getLeft();
     left->visit(this);
     const Expr *right = be->getRight();
     right->visit(this);
     return;
   }
-  case NT_DotExpr: {
+  case ASTNode::NT_DotExpr: {
     const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
     if (!tensor)
       assert(0 && "internal error: cannot handle general contractions yet");

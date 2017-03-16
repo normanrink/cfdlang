@@ -13,7 +13,7 @@
                               std::cout.unsetf(std::ios::adjustfield); }
 
 
-static std::map<NodeType, std::string> NodeLabel = {
+std::map<ASTNode::NodeType, std::string> ASTNode::NodeLabel = {
   { NT_Program, "Program" },
 
   { NT_DeclList, "DeclList" },
@@ -101,14 +101,14 @@ void BinaryExpr::visit(ASTVisitor *v) const {
 }
 
 
-template<typename T, NodeType nt, typename Derived>
-NodeList<T, nt, Derived>::NodeList(T *t)
-  : NodeList() {
+template<typename T, ASTNode::NodeType nt, typename Derived>
+ASTNodeList<T, nt, Derived>::ASTNodeList(T *t)
+  : ASTNodeList() {
   append(t);
 }
 
-template<typename T, NodeType nt, typename Derived>
-void NodeList<T, nt, Derived>::print(unsigned indent) const {
+template<typename T, ASTNode::NodeType nt, typename Derived>
+void ASTNodeList<T, nt, Derived>::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
   std::stringstream ss;
@@ -124,8 +124,8 @@ void NodeList<T, nt, Derived>::print(unsigned indent) const {
   std::cout << ")\n";
 }
 
-template<typename T, NodeType nt, typename Derived>
-void NodeList<T, nt, Derived>::deepDelete() const {
+template<typename T, ASTNode::NodeType nt, typename Derived>
+void ASTNodeList<T, nt, Derived>::deepDelete() const {
   for (int i = 0; i < size(); i++) {
     elements[i]->deepDelete();
     delete elements[i];
@@ -133,21 +133,21 @@ void NodeList<T, nt, Derived>::deepDelete() const {
 }
 
 
-template class NodeList<Decl, NT_DeclList, DeclList>;
+template class ASTNodeList<Decl, ASTNode::NT_DeclList, DeclList>;
 
 void DeclList::visit(ASTVisitor *v) const {
   v->visitDeclList(this);
 }
 
 
-template class NodeList<Stmt, NT_StmtList, StmtList>;
+template class ASTNodeList<Stmt, ASTNode::NT_StmtList, StmtList>;
 
 void StmtList::visit(ASTVisitor *v) const {
   v->visitStmtList(this);
 }
 
 
-template class NodeList<Expr, NT_ExprList, ExprList>;
+template class ASTNodeList<Expr, ASTNode::NT_ExprList, ExprList>;
 
 void ExprList::visit(ASTVisitor *v) const {
   v->visitExprList(this);
@@ -290,15 +290,15 @@ void Stmt::visit(ASTVisitor *v) const {
 }
 
 
-template<typename T, NodeType nt, typename Derived>
-void ASTVisitor::visitNodeList(const NodeList<T, nt, Derived> *list) {
+template<typename T, ASTNode::NodeType nt, typename Derived>
+void ASTVisitor::visitASTNodeList(const ASTNodeList<T, nt, Derived> *list) {
   for (const auto &i : *list)
     i->visit(this);
 }
 
 #define DEF_VISIT_LIST(Derived)                          \
   void ASTVisitor::visit##Derived(const Derived *list) { \
-      visitNodeList(list);                               \
+      visitASTNodeList(list);                               \
   }
 
 DEF_VISIT_LIST(DeclList)

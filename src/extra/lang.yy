@@ -106,13 +106,19 @@ decl_list : decl_list decl { $$ = DeclList::append($1, $2); }
 decl : var_decl
      | type_decl
 
-var_decl : KW_VAR iospec identifier COLON type_expr { $$ = Decl::create(NT_VarDecl, $3, $5, (Decl::IOSpecifier)$2); }
+var_decl : KW_VAR iospec identifier COLON type_expr {
+             $$ = Decl::create(ASTNode::NT_VarDecl,
+                               $3, $5,
+                               (Decl::IOSpecifier)$2);
+           }
 
 iospec : /* empty */ { $$ = Decl::IO_Empty; }
        | KW_INPUT iospec { $$ = Decl::IO_Input | $2; }
        | KW_OUTPUT iospec { $$ = Decl::IO_Output | $2; }
 
-type_decl : KW_TYPE identifier COLON type_expr { $$ = Decl::create(NT_TypeDecl, $2, $4); }
+type_decl : KW_TYPE identifier COLON type_expr {
+              $$ = Decl::create(ASTNode::NT_TypeDecl, $2, $4);
+            }
 
 stmt_list : stmt_list stmt { $$ = StmtList::append($1, $2); }
           | stmt { $$ = StmtList::create($1); }
@@ -121,8 +127,12 @@ stmt : identifier EQUAL expr { $$ = Stmt::create($1, $3); }
 
 type_expr : expr
 
-expr : expr STAR factor { $$ = BinaryExpr::create(NT_TensorExpr, $1, $3); }
-     | expr DOT factor { $$ = BinaryExpr::create(NT_DotExpr, $1, $3); }
+expr : expr STAR factor {
+         $$ = BinaryExpr::create(ASTNode::NT_TensorExpr, $1, $3);
+       }
+     | expr DOT factor {
+         $$ = BinaryExpr::create(ASTNode::NT_DotExpr, $1, $3);
+       }
      | factor { $$ = (const Expr *)$1; }
 
 factor : identifier { $$ = (const Factor *)$1; }

@@ -2,6 +2,7 @@
 #include <string>
 
 
+#include "AST/AST.h"
 #include "CodeGen/PythonCodeGen.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
@@ -23,7 +24,7 @@ void PythonFragBuilder::buildTheanoProgramPrologue(const CodeGen *cg) {
 void PythonFragBuilder::buildNumpyDeclEpilogue(const Decl *d,
                                                const CodeGen *cg) {
   Fragment = "";
-  if (d->getNodeType() == NT_TypeDecl)
+  if (d->getNodeType() == ASTNode::NT_TypeDecl)
     return;
 
   const std::string &name = d->getIdentifier()->getName();
@@ -38,7 +39,7 @@ void PythonFragBuilder::buildTheanoDeclEpilogue(const Decl *d, CodeGen *cg) {
   // FIXME: perhaps the generated Python code should
   // reflect the user-defined type names
   Fragment = "";
-  if (d->getNodeType() == NT_TypeDecl)
+  if (d->getNodeType() == ASTNode::NT_TypeDecl)
    return;
   
   const Sema *sema = cg->getSema();

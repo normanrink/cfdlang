@@ -122,7 +122,7 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
   visitBinaryExprPrologue(be);
 
   switch (be->getNodeType()) {
-  case NT_TensorExpr: {
+  case ASTNode::NT_TensorExpr: {
     visitTensorExprPrologue(be);
 
     const Expr *left = be->getLeft();
@@ -137,7 +137,7 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
     visitTensorExprEpilogue(be);
     break;
   }
-  case NT_DotExpr: {
+  case ASTNode::NT_DotExpr: {
     visitDotExprPrologue(be);
 
     const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
