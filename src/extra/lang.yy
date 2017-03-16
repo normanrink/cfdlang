@@ -47,9 +47,7 @@
   const Stmt *stmt;
 
   const Expr *expr;
-  const Factor *factor;
 
-  const BinaryExpr *binary;
   const Identifier *identifier;
   const Integer *integer;
   const BrackExpr *brack;
@@ -70,8 +68,12 @@
 %token RPAREN
 %token LBRACK
 %token RBRACK
-%token STAR
 %token DOT
+%token PLUS
+%token DASH
+%token STAR
+%token SLASH
+%token HASH
 %token EQUAL
 %token <integer_literal> INT
 %token <string_literal> ID
@@ -83,13 +85,12 @@
 %type <decl> decl var_decl type_decl
 %type <stmts> stmt_list
 %type <stmt> stmt
-%type <expr> type_expr expr
-%type <factor> factor
+%type <expr> type_expr contract_expr expr term factor atom
 %type <identifier> identifier
 %type <integer> integer
 %type <brack> brack_expr
 %type <paren> paren_expr
-%type <exprs> expr_list
+%type <exprs> contract_expr_list
 %type <iospec> iospec
 
 %%
@@ -123,33 +124,50 @@ type_decl : KW_TYPE identifier COLON type_expr {
 stmt_list : stmt_list stmt { $$ = StmtList::append($1, $2); }
           | stmt { $$ = StmtList::create($1); }
 
-stmt : identifier EQUAL expr { $$ = Stmt::create($1, $3); }
+stmt : identifier EQUAL contract_expr { $$ = Stmt::create($1, $3); }
 
-type_expr : expr
+type_expr : identifier { $$ = (const Expr *)$1; }
+          | brack_expr { $$ = (const Expr *)$1; }
 
-expr : expr STAR factor {
-         $$ = BinaryExpr::create(ASTNode::NT_TensorExpr, $1, $3);
+contract_expr : expr
+              | expr DOT brack_expr {
+                  $$ = BinaryExpr::create(ASTNode::NT_ContractionExpr, $1, $3);
+                }
+
+expr : term
+     | term PLUS expr { $$ = BinaryExpr::create(ASTNode::NT_AddExpr, $1, $3); }
+     | term DASH expr { $$ = BinaryExpr::create(ASTNode::NT_SubExpr, $1, $3); }
+
+term : factor
+     | factor STAR term {
+         $$ = BinaryExpr::create(ASTNode::NT_MulExpr, $1, $3);
        }
-     | expr DOT factor {
-         $$ = BinaryExpr::create(ASTNode::NT_DotExpr, $1, $3);
+     | factor SLASH term {
+         $$ = BinaryExpr::create(ASTNode::NT_DivExpr, $1, $3);
        }
-     | factor { $$ = (const Expr *)$1; }
 
-factor : identifier { $$ = (const Factor *)$1; }
-       | integer { $$ = (const Factor *)$1; }
-       | brack_expr { $$ = (const Factor *)$1; }
-       | paren_expr { $$ = (const Factor *)$1; }
+factor : atom
+       | atom HASH factor {
+           $$ = BinaryExpr::create(ASTNode::NT_ProductExpr, $1, $3);
+         }
+
+atom : identifier { $$ = (const Expr *)$1; }
+     | integer { $$ = (const Expr *)$1; }
+     | brack_expr { $$ = (const Expr *)$1; }
+     | paren_expr { $$ = (const Expr *)$1; }
 
 identifier : ID { $$ = Identifier::create($1); }
 
 integer : INT { $$ = Integer::create($1); }
      
-brack_expr : LBRACK expr_list RBRACK { $$ = BrackExpr::create($2); }
+brack_expr : LBRACK contract_expr_list RBRACK { $$ = BrackExpr::create($2); }
        
-paren_expr : LPAREN expr RPAREN { $$ = ParenExpr::create($2); }
+paren_expr : LPAREN contract_expr RPAREN { $$ = ParenExpr::create($2); }
 
-expr_list : /* empty */ { $$ = ExprList::create(); }
-          | expr_list expr { $$ = ExprList::append($1, $2); }
+contract_expr_list : /* empty */ { $$ = ExprList::create(); }
+                   | contract_expr_list contract_expr {
+                       $$ = ExprList::append($1, $2);
+                     }
 
 %%
 

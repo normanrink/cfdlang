@@ -25,12 +25,16 @@ std::map<ASTNode::NodeType, std::string> ASTNode::NodeLabel = {
 
   { NT_Stmt, "Stmt" },
 
-  { NT_TensorExpr, "TensorExpr" },
-  { NT_DotExpr, "DotExpr" },
+  { NT_ContractionExpr, "ContractionExpr" },
+  { NT_AddExpr, "AddExpr" },
+  { NT_SubExpr, "SubExpr" },
+  { NT_MulExpr, "MulExpr" },
+  { NT_DivExpr, "DivExpr" },
+  { NT_ProductExpr, "ProductExpr" },
   { NT_Identifier, "Identifier" },
   { NT_Integer, "Integer" },
   { NT_BrackExpr, "BrackExpr" },
-  { NT_BrackExpr, "ParenExpr" },
+  { NT_ParenExpr, "ParenExpr" },
 };
 
 
@@ -83,7 +87,7 @@ void BinaryExpr::print(unsigned indent) const {
   EMIT_INDENT(indent)
   std::cout << "(" << str << ss.str() << "\n";
   LeftExpr->print(indent + str.length() + 1);
-  RightFactor->print(indent + str.length() + 1);
+  RightExpr->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)
   std::cout << ")\n";
 }
@@ -92,8 +96,8 @@ void BinaryExpr::deepDelete() const {
   LeftExpr->deepDelete();
   delete LeftExpr;
 
-  RightFactor->deepDelete();
-  delete RightFactor;
+  RightExpr->deepDelete();
+  delete RightExpr;
 }
 
 void BinaryExpr::visit(ASTVisitor *v) const {

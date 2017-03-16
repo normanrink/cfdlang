@@ -30,9 +30,13 @@ LPAREN    "("
 RPAREN    ")"
 LBRACK    "["
 RBRACK    "]"
-STAR      "*"
-EQUAL     "="
 DOT       "."
+PLUS      "+"
+DASH      "-"
+STAR      "*"
+SLASH     "/"
+HASH      "#"
+EQUAL     "="
 INT       [0-9]+
 ID        [_a-zA-Z][_a-zA-Z0-9]*
 
@@ -51,8 +55,12 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
 {RPAREN}    { return RPAREN; }
 {LBRACK}    { return LBRACK; }
 {RBRACK}    { return RBRACK; }
-{STAR}      { return STAR; }
 {DOT}       { return DOT; }
+{PLUS}      { return PLUS; }
+{DASH}      { return DASH; }
+{STAR}      { return STAR; }
+{SLASH}     { return SLASH; }
+{HASH}      { return HASH; }
 {EQUAL}     { return EQUAL; }
 {INT}       { 
               yylval->integer_literal = atoi(yytext);
