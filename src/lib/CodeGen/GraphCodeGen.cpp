@@ -81,27 +81,48 @@ void GraphCodeGen::visitParenExpr(const ParenExpr *pe) {
   e->visit(this);
 }
 
+std::string GraphCodeGen::emitGraphForExpr(const Expr *expr) {  
+  GCG_Graph *savedGraph = curGraph;
+  GCG_Legs savedLegs = curLegs;
+  GCG_Node *savedEnd = curEnd;
+
+  std::string result = getTemp();
+  {
+    // no need to construct and emit a graph if there is
+    // only a single identifier node:
+    if (expr->isIdentifier()) {
+      return dynamic_cast<const Identifier *>(expr)->getName();
+    }
+
+    GCG_Graph temporaryGraph;
+    curGraph = &temporaryGraph;
+    curLegs.clear();
+    curEnd = nullptr;
+
+    expr->visit(this);
+
+    emitGraph(result, curGraph);
+  }
+
+  curEnd = savedEnd;
+  curLegs = savedLegs;
+  curGraph = savedGraph;
+  
+  return result;
+}
+
 void GraphCodeGen::visitBrackExpr(const BrackExpr *be) {
   const ExprList &exprs = *be->getExprs();
   const std::string result = getTemp();
   std::stringstream ssLabel;
   std::list<std::string> temps;
 
-  GCG_Graph *graph = curGraph;
-  GCG_Legs legs = curLegs;
-  GCG_Node *end = curEnd;
 
   ssLabel << "[";
   for (unsigned i = 0; i < exprs.size(); i++) {
-    GCG_Graph temporaryGraph;
-    curGraph = &temporaryGraph;
-    curLegs.clear();
-    curEnd = nullptr;
-    exprs[i]->visit(this);
+    std::string t;
 
-    const std::string t = getTemp();
-    temps.push_back(t);
-    emitGraph(t, curGraph);
+    t = emitGraphForExpr(exprs[i]);
     
     if (i > 0) ssLabel << ", ";
     ssLabel << t;
@@ -110,29 +131,20 @@ void GraphCodeGen::visitBrackExpr(const BrackExpr *be) {
 
   emitTensorStack(result, temps);
 
-  curGraph = graph;
   const TensorType *type = getSema()->getType(be);
   const int rank = type->getRank();
   GCG_Node *n = curGraph->getNode(StringID(result, ssLabel.str(), be), rank);
 
-  curLegs = legs;
   for (int i = 0; i < rank; i++)
     curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
 
-  curEnd = end;
   updateCurEnd(n);
 } 
 
 void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
-  switch (be->getNodeType()) {
-  case ASTNode::NT_TensorExpr: {
-    const Expr *left = be->getLeft();
-    left->visit(this);
-    const Expr *right = be->getRight();
-    right->visit(this);
-    return;
-  }
-  case ASTNode::NT_DotExpr: {
+  const ASTNode::NodeType nt = be->getNodeType();
+
+  if (nt == ASTNode::NT_ContractionExpr) {
     const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
     if (!tensor)
       assert(0 && "internal error: cannot handle general contractions yet");
@@ -146,10 +158,58 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
 
     visitContraction(tensor, contractionsList);
     return;
+  } else if (nt == ASTNode::NT_ProductExpr) {
+    const Expr *left = be->getLeft();
+    left->visit(this);
+    const Expr *right = be->getRight();
+    right->visit(this);
+    return;
   }
+
+  // binary expression is NOT a contraction
+  //                  and NOT a tesnor product:
+  assert(nt != ASTNode::NT_ContractionExpr &&
+         nt != ASTNode::NT_ProductExpr &&
+         "internal error: should not be here");
+
+  const std::string tempLHS = emitGraphForExpr(be->getLeft());
+  const std::string tempRHS = emitGraphForExpr(be->getRight());
+  
+  const std::string result = getTemp();
+
+  std::string OperatorLabel;
+  switch (nt) {
+  case ASTNode::NT_AddExpr:
+    emitAddExpr(result, tempLHS, tempRHS);
+    OperatorLabel = "+";
+    break;
+  case ASTNode::NT_SubExpr:
+    emitSubExpr(result, tempLHS, tempRHS);
+    OperatorLabel = "-";
+    break;
+  case ASTNode::NT_MulExpr:
+    emitMulExpr(result, tempLHS, tempRHS);
+    OperatorLabel = "*";
+    break;
+  case ASTNode::NT_DivExpr:
+    emitDivExpr(result, tempLHS, tempRHS);
+    OperatorLabel = "/";
+    break;
   default:
     assert(0 && "internal error: invalid binary expression");
   }
+  
+  std::stringstream ssLabel;
+  ssLabel << tempLHS << " " << OperatorLabel << " " << tempRHS;
+
+  const TensorType *type = getSema()->getType(be);
+  const int rank = type->getRank();
+  GCG_Node *n = curGraph->getNode(StringID(result, ssLabel.str(), be), rank);
+
+  for (int i = 0; i < rank; i++)
+    curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
+
+  updateCurEnd(n);
 }
 
 void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
@@ -197,6 +257,12 @@ void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
 
   List indL, indR;
   unpackPairList(contrMixed, indL, indR);
+  // only contractions in 'contrL' affect the adjustments
+  // of the left indices in 'indL':
+  adjustForContractions(indL, contrL);
+  // adjustments of the right indices in 'indR' are affected by
+  // the contractions in both 'contrL' and 'contrR':
+  adjustForContractions(indR, contrL); adjustForContractions(indR, contrR);
   
   assert(indL.size() == indR.size() &&
          "internal error: mis-matched numbers of indices to be contracted");
@@ -366,7 +432,7 @@ void GraphCodeGen::replaceEdgesAtNode(GCG_Graph &graph,
                                  : e->getTgtNode();
     const int newTgtIndex = (oldNode == *e->getTgtNode())
                             ? adjustForContractions(e->getTgtIndex()) + shift
-                            : e->getSrcIndex();
+                            : e->getTgtIndex();
 
     std::stringstream ssLabel;
     ssLabel << "["    << newSrcNode->getID().getLabel() << ":" << newSrcIndex

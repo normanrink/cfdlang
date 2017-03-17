@@ -72,6 +72,9 @@ public:
                           const EdgeSet &edgesAtOldNode,
                           const GCG_Node &newNode,
                           int shift, const EdgeSet &toContract);
+
+  std::string emitGraphForExpr(const Expr *expr);
+
   virtual void
   emitContraction(const std::string &result,
                   const std::string &lhs, const List &srcIndices,
@@ -84,6 +87,19 @@ public:
                   const std::list<std::string> &temps) = 0;
   virtual void
   emitAssignment(const std::string &result, const std::string &expr) = 0;
+
+  virtual void
+  emitAddExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) = 0;
+  virtual void
+  emitSubExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) = 0;
+  virtual void
+  emitMulExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) = 0;
+  virtual void
+  emitDivExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) = 0;
 };
 
 #endif /* !__GRAPH_CODEGEN_H__ */

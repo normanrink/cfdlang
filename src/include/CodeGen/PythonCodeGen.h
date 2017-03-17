@@ -27,8 +27,12 @@ public:
                            const std::string &lhs, const std::string &rhs,
                            const TupleList &LeftAndRightIndices);
 
-  virtual void visitTensorExprEpilogue(const BinaryExpr *be) override;
-  //virtual void visitIntegerEpilogue(const Integer *i) override;
+  virtual void visitAddExprEpilogue(const BinaryExpr *be) override;
+  virtual void visitSubExprEpilogue(const BinaryExpr *be) override;
+  virtual void visitMulExprEpilogue(const BinaryExpr *be) override;
+  virtual void visitDivExprEpilogue(const BinaryExpr *be) override;
+  virtual void visitProductExprEpilogue(const BinaryExpr *be) override;
+
   virtual void visitBrackExprEpilogue(const BrackExpr *be) override;
 };
 
@@ -67,6 +71,19 @@ public:
                   const std::list<std::string> &temps) override;
   virtual void
   emitAssignment(const std::string &result, const std::string &expr) override;
+
+  virtual void
+  emitAddExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) override;
+  virtual void
+  emitSubExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) override;
+  virtual void
+  emitMulExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) override;
+  virtual void
+  emitDivExpr(const std::string &result,
+              const std::string &lhs, const std::string &rhs) override;
 };
 
 

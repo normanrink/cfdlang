@@ -38,8 +38,28 @@ const std::string NumpyDirectCG::visitContractionEpilogue(
   return result;
 }
 
-void NumpyDirectCG::visitTensorExprEpilogue(const BinaryExpr *be) {
-  Builder.buildTensorExprEpilogue(be, this);
+void NumpyDirectCG::visitAddExprEpilogue(const BinaryExpr *be) {
+  Builder.buildAddExprEpilogue(be, this);
+  append(Builder.getFragment());
+}
+
+void NumpyDirectCG::visitSubExprEpilogue(const BinaryExpr *be) {
+  Builder.buildSubExprEpilogue(be, this);
+  append(Builder.getFragment());
+}
+
+void NumpyDirectCG::visitMulExprEpilogue(const BinaryExpr *be) {
+  Builder.buildMulExprEpilogue(be, this);
+  append(Builder.getFragment());
+}
+
+void NumpyDirectCG::visitDivExprEpilogue(const BinaryExpr *be) {
+  Builder.buildDivExprEpilogue(be, this);
+  append(Builder.getFragment());
+}
+
+void NumpyDirectCG::visitProductExprEpilogue(const BinaryExpr *be) {
+  Builder.buildProductExprEpilogue(be, this);
   append(Builder.getFragment());
 }
 
@@ -114,6 +134,30 @@ void NumpyGraphCG::emitTensorStack(const std::string &result,
 void NumpyGraphCG::emitAssignment(const std::string &result,
                                   const std::string &expr) {
   Builder.buildAssignment(result, expr);
+  append(Builder.getFragment());
+}
+
+void NumpyGraphCG::emitAddExpr(const std::string &result,
+                               const std::string &lhs, const std::string &rhs) {
+  Builder.buildAddExpr(result, lhs, rhs);
+  append(Builder.getFragment());
+}
+
+void NumpyGraphCG::emitSubExpr(const std::string &result,
+                               const std::string &lhs, const std::string &rhs) {
+  Builder.buildSubExpr(result, lhs, rhs);
+  append(Builder.getFragment());
+}
+
+void NumpyGraphCG::emitMulExpr(const std::string &result,
+                               const std::string &lhs, const std::string &rhs) {
+  Builder.buildMulExpr(result, lhs, rhs);
+  append(Builder.getFragment());
+}
+
+void NumpyGraphCG::emitDivExpr(const std::string &result,
+                               const std::string &lhs, const std::string &rhs) {
+  Builder.buildDivExpr(result, lhs, rhs);
   append(Builder.getFragment());
 }
 

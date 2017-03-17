@@ -99,23 +99,42 @@ void PythonFragBuilder::buildContractionEpilogue(
                          CodeGen::getTupleListString(LeftAndRightIndices));
 }
 
-void PythonFragBuilder::buildTensorExprEpilogue(const BinaryExpr *be,
-                                                const DirectCodeGen *cg) {
+void PythonFragBuilder::buildBinOpExprEpilogue(const BinaryExpr *be,
+                                               const std::string &op,
+                                               const DirectCodeGen *cg) {
   const std::string &tempL = cg->getTempForExpr(be->getLeft());
   const std::string &tempR = cg->getTempForExpr(be->getRight());
   const std::string &result = cg->getTempForExpr(be);
 
-  buildTensorDotString(result, tempL, tempR);
+  buildBinOpExpr(result, op, tempL, tempR);
 }
 
-// Is this needed:
-/*
-void NumpyDirectCodeGen::buildIntegerEpilogue(const Integer *i,
-                                              ) {
-  const std::string &temp = getTempForExpr(i);
-  Fragment = (temp + " = " + std::to_string(i->getValue()));
+void PythonFragBuilder::buildAddExprEpilogue(const BinaryExpr *be,
+                                             const DirectCodeGen *cg) {
+  buildBinOpExprEpilogue(be, "+", cg);
 }
-*/
+
+void PythonFragBuilder::buildSubExprEpilogue(const BinaryExpr *be,
+                                             const DirectCodeGen *cg) {
+  buildBinOpExprEpilogue(be, "-", cg);
+}
+void PythonFragBuilder::buildMulExprEpilogue(const BinaryExpr *be,
+                                             const DirectCodeGen *cg) {
+  buildBinOpExprEpilogue(be, "*", cg);
+}
+void PythonFragBuilder::buildDivExprEpilogue(const BinaryExpr *be,
+                                             const DirectCodeGen *cg) {
+  buildBinOpExprEpilogue(be, "/", cg);
+}
+
+void PythonFragBuilder::buildProductExprEpilogue(const BinaryExpr *be,
+                                                 const DirectCodeGen *cg) {
+  const std::string &tempL = cg->getTempForExpr(be->getLeft());
+  const std::string &tempR = cg->getTempForExpr(be->getRight());
+  const std::string &result = cg->getTempForExpr(be);
+  
+  buildTensorDotString(result, tempL, tempR);
+}
 
 void PythonFragBuilder::buildBrackExprEpilogue(const BrackExpr *be,
                                                const DirectCodeGen *cg) {
@@ -209,3 +228,31 @@ void PythonFragBuilder::buildAssignment(const std::string &result,
   Fragment = (result + " = " + expr + "\n");
 }
 
+void PythonFragBuilder::buildBinOpExpr(const std::string &result,
+                                       const std::string &op,
+                                       const std::string &lhs,
+                                       const std::string &rhs) {
+  Fragment = (result + " = " + lhs + " " + op + " " + rhs + "\n");
+}
+
+void PythonFragBuilder::buildAddExpr(const std::string &result,
+                                     const std::string &lhs,
+                                     const std::string &rhs) {
+  buildBinOpExpr(result, "+", lhs, rhs);
+}
+
+void PythonFragBuilder::buildSubExpr(const std::string &result,
+                                     const std::string &lhs,
+                                     const std::string &rhs) {
+  buildBinOpExpr(result, "-", lhs, rhs);
+}
+void PythonFragBuilder::buildMulExpr(const std::string &result,
+                                     const std::string &lhs,
+                                     const std::string &rhs) {
+  buildBinOpExpr(result, "*", lhs, rhs);
+}
+void PythonFragBuilder::buildDivExpr(const std::string &result,
+                                     const std::string &lhs,
+                                     const std::string &rhs) {
+  buildBinOpExpr(result, "/", lhs, rhs);
+}

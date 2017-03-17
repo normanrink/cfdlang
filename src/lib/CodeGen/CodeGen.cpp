@@ -158,7 +158,7 @@ const BinaryExpr *CodeGen::extractTensorExprOrNull(const Expr *e) {
   // this should not be 'nullptr' if we get here:
   assert(tensor);
 
-  if (tensor->getNodeType() != ASTNode::NT_TensorExpr)
+  if (tensor->getNodeType() != ASTNode::NT_ProductExpr)
     return nullptr;
 
   return tensor;

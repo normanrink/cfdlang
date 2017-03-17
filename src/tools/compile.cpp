@@ -8,6 +8,9 @@
 #include "Sema/Sema.h"
 
 
+#define CODEGEN NumpyGraphCG
+//#define CODEGEN NumpyDirectCG
+
 int main(int argc, char* argv[]) {
   std::ifstream ifs;
   std::filebuf *buffer;
@@ -42,7 +45,7 @@ int main(int argc, char* argv[]) {
   Sema sema;
   sema.visitProgram(parser.getAST());
 
-  TheanoGraphCG cg(&sema);
+  CODEGEN cg(&sema);
   cg.visitProgram(parser.getAST());
   std::cout << cg.getCode();
 

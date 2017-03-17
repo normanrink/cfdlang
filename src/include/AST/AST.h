@@ -125,6 +125,8 @@ public:
   virtual ~Expr() {}
 
   virtual void visit(ASTVisitor *v) const override;
+
+  virtual bool isIdentifier() const { return false; }
 };
 
 
@@ -190,6 +192,8 @@ public:
   }
   
   virtual void visit(ASTVisitor *v) const override;
+
+  virtual bool isIdentifier() const override { return true; }
 };
 
 

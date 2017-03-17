@@ -41,7 +41,13 @@ public:
                                 const std::string &rhs, 
                                 const CodeGen::TupleList &LeftAndRightIndices);
 
-  void buildTensorExprEpilogue(const BinaryExpr *be, const DirectCodeGen *cg);
+  void buildBinOpExprEpilogue(const BinaryExpr *be, const std::string &op,
+                              const DirectCodeGen *cg);
+  void buildAddExprEpilogue(const BinaryExpr *be, const DirectCodeGen *cg);
+  void buildSubExprEpilogue(const BinaryExpr *be, const DirectCodeGen *cg);
+  void buildMulExprEpilogue(const BinaryExpr *be, const DirectCodeGen *cg);
+  void buildDivExprEpilogue(const BinaryExpr *be, const DirectCodeGen *cg);
+  void buildProductExprEpilogue(const BinaryExpr *be, const DirectCodeGen *cg);
 
   void buildBrackExprEpilogue(const BrackExpr *be, const DirectCodeGen *cg);
 
@@ -60,6 +66,17 @@ public:
                         const std::list<std::string> &temps);
 
   void buildAssignment(const std::string &result, const std::string &expr);
+
+  void buildBinOpExpr(const std::string &result, const std::string &op,
+                      const std::string &lhs, const std::string &rhs);
+  void buildAddExpr(const std::string &result,
+                    const std::string &lhs, const std::string &rhs);
+  void buildSubExpr(const std::string &result,
+                    const std::string &lhs, const std::string &rhs);
+  void buildMulExpr(const std::string &result,
+                    const std::string &lhs, const std::string &rhs);
+  void buildDivExpr(const std::string &result,
+                    const std::string &lhs, const std::string &rhs);
 };
 
 #endif /* __PYTHON_FRAGMENT_BUILDER_H__ */

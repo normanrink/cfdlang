@@ -119,26 +119,12 @@ const std::string DirectCodeGen::visitContraction(const Expr *e,
 }
 
 void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
+  const ASTNode::NodeType nt = be->getNodeType();
+
   visitBinaryExprPrologue(be);
 
-  switch (be->getNodeType()) {
-  case ASTNode::NT_TensorExpr: {
-    visitTensorExprPrologue(be);
-
-    const Expr *left = be->getLeft();
-    left->visit(this);
-    TEMP_MAP_ASSERT(left);
-
-    const Expr *right = be->getRight();
-    right->visit(this);
-    TEMP_MAP_ASSERT(right);
-
-    addTempForExpr(be);
-    visitTensorExprEpilogue(be);
-    break;
-  }
-  case ASTNode::NT_DotExpr: {
-    visitDotExprPrologue(be);
+  if (nt == ASTNode::NT_ContractionExpr) {
+    visitContractionExprPrologue(be);
 
     const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
     if (!tensor)
@@ -153,14 +139,68 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
 
     const std::string result = visitContraction(tensor, contractionsList);
     addNameForExpr(be, result);
-    visitDotExprEpilogue(be);
-    break;
+    visitContractionExprEpilogue(be);
+
+    visitBinaryExprEpilogue(be);
+    return;
   }
+  
+  // binary expression is NOT a contraction:
+  assert(nt != ASTNode::NT_ContractionExpr &&
+         "internal error: should not be here");
+
+  switch(nt) {
+  case ASTNode::NT_AddExpr:
+    visitAddExprPrologue(be);
+    break;
+  case ASTNode::NT_SubExpr:
+    visitSubExprPrologue(be);
+    break;
+  case ASTNode::NT_MulExpr:
+    visitMulExprPrologue(be);
+    break;
+  case ASTNode::NT_DivExpr:
+    visitDivExprPrologue(be);
+    break;
+  case ASTNode::NT_ProductExpr:
+    visitProductExprPrologue(be);
+    break;
+  default:
+    assert(0 && "internal error: invalid binary expression");
+  }
+
+  const Expr *left = be->getLeft();
+  left->visit(this);
+  TEMP_MAP_ASSERT(left);
+
+  const Expr *right = be->getRight();
+  right->visit(this);
+  TEMP_MAP_ASSERT(right);
+
+  addTempForExpr(be);
+
+  switch(nt) {
+  case ASTNode::NT_AddExpr:
+    visitAddExprEpilogue(be);
+    break;
+  case ASTNode::NT_SubExpr:
+    visitSubExprEpilogue(be);
+    break;
+  case ASTNode::NT_MulExpr:
+    visitMulExprEpilogue(be);
+    break;
+  case ASTNode::NT_DivExpr:
+    visitDivExprEpilogue(be);
+    break;
+  case ASTNode::NT_ProductExpr:
+    visitProductExprEpilogue(be);
+    break;
   default:
     assert(0 && "internal error: invalid binary expression");
   }
 
   visitBinaryExprEpilogue(be);
+  return;
 }
 
 void DirectCodeGen::visitIdentifier(const Identifier *id) {

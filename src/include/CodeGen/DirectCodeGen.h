@@ -55,10 +55,20 @@ public:
 
   virtual void visitBinaryExprPrologue(const BinaryExpr *be) {}
   virtual void visitBinaryExprEpilogue(const BinaryExpr *be) {}
-  virtual void visitTensorExprPrologue(const BinaryExpr *be) {}
-  virtual void visitTensorExprEpilogue(const BinaryExpr *be) {}
-  virtual void visitDotExprPrologue(const BinaryExpr *be) {}
-  virtual void visitDotExprEpilogue(const BinaryExpr *be) {}
+
+  virtual void visitContractionExprPrologue(const BinaryExpr *be) {}
+  virtual void visitContractionExprEpilogue(const BinaryExpr *be) {}
+  virtual void visitAddExprPrologue(const BinaryExpr *be) {}
+  virtual void visitAddExprEpilogue(const BinaryExpr *be) {}
+  virtual void visitSubExprPrologue(const BinaryExpr *be) {}
+  virtual void visitSubExprEpilogue(const BinaryExpr *be) {}
+  virtual void visitMulExprPrologue(const BinaryExpr *be) {}
+  virtual void visitMulExprEpilogue(const BinaryExpr *be) {}
+  virtual void visitDivExprPrologue(const BinaryExpr *be) {}
+  virtual void visitDivExprEpilogue(const BinaryExpr *be) {}
+  virtual void visitProductExprPrologue(const BinaryExpr *be) {}
+  virtual void visitProductExprEpilogue(const BinaryExpr *be) {}
+
   virtual void visitIdentifierPrologue(const Identifier *id) {}
   virtual void visitIdentifierEpilogue(const Identifier *id) {}
   virtual void visitIntegerPrologue(const Integer *i) {}
