@@ -85,12 +85,12 @@
 %type <decl> decl var_decl type_decl
 %type <stmts> stmt_list
 %type <stmt> stmt
-%type <expr> type_expr contract_expr expr term factor atom
+%type <expr> type_expr expr term factor atom
 %type <identifier> identifier
 %type <integer> integer
 %type <brack> brack_expr
 %type <paren> paren_expr
-%type <exprs> contract_expr_list
+%type <exprs> expr_list
 %type <iospec> iospec
 
 %%
@@ -124,15 +124,10 @@ type_decl : KW_TYPE identifier COLON type_expr {
 stmt_list : stmt_list stmt { $$ = StmtList::append($1, $2); }
           | stmt { $$ = StmtList::create($1); }
 
-stmt : identifier EQUAL contract_expr { $$ = Stmt::create($1, $3); }
+stmt : identifier EQUAL expr { $$ = Stmt::create($1, $3); }
 
 type_expr : identifier { $$ = (const Expr *)$1; }
           | brack_expr { $$ = (const Expr *)$1; }
-
-contract_expr : expr
-              | expr DOT contract_expr {
-                  $$ = BinaryExpr::create(ASTNode::NT_ContractionExpr, $1, $3);
-                }
 
 expr : term
      | term PLUS expr { $$ = BinaryExpr::create(ASTNode::NT_AddExpr, $1, $3); }
@@ -144,6 +139,9 @@ term : factor
        }
      | factor SLASH term {
          $$ = BinaryExpr::create(ASTNode::NT_DivExpr, $1, $3);
+       }
+     | factor DOT term {
+         $$ = BinaryExpr::create(ASTNode::NT_ContractionExpr, $1, $3);
        }
 
 factor : atom
@@ -160,14 +158,14 @@ identifier : ID { $$ = Identifier::create($1); }
 
 integer : INT { $$ = Integer::create($1); }
      
-brack_expr : LBRACK contract_expr_list RBRACK { $$ = BrackExpr::create($2); }
+brack_expr : LBRACK expr_list RBRACK { $$ = BrackExpr::create($2); }
        
-paren_expr : LPAREN contract_expr RPAREN { $$ = ParenExpr::create($2); }
+paren_expr : LPAREN expr RPAREN { $$ = ParenExpr::create($2); }
 
-contract_expr_list : /* empty */ { $$ = ExprList::create(); }
-                   | contract_expr_list contract_expr {
-                       $$ = ExprList::append($1, $2);
-                     }
+expr_list : /* empty */ { $$ = ExprList::create(); }
+          | expr_list expr {
+              $$ = ExprList::append($1, $2);
+            }
 
 %%
 
