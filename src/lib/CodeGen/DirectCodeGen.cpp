@@ -126,18 +126,37 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
   if (nt == ASTNode::NT_ContractionExpr) {
     visitContractionExprPrologue(be);
 
-    const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
-    if (!tensor)
-      assert(0 && "internal error: cannot handle general contractions yet");
-
+    std::string result;
     TupleList contractionsList;
-    if (!Sema::isListOfLists(be->getRight(), contractionsList))
-      assert(0 && "internal error: cannot have a non-list here");
+    if (Sema::isListOfLists(be->getRight(), contractionsList)) {
+      //assert(0 && "internal error: cannot have a non-list here");
+    
+      const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
+      if (!tensor)
+        assert(0 && "internal error: cannot handle general contractions yet");
 
-    if (contractionsList.empty())
-      assert(0 && "internal error: cannot have an empty list here");
+      if (contractionsList.empty())
+        assert(0 && "internal error: cannot have an empty list here");
 
-    const std::string result = visitContraction(tensor, contractionsList);
+      result = visitContraction(tensor, contractionsList);
+    } else {
+      const Expr *left = be->getLeft();
+      left->visit(this);
+      TEMP_MAP_ASSERT(left);
+
+      const Expr *right = be->getRight();
+      right->visit(this);
+      TEMP_MAP_ASSERT(right);
+
+      const int leftRank = getSema()->getType(left)->getRank();
+      TupleList indicesLR;
+      indicesLR.push_back({leftRank-1});
+      indicesLR.push_back({0});
+      result = visitContractionEpilogue(be,
+                                        getTempForExpr(left),
+                                        getTempForExpr(right),
+                                        indicesLR);
+    }
     addNameForExpr(be, result);
     visitContractionExprEpilogue(be);
 

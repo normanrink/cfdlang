@@ -130,7 +130,7 @@ type_expr : identifier { $$ = (const Expr *)$1; }
           | brack_expr { $$ = (const Expr *)$1; }
 
 contract_expr : expr
-              | expr DOT brack_expr {
+              | expr DOT contract_expr {
                   $$ = BinaryExpr::create(ASTNode::NT_ContractionExpr, $1, $3);
                 }
 

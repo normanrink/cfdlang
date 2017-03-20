@@ -8,8 +8,8 @@
 #include "Sema/Sema.h"
 
 
-#define CODEGEN NumpyGraphCG
-//#define CODEGEN NumpyDirectCG
+//#define CODEGEN TheanoGraphCG
+#define CODEGEN TheanoDirectCG
 
 int main(int argc, char* argv[]) {
   std::ifstream ifs;

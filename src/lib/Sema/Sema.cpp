@@ -172,48 +172,76 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
     const TensorType *type0 = ExprTypes[left];
     
     std::vector<std::vector<int>> lists;
-    if (!isListOfLists(be->getRight(), lists))
-      assert(0 && "semantic error: right member of contraction not a list");
+    if (isListOfLists(be->getRight(), lists)) {
+      //assert(0 && "semantic error: right member of contraction not a list");
 
-    if (lists.empty())
-      assert(0 && "semantic error: contracting over empty index list");
+      if (lists.empty())
+        assert(0 && "semantic error: contracting over empty index list");
 
-    std::vector<int> res;
-    for (int i = 0; i < type0->getRank(); i++)
-      res.push_back(type0->getDim(i));
+      std::vector<int> res;
+      for (int i = 0; i < type0->getRank(); i++)
+        res.push_back(type0->getDim(i));
   
-    std::set<int> index_set_to_erase;
-    std::list<int> index_list_to_erase;
-    for (const auto &list : lists) {
-      // skip empty lists:
-      if (!list.size())
-        continue;
+      std::set<int> index_set_to_erase;
+      std::list<int> index_list_to_erase;
+      for (const auto &list : lists) {
+        // skip empty lists:
+        if (!list.size())
+          continue;
 
-      const int dim = type0->getDim(list[0]);
-      const int rank = type0->getRank();
-      for (int i: list) {
-        if (!(i < rank)) {
-          assert(0 && "semantic error: contracted index out of range");
+        const int dim = type0->getDim(list[0]);
+        const int rank = type0->getRank();
+        for (int i: list) {
+          if (!(i < rank)) {
+            assert(0 && "semantic error: contracted index out of range");
+          }
+          if (type0->getDim(i) != dim) {
+            assert(0 && "semantic error: incompatible indices in contraction");
+          }
+          if (index_set_to_erase.count(i)) {
+            assert(0 && ("semantic error: index \'" + std::to_string(i)
+                         + "\' appears multiple times").c_str());
+          }
+          index_set_to_erase.insert(i);
+          index_list_to_erase.push_back(i);
         }
-        if (type0->getDim(i) != dim) {
-          assert(0 && "semantic error: incompatible indices in contraction");
-        }
-        if (index_set_to_erase.count(i)) {
-          assert(0 && ("semantic error: index \'" + std::to_string(i)
-                       + "\' appears multiple times").c_str());
-        }
-        index_set_to_erase.insert(i);
-        index_list_to_erase.push_back(i);
       }
+
+      index_list_to_erase.sort();
+      int erased = 0;
+      for (int i : index_list_to_erase)
+        res.erase(res.begin() + i - (erased++));
+
+      ExprTypes[be] = getType(res);
+      return;
+    } else {
+      const Expr *right = be->getRight();
+      right->visit(this);
+      TYPE_MAP_ASSERT(right);
+      const TensorType *type1 = ExprTypes[right];
+
+      const int rank0 = type0->getRank();
+      const int rank1 = type1->getRank();
+
+      // contract the last index from 'left' with the first index from 'right':
+      if (rank0 == 0 || rank1 == 0) {
+        assert(0 && "semantic error: cannot contract scalar");
+      }
+      if (type0->getDim(rank0-1) != type1->getDim(0)) {
+        assert(0 && "semantic error: contracted dimensions do not match");
+      }
+
+      std::vector<int> res;
+      for (int i = 0; i < (rank0-1); i++)
+        res.push_back(type0->getDim(i));
+      for (int i = 1; i < rank1; i++)
+        res.push_back(type1->getDim(i));
+
+      ExprTypes[be] = getType(res);
+      return;
     }
-
-    index_list_to_erase.sort();
-    int erased = 0;
-    for (int i : index_list_to_erase)
-      res.erase(res.begin() + i - (erased++));
-
-    ExprTypes[be] = getType(res);
-    return;
+    // each branch of the above if-statement should return:
+    assert(0 && "internal error: should have returned");
   }
 
   // binary expression is NOT a contraction:

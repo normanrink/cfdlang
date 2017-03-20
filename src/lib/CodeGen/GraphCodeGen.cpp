@@ -32,14 +32,14 @@ GraphCodeGen::~GraphCodeGen() {
 void GraphCodeGen::visitProgram(const Program *p) {
   visitProgramPrologue(p);
 
-  curGraph = nullptr;
-  curLegs.clear();
-  curEnd = nullptr;
+  //curGraph = nullptr;
+  //curLegs.clear();
+  //curEnd = nullptr;
 
   ASTVisitor::visitProgram(p);
   
-  for(auto &g : Graphs)
-    emitGraph(g.first, g.second);
+  //for(auto &g : Graphs)
+  //  emitGraph(g.first, g.second);
 
   visitProgramEpilogue(p);
 }
@@ -52,12 +52,16 @@ void GraphCodeGen::visitDecl(const Decl *d) {
 void GraphCodeGen::visitStmt(const Stmt *s) {
   const Expr *expr = s->getExpr();
 
-  curGraph = new GCG_Graph;
+  GCG_Graph temporaryGraph;
+  curGraph = &temporaryGraph;
   curLegs.clear();
+  curEnd = nullptr;
   expr->visit(this);
 
   const std::string &name = s->getIdentifier()->getName();
-  Graphs.push_back(GCG_LabeledGraph(name, curGraph));
+  emitGraph(name, curGraph);
+  //Graphs.push_back(GCG_LabeledGraph(name, curGraph));
+  //Graphs.push_back(GCG_LabeledGraph(name, curGraph));
 }
 
 void GraphCodeGen::visitIdentifier(const Identifier *id) {
@@ -123,6 +127,7 @@ void GraphCodeGen::visitBrackExpr(const BrackExpr *be) {
     std::string t;
 
     t = emitGraphForExpr(exprs[i]);
+    temps.push_back(t);
     
     if (i > 0) ssLabel << ", ";
     ssLabel << t;
@@ -146,18 +151,47 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
 
   if (nt == ASTNode::NT_ContractionExpr) {
     const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
-    if (!tensor)
-      assert(0 && "internal error: cannot handle general contractions yet");
 
     TupleList contractionsList;
-    if (!getSema()->isListOfLists(be->getRight(), contractionsList))
-      assert(0 && "internal error: cannot have a non-list here");
+    if (getSema()->isListOfLists(be->getRight(), contractionsList)) {
+      //assert(0 && "internal error: cannot have a non-list here");
 
-    if (contractionsList.empty())
-      assert(0 && "internal error: cannot have an empty list here");
+      if (!tensor)
+        assert(0 && "internal error: cannot handle general contractions yet");
 
-    visitContraction(tensor, contractionsList);
-    return;
+      if (contractionsList.empty())
+        assert(0 && "internal error: cannot have an empty list here");
+
+      visitContraction(tensor, contractionsList);
+      return;
+    } else {
+      const std::string tempLHS = emitGraphForExpr(be->getLeft());
+      const std::string tempRHS = emitGraphForExpr(be->getRight());
+
+      const TensorType *leftType = getSema()->getType(be->getLeft());
+      const int leftRank = leftType->getRank();
+
+      const std::string result = getTemp();
+      emitContraction(result,
+                      tempLHS, {leftRank-1},
+                      tempRHS, {0});
+  
+      std::stringstream ssLabel;
+      ssLabel << tempLHS << " . " << tempRHS;
+
+      const TensorType *type = getSema()->getType(be);
+      const int rank = type->getRank();
+      GCG_Node *n = curGraph->getNode(StringID(result, ssLabel.str(), be),
+                                      rank);
+
+      for (int i = 0; i < rank; i++)
+        curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
+
+      updateCurEnd(n);
+      return;
+    }
+    // each branch of the above if-statement should return:
+    assert(0 && "internal error: should have returned");
   } else if (nt == ASTNode::NT_ProductExpr) {
     const Expr *left = be->getLeft();
     left->visit(this);
