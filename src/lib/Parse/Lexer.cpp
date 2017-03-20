@@ -3,8 +3,25 @@
 #include <string>
 
 
-#include "Lexer.h"
+#include "Parse/Lexer.h"
 
+
+#include "lex.yy.h"
+
+
+Lexer::Lexer(const char *input) 
+  : Input(input) {
+  yylex_init(&Scanner);
+  yy_scan_string(Input, Scanner);
+}
+
+Lexer::~Lexer() {
+  yylex_destroy(Scanner);
+}
+
+int Lexer::lex() {
+  return yylex(&Val, Scanner);    
+}
 
 std::map<int, const std::string> Lexer::TokenStrings = {
   { KW_VAR, "KW_VAR" },

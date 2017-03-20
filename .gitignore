@@ -1,9 +1,2 @@
 *.o
-lang.tab.*
-lex.yy.*
-parser
-lexer
-Parse
-Lex
-Compile
 *.sw?
