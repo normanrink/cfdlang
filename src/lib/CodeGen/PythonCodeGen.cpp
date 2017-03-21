@@ -158,25 +158,26 @@ void TheanoEmitter::visitProductExpr(const ProductExpr *en) {
 
 void TheanoEmitter::visitStackExpr(const StackExpr *en) {
   std::string result = getResultTemp();
-  append(result + " = " + getModulePrefix() + ".stack([");
+  std::string code = (result + " = " + getModulePrefix() + ".stack([");
 
   for (int i = 0; i < en->getNumChildren(); i++) {
     const ExprNode *child = en->getChild(i);
 
     if (child->isIdentifier()) {
-      append(child->getSymbol()->getName());
+      code += child->getSymbol()->getName();
     } else {
       const std::string temp = getTemp();
       setResultTemp(temp);
       child->visit(this);
-      append(temp);
+      code += getResultTemp();
     }
 
-    if (i != en->getNumChildren()-1)
-      append(", ");
+    if (i != (en->getNumChildren()-1))
+      code += (", ");
   }
 
-  append("])\n");
+  code += ("])\n");
+  append(code);
   setResultTemp(result);
 }
 
