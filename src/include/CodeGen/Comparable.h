@@ -34,7 +34,7 @@ class GraphComponentID : public Comparable<Derived> {
 private:
   const std::string Label;
 
-  const ASTNode *AST; /* AST node */
+  const ASTNode *AST; /* corresponding AST node */
 
 public:
   GraphComponentID(const std::string label = "", const ASTNode *ast = nullptr)
@@ -60,7 +60,7 @@ public:
     : GraphComponentID<StringID>(rhs.getLabel(), rhs.getAST()),
       ID(rhs.str()) {}
 
-  const std::string str() const final { return ID; }
+  virtual const std::string str() const final { return ID; }
   bool operator==(const StringID &id) const final {
     return ID == id.str();
   }
@@ -69,23 +69,23 @@ public:
   }
 };
 
-
-class AddressID : public GraphComponentID<AddressID> {
+template<typename T>
+class AddressID : public GraphComponentID<AddressID<T>> {
 private:
-  const void *const ID;
+  const T * ID;
 
 public:
-  AddressID(const void *const id, const std::string label = "",
+  AddressID(const T * id, const std::string label = "",
             const ASTNode *ast = nullptr)
     : GraphComponentID<AddressID>(label, ast), ID(id) {}
 
-  const void *const get() const { return ID; }
+  const T * get() const { return ID; }
 
   AddressID(const AddressID &rhs, const std::string label = "")
     : GraphComponentID<AddressID>(rhs.getLabel(), rhs.getAST()),
       ID(rhs.get()) {}
 
-  const std::string str() const {
+  virtual const std::string str() const final {
     std::stringstream ss;
     ss << std::hex << ID;
     return ss.str();
@@ -97,4 +97,3 @@ public:
 
 
 #endif /* __COMPARABLE_H__ */
-

@@ -2,52 +2,69 @@
 #ifndef __PYTHON_CODEGEN_H__
 #define __PYTHON_CODEGEN_H__
 
+#include <list>
 #include <string>
 
 
 #include "CodeGen/DirectCodeGen.h"
+#include "CodeGen/ExprTree.h"
 #include "CodeGen/GraphCodeGen.h"
-#include "CodeGen/PythonFragmentBuilder.h"
+//#include "CodeGen/PythonFragmentBuilder.h"
 
 
-class NumpyDirectCG : public DirectCodeGen {
+class TheanoEmitter : public ExprTreeVisitor {
+private:
+  CodeGen *CG;
+
+  const std::string ModulePrefix;
+
+  std::string resultTemp;
+
+public:
+  TheanoEmitter(CodeGen *cg, const std::string &prefix = "T")
+    : CG(cg), ModulePrefix(prefix) {}
+
+  void codeGen(const Program *p);
+  const std::string &getCode() const { return CG->getCode(); }
+
 protected:
-  PythonFragBuilder Builder;
+  const std::string &getModulePrefix() const { return ModulePrefix; }
 
-public:
-  NumpyDirectCG(const Sema *sema, const std::string &prefix = "np");
+  std::string getResultTemp() const { return resultTemp; }
+  void setResultTemp(const std::string &temp) { resultTemp = temp; }
 
-  virtual void visitProgramPrologue(const Program *p) override;
+  #define DECL_VISIT_EXPR_NODE(Kind)                            \
+  virtual void visit##Kind##Expr(const Kind##Expr *e) override;
 
-  virtual void visitDeclEpilogue(const Decl *d) override;
-  virtual void visitStmtEpilogue(const Stmt *s) override;
+  DECL_VISIT_EXPR_NODE(Add)
+  DECL_VISIT_EXPR_NODE(Sub)
+  DECL_VISIT_EXPR_NODE(Mul)
+  DECL_VISIT_EXPR_NODE(Div)
+  DECL_VISIT_EXPR_NODE(Contraction)
+  DECL_VISIT_EXPR_NODE(Product)
+  DECL_VISIT_EXPR_NODE(Stack)
+  DECL_VISIT_EXPR_NODE(Identifier)
 
-  virtual const std::string
-  visitContractionEpilogue(const Expr *e,
-                           const std::string &lhs, const std::string &rhs,
-                           const TupleList &LeftAndRightIndices) override;
+  #undef DECL_VISIT_EXPR_NODE
 
-  virtual void visitAddExprEpilogue(const BinaryExpr *be) override;
-  virtual void visitSubExprEpilogue(const BinaryExpr *be) override;
-  virtual void visitMulExprEpilogue(const BinaryExpr *be) override;
-  virtual void visitDivExprEpilogue(const BinaryExpr *be) override;
-  virtual void visitProductExprEpilogue(const BinaryExpr *be) override;
+  void visitBinOpExpr(const ExprNode *en, const std::string &op);
+  void visitTensordotExpr(const ExprNode *en, const std::string &axes);
 
-  virtual void visitBrackExprEpilogue(const BrackExpr *be) override;
+// helper methods that implement functionality from the code generator 'cg':
+private:
+  std::string getTemp() { return CG->getTemp(); }
+  void append(const std::string &code) { CG->append(code); }
+
+  const Sema *getSema() const { return CG->getSema(); }
+  void addExprNode(const Expr *expr, const ExprNode *en) {
+    CG->addExprNode(expr, en);
+  }
+  const ExprNode *getExprNode(const Expr *expr) const {
+    return CG->getExprNode(expr);
+  }
 };
 
-
-class TheanoDirectCG : public NumpyDirectCG {
-public:
-  TheanoDirectCG(const Sema *sema, const std::string &prefix = "T");
-
-  virtual void visitProgramPrologue(const Program *p) override;
-  virtual void visitProgramEpilogue(const Program *p) override;
-
-  virtual void visitDeclEpilogue(const Decl *d) override;
-};
-
-
+/*
 class NumpyGraphCG : public GraphCodeGen {
 protected:
   PythonFragBuilder Builder;
@@ -96,6 +113,6 @@ public:
 
   virtual void visitDeclEpilogue(const Decl *d) override;
 };
-
+*/
 #endif /* __PYTHON_CODEGEN_H__ */
 

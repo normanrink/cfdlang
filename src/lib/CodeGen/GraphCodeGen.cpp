@@ -6,10 +6,8 @@
 #include <sstream>
 
 
-#include "AST/AST.h"
+#include "CodeGen/ExprTree.h"
 #include "CodeGen/GraphCodeGen.h"
-#include "Sema/Sema.h"
-#include "Sema/TensorType.h"
 
 
 void GraphCodeGen::updateCurEnd(GCG_Node *n) {
@@ -23,51 +21,48 @@ void GraphCodeGen::updateCurEnd(GCG_Node *n) {
 }
 
 GraphCodeGen::GraphCodeGen(const Sema *sema)
-  : CodeGen(sema) {}
-
-GraphCodeGen::~GraphCodeGen() {
-  for (const auto &it : Graphs) delete it.second;
-}
-
-void GraphCodeGen::visitProgram(const Program *p) {
-  visitProgramPrologue(p);
-
-  //curGraph = nullptr;
-  //curLegs.clear();
-  //curEnd = nullptr;
-
-  ASTVisitor::visitProgram(p);
-  
-  //for(auto &g : Graphs)
-  //  emitGraph(g.first, g.second);
-
-  visitProgramEpilogue(p);
-}
-
-void GraphCodeGen::visitDecl(const Decl *d) {
-  visitDeclPrologue(d);
-  visitDeclEpilogue(d);
+  : CodeGen(sema), curGraph(nullptr), curEnd(nullptr) {
+  curLegs.clear();
 }
 
 void GraphCodeGen::visitStmt(const Stmt *s) {
-  const Expr *expr = s->getExpr();
+  CodeGen::visitStmt(s);
 
-  GCG_Graph temporaryGraph;
-  curGraph = &temporaryGraph;
-  curLegs.clear();
-  curEnd = nullptr;
-  expr->visit(this);
+  buildExprTreeForExpr(s->getExpr());
+}
 
-  const std::string &name = s->getIdentifier()->getName();
-  emitGraph(name, curGraph);
-  //Graphs.push_back(GCG_LabeledGraph(name, curGraph));
-  //Graphs.push_back(GCG_LabeledGraph(name, curGraph));
+void GraphCodeGen::buildExprTreeForExpr(const Expr *expr) {
+  GCG_Graph *savedGraph = curGraph;
+  GCG_Legs savedLegs = curLegs;
+  GCG_Node *savedEnd = curEnd;
+
+  {
+    GCG_Graph temporaryGraph;
+    curGraph = &temporaryGraph;
+    curLegs.clear();
+    curEnd = nullptr;
+
+    // This builds the graph for 'expr' into 'curGraph':
+    expr->visit(this);
+
+    addExprNode(expr, buildExprTreeForGraph(curGraph));
+  }
+
+  curGraph = savedGraph;
+  curLegs = savedLegs;
+  curEnd = savedEnd;
 }
 
 void GraphCodeGen::visitIdentifier(const Identifier *id) {
-  const TensorType *type = getSema()->getType(id);
+  const Sema &sema = *getSema();
+
+  const std::string &name = id->getName();
+  const Symbol *sym = sema.getSymbol(name);
+  const TensorType *type = sema.getType(id);
   const int rank = type->getRank();
-  GCG_Node *n = curGraph->getNode(StringID(getTemp(), id->getName(), id), rank);
+
+  const ExprNode *resNode = IdentifierExpr::create(sym);
+  GCG_Node *n = curGraph->getNode(NodeID(resNode, name, id), rank);
 
   for (int i = 0; i < rank; i++)
     curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
@@ -85,77 +80,40 @@ void GraphCodeGen::visitParenExpr(const ParenExpr *pe) {
   e->visit(this);
 }
 
-std::string GraphCodeGen::emitGraphForExpr(const Expr *expr) {  
-  GCG_Graph *savedGraph = curGraph;
-  GCG_Legs savedLegs = curLegs;
-  GCG_Node *savedEnd = curEnd;
-
-  std::string result = getTemp();
-  {
-    // no need to construct and emit a graph if there is
-    // only a single identifier node:
-    if (expr->isIdentifier()) {
-      return dynamic_cast<const Identifier *>(expr)->getName();
-    }
-
-    GCG_Graph temporaryGraph;
-    curGraph = &temporaryGraph;
-    curLegs.clear();
-    curEnd = nullptr;
-
-    expr->visit(this);
-
-    emitGraph(result, curGraph);
-  }
-
-  curEnd = savedEnd;
-  curLegs = savedLegs;
-  curGraph = savedGraph;
-  
-  return result;
-}
-
 void GraphCodeGen::visitBrackExpr(const BrackExpr *be) {
+  std::vector<const ExprNode *> members;
+
   const ExprList &exprs = *be->getExprs();
-  const std::string result = getTemp();
-  std::stringstream ssLabel;
-  std::list<std::string> temps;
-
-
-  ssLabel << "[";
   for (unsigned i = 0; i < exprs.size(); i++) {
-    std::string t;
+    buildExprTreeForExpr(exprs[i]);
+    EXPR_TREE_MAP_ASSERT(exprs[i]);
 
-    t = emitGraphForExpr(exprs[i]);
-    temps.push_back(t);
-    
-    if (i > 0) ssLabel << ", ";
-    ssLabel << t;
+    const ExprNode *en = getExprNode(exprs[i]);
+    members.push_back(en);
   }
-  ssLabel << "]";
 
-  emitTensorStack(result, temps);
+  const ExprNode *resNode = StackExpr::create(members);
+  addExprNode(be, resNode);
 
   const TensorType *type = getSema()->getType(be);
   const int rank = type->getRank();
-  GCG_Node *n = curGraph->getNode(StringID(result, ssLabel.str(), be), rank);
+  GCG_Node *n = curGraph->getNode(NodeID(resNode, "stack", be), rank);
 
   for (int i = 0; i < rank; i++)
     curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
 
   updateCurEnd(n);
-} 
+}
 
 void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
   const ASTNode::NodeType nt = be->getNodeType();
 
-  if (nt == ASTNode::NT_ContractionExpr) {
-    const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
-
+  if (nt == ASTNode::NT_ContractionExpr)
+  {
     TupleList contractionsList;
-    if (getSema()->isListOfLists(be->getRight(), contractionsList)) {
-      //assert(0 && "internal error: cannot have a non-list here");
-
+    if (getSema()->isListOfLists(be->getRight(), contractionsList))
+    {
+      const BinaryExpr *tensor = extractTensorExprOrNull(be->getLeft());
       if (!tensor)
         assert(0 && "internal error: cannot handle general contractions yet");
 
@@ -163,82 +121,87 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
         assert(0 && "internal error: cannot have an empty list here");
 
       visitContraction(tensor, contractionsList);
-      return;
-    } else {
-      const std::string tempLHS = emitGraphForExpr(be->getLeft());
-      const std::string tempRHS = emitGraphForExpr(be->getRight());
+    }
+    else
+    {
+      const Expr *left = be->getLeft();
+      buildExprTreeForExpr(left);
+      EXPR_TREE_MAP_ASSERT(left);
+
+      const Expr *right = be->getRight();
+      buildExprTreeForExpr(right);
+      EXPR_TREE_MAP_ASSERT(right);
+
+      const ExprNode *lhs = getExprNode(left);
+      const ExprNode *rhs = getExprNode(right);
 
       const TensorType *leftType = getSema()->getType(be->getLeft());
       const int leftRank = leftType->getRank();
-
-      const std::string result = getTemp();
-      emitContraction(result,
-                      tempLHS, {leftRank-1},
-                      tempRHS, {0});
-  
-      std::stringstream ssLabel;
-      ssLabel << tempLHS << " . " << tempRHS;
+      const ExprNode *resNode = ContractionExpr::create(lhs, {leftRank-1},
+                                                        rhs, {0});
+      addExprNode(be, resNode);
 
       const TensorType *type = getSema()->getType(be);
       const int rank = type->getRank();
-      GCG_Node *n = curGraph->getNode(StringID(result, ssLabel.str(), be),
-                                      rank);
+      GCG_Node *n = curGraph->getNode(NodeID(resNode, ".", be), rank);
 
       for (int i = 0; i < rank; i++)
         curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
 
       updateCurEnd(n);
-      return;
     }
-    // each branch of the above if-statement should return:
-    assert(0 && "internal error: should have returned");
-  } else if (nt == ASTNode::NT_ProductExpr) {
-    const Expr *left = be->getLeft();
-    left->visit(this);
-    const Expr *right = be->getRight();
-    right->visit(this);
+    return;
+  }
+  else if (nt == ASTNode::NT_ProductExpr) {
+    // simply add nodes to 'curGraph':
+    be->getLeft()->visit(this);
+    be->getRight()->visit(this);
     return;
   }
 
-  // binary expression is NOT a contraction
-  //                  and NOT a tesnor product:
+  // binary expression is NOT a contraction, and NOT a (tensor) product:
   assert(nt != ASTNode::NT_ContractionExpr &&
          nt != ASTNode::NT_ProductExpr &&
          "internal error: should not be here");
 
-  const std::string tempLHS = emitGraphForExpr(be->getLeft());
-  const std::string tempRHS = emitGraphForExpr(be->getRight());
-  
-  const std::string result = getTemp();
+  const Expr *left = be->getLeft();
+  buildExprTreeForExpr(left);
+  EXPR_TREE_MAP_ASSERT(left);
 
+  const Expr *right = be->getRight();
+  buildExprTreeForExpr(right);
+  EXPR_TREE_MAP_ASSERT(right);
+
+  const ExprNode *resNode,
+                 *lhs = getExprNode(left),
+                 *rhs = getExprNode(right);
   std::string OperatorLabel;
-  switch (nt) {
-  case ASTNode::NT_AddExpr:
-    emitAddExpr(result, tempLHS, tempRHS);
-    OperatorLabel = "+";
-    break;
-  case ASTNode::NT_SubExpr:
-    emitSubExpr(result, tempLHS, tempRHS);
-    OperatorLabel = "-";
-    break;
-  case ASTNode::NT_MulExpr:
-    emitMulExpr(result, tempLHS, tempRHS);
-    OperatorLabel = "*";
-    break;
-  case ASTNode::NT_DivExpr:
-    emitDivExpr(result, tempLHS, tempRHS);
-    OperatorLabel = "/";
-    break;
-  default:
-    assert(0 && "internal error: invalid binary expression");
+  switch(nt) {
+    case ASTNode::NT_AddExpr:
+      resNode = AddExpr::create(lhs, rhs);
+      OperatorLabel = "+";
+      break;
+    case ASTNode::NT_SubExpr:
+      resNode = SubExpr::create(lhs, rhs);
+      OperatorLabel = "-";
+      break;
+    case ASTNode::NT_MulExpr:
+      resNode = MulExpr::create(lhs, rhs);
+      OperatorLabel = "*";
+      break;
+    case ASTNode::NT_DivExpr:
+      resNode = DivExpr::create(lhs, rhs);
+      OperatorLabel = "/";
+      break;
+    default:
+      assert(0 && "internal error: invalid binary expression");
   }
-  
-  std::stringstream ssLabel;
-  ssLabel << tempLHS << " " << OperatorLabel << " " << tempRHS;
+
+  addExprNode(be, resNode);
 
   const TensorType *type = getSema()->getType(be);
   const int rank = type->getRank();
-  GCG_Node *n = curGraph->getNode(StringID(result, ssLabel.str(), be), rank);
+  GCG_Node *n = curGraph->getNode(NodeID(resNode, OperatorLabel, be), rank);
 
   for (int i = 0; i < rank; i++)
     curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
@@ -313,9 +276,10 @@ void GraphCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
 
     std::stringstream ssLabel;
     ssLabel << "("    << srcNode->getID().getLabel() << ":" << srcIndex
-            << " -- " << tgtNode->getID().getLabel() << ":" << tgtIndex << ")";
+            << " -- " << tgtNode->getID().getLabel() << ":" << tgtIndex
+            << ")";
 
-    bool success = curGraph->addEdge(StringID(getTemp(), ssLabel.str(), e),
+    bool success = curGraph->addEdge(EdgeID(getTemp(), ssLabel.str(), e),
                                      srcNode, srcIndex, tgtNode, tgtIndex);
     assert(success && "internal error: should not fail to add edge");
   }
@@ -338,20 +302,7 @@ void GraphCodeGen::dump(const GCG_Graph &g) {
   of.close();
 }
 
-void GraphCodeGen::dump() const {
-  for(const auto &g : Graphs)
-    dump(*g.second);
-}
-
-static const std::string getNodeIdString(const GraphCodeGen::GCG_Node &n) {
-  const StringID &nID = n.getID();
-  if (dynamic_cast<const Identifier *>(nID.getAST()))
-    return nID.getLabel();
-  else
-    return nID.str();
-}
-
-void GraphCodeGen::emitGraph(const std::string &name, GCG_Graph *graph) {
+const ExprNode *GraphCodeGen::buildExprTreeForGraph(GCG_Graph *graph) {
   bool success;
 
   while (graph->getNumEdges()) {
@@ -374,11 +325,11 @@ void GraphCodeGen::emitGraph(const std::string &name, GCG_Graph *graph) {
       srcIndices.push_back(e->getSrcIndex());
       tgtIndices.push_back(e->getTgtIndex());
     }
-      
-    const std::string result = getTemp();
-    emitContraction(result,
-                    getNodeIdString(src), srcIndices,
-                    getNodeIdString(tgt), tgtIndices);
+
+    const ExprNode *resNode = ContractionExpr::create(src.getID().get(),
+                                                      srcIndices,
+                                                      tgt.getID().get(),
+                                                      tgtIndices);
 
     // find edges that remain at 'src' or 'tgt' after the contraction:
     EdgeSet edgesAtSrc, edgesAtTgt;
@@ -386,7 +337,7 @@ void GraphCodeGen::emitGraph(const std::string &name, GCG_Graph *graph) {
     getRemainingEdgesAtNode(edgesAtTgt, tgt, toContract);
 
     int rank = src.getRank() + tgt.getRank() - 2*toContract.size();
-    GCG_Node *n = graph->getNode(StringID(result, result, nullptr), rank);
+    GCG_Node *n = graph->getNode(NodeID(resNode, "contraction"), rank);
     n->updateSequence(&src, &tgt);
 
     replaceEdgesAtNode(*graph, src, edgesAtSrc, *n,
@@ -408,17 +359,14 @@ void GraphCodeGen::emitGraph(const std::string &name, GCG_Graph *graph) {
   // graph has no edges left; hence, form the tensor product
   // of the remaining nodes from left to right:
   const GCG_Node *n = graph->getStartNode();
-  std::string temp = getNodeIdString(*n);
+  const ExprNode *resNode = n->getID().get();
   while (n->hasSucc()) {
     const GCG_Node *succ = n->getSucc();
-    const std::string &result = getTemp();
-    
-    emitTensorProduct(result, temp, succ->getID().str());
-    temp = result;
+    resNode = ProductExpr::create(resNode, succ->getID().get());
     n = succ;
   }
 
-  emitAssignment(name, temp);
+  return resNode;
 }
 
 void GraphCodeGen::getRemainingEdgesAtNode(EdgeSet &result, const GCG_Node &n,
@@ -469,12 +417,11 @@ void GraphCodeGen::replaceEdgesAtNode(GCG_Graph &graph,
                             : e->getTgtIndex();
 
     std::stringstream ssLabel;
-    ssLabel << "["    << newSrcNode->getID().getLabel() << ":" << newSrcIndex
+    ssLabel << "("    << newSrcNode->getID().getLabel() << ":" << newSrcIndex
             << " -- " << newTgtNode->getID().getLabel() << ":" << newTgtIndex
-            << "]";
+            << ")";
     
-    GCG_Edge newEdge(StringID(getTemp(), ssLabel.str(),
-                              nullptr /* no AST node */),
+    GCG_Edge newEdge(EdgeID(getTemp(), ssLabel.str()),
                      newSrcNode, newSrcIndex, newTgtNode, newTgtIndex);
 
     bool success = graph.eraseEdge(e->getID());

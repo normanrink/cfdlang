@@ -155,40 +155,7 @@ void PythonFragBuilder::buildBrackExprEpilogue(const BrackExpr *be,
 
 
 void PythonFragBuilder::buildTheanoProgramEpilogue(CodeGen *cg) {
-  Fragment = "\n";
 
-  const Sema *sema = cg->getSema();
-  if (sema->inputs_size() == 0 || sema->outputs_size() == 0)
-    return;
-
-  #define IO_SYMBOL_LIST(inout)              \
-    std::string inout##List;                 \
-    {                                        \
-      inout##List = "[";                     \
-      bool first = true;                     \
-      for (auto i = sema->inout##_begin(),    \
-                e = sema->inout##_end();      \
-           i != e; i++) {                    \
-        const Symbol *sym = *i;              \
-        if (!first) inout##List += ", ";     \
-        inout##List += sym->getName();       \
-        first = false;                       \
-      }                                      \
-      inout##List += "]";                    \
-    }
-  
-  IO_SYMBOL_LIST(inputs)
-
-  std::string output;
-  if (sema->outputs_size() == 1) {
-    const Symbol *sym = *sema->outputs_begin();
-    Fragment += (cg->getTemp() + " = theano_function(" + inputsList + ", "
-                                                 + sym->getName() + ")\n");
-  } else {
-    IO_SYMBOL_LIST(outputs)
-    Fragment += (cg->getTemp() + " = theano_function(" + inputsList + ", "
-                                                       + outputsList + ")\n");
-  }
 }
 
 void PythonFragBuilder::buildContraction(const std::string &result,

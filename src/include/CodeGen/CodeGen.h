@@ -12,6 +12,9 @@
 #include "Sema/TensorType.h"
 
 
+class ExprNode;
+
+
 class CodeGen : public ASTVisitor {
 private:
   const Sema *TheSema;
@@ -22,8 +25,24 @@ private:
   
   std::map<const TensorType *, std::string> EmittedTypes;
 
+private:
+  // map each 'Expr' in the AST to an expression tree, rooted at an 'ExprNode':
+  std::map<const Expr *, const ExprNode *> ExprTrees;
+
+protected:
+  void EXPR_TREE_MAP_ASSERT(const Expr *expr) const ;
+
+public:
+  void addExprNode(const Expr *expr, const ExprNode *en) {
+    ExprTrees[expr] = en;
+  }
+  const ExprNode *getExprNode(const Expr *expr) const {
+    return ExprTrees.at(expr);
+  }
+
 public:
   CodeGen(const Sema *sema);
+  virtual ~CodeGen();
 
   const Sema *getSema() const { return TheSema; }
   std::string getTemp();
@@ -35,6 +54,19 @@ public:
   const std::string &getEmittedTypeName(const TensorType *type) const;
   void addEmittedType(const TensorType *type, const std::string &name);
 
+private:
+  std::list<const Decl *> Declarations;
+  std::list<const Stmt *> Statements;
+
+public:
+  virtual void visitDecl(const Decl *d) override;
+  virtual void visitStmt(const Stmt *s) override;
+
+  const std::list<const Decl *> &getDeclarations() const {
+    return Declarations;
+  }
+  const std::list<const Stmt *> &getStatements() const { return Statements; }
+  
 // useful helpers:
 public:
   typedef std::vector<int> List;
@@ -64,6 +96,7 @@ public:
   static void adjustForContractions(List &indices,
                                     const TupleList &contractions);
 
+  static const std::string getListString(const List &list);
   static const std::string getTupleListString(const TupleList &list);
 
   static const BinaryExpr *extractTensorExprOrNull(const Expr *e);

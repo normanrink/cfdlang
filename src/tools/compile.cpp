@@ -3,13 +3,12 @@
 #include <iostream>
 
 
+#include "CodeGen/DirectCodeGen.h"
+#include "CodeGen/GraphCodeGen.h"
 #include "CodeGen/PythonCodeGen.h"
 #include "Parse/Parser.h"
 #include "Sema/Sema.h"
 
-
-//#define CODEGEN TheanoGraphCG
-#define CODEGEN TheanoDirectCG
 
 int main(int argc, char* argv[]) {
   std::ifstream ifs;
@@ -45,9 +44,11 @@ int main(int argc, char* argv[]) {
   Sema sema;
   sema.visitProgram(parser.getAST());
 
-  CODEGEN cg(&sema);
-  cg.visitProgram(parser.getAST());
-  std::cout << cg.getCode();
+  //DirectCodeGen DCG(&sema);
+  GraphCodeGen GCG(&sema);
+  TheanoEmitter emitter(&GCG);
+  emitter.codeGen(parser.getAST());
+  std::cout << emitter.getCode();
 
   Program::destroy(parser.getAST());
 
