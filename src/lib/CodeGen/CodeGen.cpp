@@ -11,11 +11,12 @@
 
 
 CodeGen::CodeGen(const Sema *sema)
-  : TheSema(sema), TempCounter(0), Code("") {}
+  : TheSema(sema), TempCounter(0), Code("") {
+  ENBuilder = new ExprNodeBuilder;
+}
 
 CodeGen::~CodeGen() {
-  //for (const auto *s: getStatements())
-    //ExprTrees[s->getExpr()]->deepDelete();
+  delete ENBuilder;
 }
 
 std::string CodeGen::getTemp() {

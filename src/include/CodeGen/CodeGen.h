@@ -13,6 +13,7 @@
 
 
 class ExprNode;
+class ExprNodeBuilder;
 
 
 class CodeGen : public ASTVisitor {
@@ -25,11 +26,12 @@ private:
   
   std::map<const TensorType *, std::string> EmittedTypes;
 
-private:
   // map each 'Expr' in the AST to an expression tree, rooted at an 'ExprNode':
   std::map<const Expr *, const ExprNode *> ExprTrees;
 
 protected:
+  ExprNodeBuilder *ENBuilder;
+
   void EXPR_TREE_MAP_ASSERT(const Expr *expr) const ;
 
 public:

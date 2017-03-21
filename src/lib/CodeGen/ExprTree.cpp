@@ -66,6 +66,8 @@ DEF_EXPR_NODE_CLASS_VISIT(Mul)
 DEF_EXPR_NODE_CLASS_VISIT(Div)
 DEF_EXPR_NODE_CLASS_VISIT(Product)
 
+#undef DEF_EXPR_NODE_CLASS_VISIT
+
 
 ContractionExpr::ContractionExpr(const ExprNode *lhs,
                                  const CodeGen::List &leftIndices,
@@ -128,4 +130,51 @@ void IdentifierExpr::print(unsigned indent) const {
 
 void IdentifierExpr::visit(ExprTreeVisitor *v) const {
   v->visitIdentifierExpr(this);
+}
+
+
+ExprNodeBuilder::~ExprNodeBuilder() {
+  for (auto *en: AllocatedNodes)
+    delete en;
+}
+
+#define DEF_BUILDER_CREATE_EXPR_NODE(Kind)                             \
+Kind##Expr *ExprNodeBuilder::create##Kind##Expr(const ExprNode *lhs,   \
+                                                const ExprNode *rhs) { \
+  Kind##Expr *result = Kind ##Expr::create(lhs, rhs);                  \
+  AllocatedNodes.insert(result);                                       \
+  return result;                                                       \
+}
+
+DEF_BUILDER_CREATE_EXPR_NODE(Add)
+DEF_BUILDER_CREATE_EXPR_NODE(Sub)
+DEF_BUILDER_CREATE_EXPR_NODE(Mul)
+DEF_BUILDER_CREATE_EXPR_NODE(Div)
+DEF_BUILDER_CREATE_EXPR_NODE(Product)
+
+#undef DEF_BUILDER_CREATE_EXPR_NODE
+
+ContractionExpr *
+ExprNodeBuilder::createContractionExpr(const ExprNode *lhs,
+                                       const CodeGen::List &leftIndices,
+                                       const ExprNode *rhs,
+                                       const CodeGen::List &rightIndices) {
+  ContractionExpr *result = ContractionExpr::create(lhs, leftIndices,
+                                                    rhs, rightIndices);
+  AllocatedNodes.insert(result);
+  return result;
+}
+
+StackExpr *
+ExprNodeBuilder::createStackExpr(const std::vector<const ExprNode *> &members) {
+
+  StackExpr *result = StackExpr::create(members);
+  AllocatedNodes.insert(result);
+  return result;
+}
+
+IdentifierExpr *ExprNodeBuilder::createIdentifierExpr(const Symbol *sym) {
+  IdentifierExpr *result = IdentifierExpr::create(sym);
+  AllocatedNodes.insert(result);
+  return result;
 }

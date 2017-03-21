@@ -44,9 +44,9 @@ int main(int argc, char* argv[]) {
   Sema sema;
   sema.visitProgram(parser.getAST());
 
-  //DirectCodeGen DCG(&sema);
-  GraphCodeGen GCG(&sema);
-  TheanoEmitter emitter(&GCG);
+  DirectCodeGen DCG(&sema);
+  //GraphCodeGen GCG(&sema);
+  TheanoEmitter emitter(&DCG);
   emitter.codeGen(parser.getAST());
   std::cout << emitter.getCode();
 

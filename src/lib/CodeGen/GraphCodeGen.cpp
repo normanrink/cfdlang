@@ -61,7 +61,7 @@ void GraphCodeGen::visitIdentifier(const Identifier *id) {
   const TensorType *type = sema.getType(id);
   const int rank = type->getRank();
 
-  const ExprNode *resNode = IdentifierExpr::create(sym);
+  const ExprNode *resNode = ENBuilder->createIdentifierExpr(sym);
   GCG_Node *n = curGraph->getNode(NodeID(resNode, name, id), rank);
 
   for (int i = 0; i < rank; i++)
@@ -92,7 +92,7 @@ void GraphCodeGen::visitBrackExpr(const BrackExpr *be) {
     members.push_back(en);
   }
 
-  const ExprNode *resNode = StackExpr::create(members);
+  const ExprNode *resNode = ENBuilder->createStackExpr(members);
   addExprNode(be, resNode);
 
   const TensorType *type = getSema()->getType(be);
@@ -137,8 +137,8 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
 
       const TensorType *leftType = getSema()->getType(be->getLeft());
       const int leftRank = leftType->getRank();
-      const ExprNode *resNode = ContractionExpr::create(lhs, {leftRank-1},
-                                                        rhs, {0});
+      const ExprNode *resNode =
+        ENBuilder->createContractionExpr(lhs, {leftRank-1}, rhs, {0});
       addExprNode(be, resNode);
 
       const TensorType *type = getSema()->getType(be);
@@ -178,19 +178,19 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
   std::string OperatorLabel;
   switch(nt) {
     case ASTNode::NT_AddExpr:
-      resNode = AddExpr::create(lhs, rhs);
+      resNode = ENBuilder->createAddExpr(lhs, rhs);
       OperatorLabel = "+";
       break;
     case ASTNode::NT_SubExpr:
-      resNode = SubExpr::create(lhs, rhs);
+      resNode = ENBuilder->createSubExpr(lhs, rhs);
       OperatorLabel = "-";
       break;
     case ASTNode::NT_MulExpr:
-      resNode = MulExpr::create(lhs, rhs);
+      resNode = ENBuilder->createMulExpr(lhs, rhs);
       OperatorLabel = "*";
       break;
     case ASTNode::NT_DivExpr:
-      resNode = DivExpr::create(lhs, rhs);
+      resNode = ENBuilder->createDivExpr(lhs, rhs);
       OperatorLabel = "/";
       break;
     default:
@@ -326,10 +326,9 @@ const ExprNode *GraphCodeGen::buildExprTreeForGraph(GCG_Graph *graph) {
       tgtIndices.push_back(e->getTgtIndex());
     }
 
-    const ExprNode *resNode = ContractionExpr::create(src.getID().get(),
-                                                      srcIndices,
-                                                      tgt.getID().get(),
-                                                      tgtIndices);
+    const ExprNode *resNode =
+      ENBuilder->createContractionExpr(src.getID().get(), srcIndices,
+                                       tgt.getID().get(), tgtIndices);
 
     // find edges that remain at 'src' or 'tgt' after the contraction:
     EdgeSet edgesAtSrc, edgesAtTgt;
@@ -362,7 +361,7 @@ const ExprNode *GraphCodeGen::buildExprTreeForGraph(GCG_Graph *graph) {
   const ExprNode *resNode = n->getID().get();
   while (n->hasSucc()) {
     const GCG_Node *succ = n->getSucc();
-    resNode = ProductExpr::create(resNode, succ->getID().get());
+    resNode = ENBuilder->createProductExpr(resNode, succ->getID().get());
     n = succ;
   }
 

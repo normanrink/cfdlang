@@ -2,7 +2,7 @@
 #ifndef __EXPR_TREE_H__
 #define __EXPR_TREE_H__
 
-
+#include <set>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -46,13 +46,13 @@ public:
     return Children[i];
   }
 
-protected:
+public:
   ExprNode(ExprKind ek, int numChildren);
-
   virtual ~ExprNode() {}
 
   enum ExprKind getExprKind() const { return ExKind; }
 
+protected:
   void setChild(int i, const ExprNode *en) {
     assert(i < getNumChildren());
     Children[i] = en;
@@ -176,6 +176,38 @@ public:
   DECL_VISIT_EXPR_NODE(Identifier)
 
   #undef DECL_VISIT_EXPR_NODE
+};
+
+
+
+    /****************************************/
+    /* factory class for memory management: */
+    /****************************************/
+
+class ExprNodeBuilder {
+private:
+  std::set<const ExprNode *> AllocatedNodes;
+
+public:
+  ~ExprNodeBuilder();
+
+  #define DECL_BUILDER_CREATE_EXPR_NODE(Kind)                               \
+  Kind##Expr *create##Kind##Expr(const ExprNode *lhs, const ExprNode *rhs);
+
+  DECL_BUILDER_CREATE_EXPR_NODE(Add)
+  DECL_BUILDER_CREATE_EXPR_NODE(Sub)
+  DECL_BUILDER_CREATE_EXPR_NODE(Mul)
+  DECL_BUILDER_CREATE_EXPR_NODE(Div)
+  DECL_BUILDER_CREATE_EXPR_NODE(Product)
+
+  #undef DECL_BUILDER_CREATE_EXPR_NODE
+
+  ContractionExpr *createContractionExpr(const ExprNode *lhs,
+                                         const CodeGen::List &leftIndices,
+                                         const ExprNode *rhs,
+                                         const CodeGen::List &rightIndices);
+  StackExpr *createStackExpr(const std::vector<const ExprNode *> &);
+  IdentifierExpr *createIdentifierExpr(const Symbol *);
 };
 
 #endif /* __EXPR_TREE_H__ */

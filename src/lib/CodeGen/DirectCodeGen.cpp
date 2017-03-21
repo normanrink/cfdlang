@@ -62,8 +62,8 @@ void DirectCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
   EXPR_TREE_MAP_ASSERT(tensorR);
 
   if (contrMixed.empty()) {
-    addExprNode(e, ProductExpr::create(getExprNode(tensorL),
-                                       getExprNode(tensorR)));
+    addExprNode(e, ENBuilder->createProductExpr(getExprNode(tensorL),
+                                                getExprNode(tensorR)));
     return;
   }
 
@@ -79,8 +79,8 @@ void DirectCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
   // must be relative to the first index of the right sub-expresion:
   shiftList(-rankContractedL, indR);
 
-  addExprNode(e, ContractionExpr::create(getExprNode(tensorL), indL,
-                                         getExprNode(tensorR), indR));
+  addExprNode(e, ENBuilder->createContractionExpr(getExprNode(tensorL), indL,
+                                                  getExprNode(tensorR), indR));
 }
 
 void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
@@ -113,8 +113,10 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
       EXPR_TREE_MAP_ASSERT(right);
 
       const int leftRank = getSema()->getType(left)->getRank();
-      addExprNode(be, ContractionExpr::create(getExprNode(left), {leftRank-1},
-                                              getExprNode(right), {0}));
+      addExprNode(be,ENBuilder->createContractionExpr(getExprNode(left),
+                                                      {leftRank-1},
+                                                      getExprNode(right),
+                                                      {0}));
     }
     return;
   }
@@ -136,18 +138,18 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
                  *rhs = getExprNode(right);
   switch(nt) {
   case ASTNode::NT_AddExpr:
-    result = AddExpr::create(lhs, rhs);
+    result = ENBuilder->createAddExpr(lhs, rhs);
     break;
   case ASTNode::NT_SubExpr:
-    result = SubExpr::create(lhs, rhs);
+    result = ENBuilder->createSubExpr(lhs, rhs);
     break;
   case ASTNode::NT_MulExpr:
-    result = MulExpr::create(lhs, rhs);
+    result = ENBuilder->createMulExpr(lhs, rhs);
     break;
   case ASTNode::NT_DivExpr:
-    result = DivExpr::create(lhs, rhs);
+    result = ENBuilder->createDivExpr(lhs, rhs);
   case ASTNode::NT_ProductExpr:
-      result = ProductExpr::create(lhs, rhs);
+      result = ENBuilder->createProductExpr(lhs, rhs);
     break;
   default:
     assert(0 && "internal error: invalid binary expression");
@@ -161,7 +163,7 @@ void DirectCodeGen::visitIdentifier(const Identifier *id) {
   const std::string &name = id->getName();
   const Symbol *sym = sema.getSymbol(name);
 
-  addExprNode(id, IdentifierExpr::create(sym));
+  addExprNode(id, ENBuilder->createIdentifierExpr(sym));
 }
 
 void DirectCodeGen::visitBrackExpr(const BrackExpr *be) {
@@ -178,7 +180,7 @@ void DirectCodeGen::visitBrackExpr(const BrackExpr *be) {
     members.push_back(getExprNode(e));
   }
 
-  addExprNode(be, StackExpr::create(members));
+  addExprNode(be, ENBuilder->createStackExpr(members));
 } 
 
 void DirectCodeGen::visitParenExpr(const ParenExpr *pe) {
