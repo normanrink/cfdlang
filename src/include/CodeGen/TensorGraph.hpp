@@ -145,15 +145,28 @@ TensorGraph<NodeID, EdgeID>::getNumEdges(const NodeID &id) const {
 
 template<typename NodeID, typename EdgeID>
 void
-TensorGraph<NodeID, EdgeID>::getEdgesAtNode(
+TensorGraph<NodeID, EdgeID>::getEdgesFromNode(
   EdgeMap &result,
   const GraphNode<NodeID, EdgeID> *n) const
 {
   for (const auto &e : Edges) {
     const GraphNode<NodeID, EdgeID> &src = *e.second->getSrcNode();
-    const GraphNode<NodeID, EdgeID> &tgt = *e.second->getTgtNode();
 
-    if (*n == src || *n == tgt)
+    if (*n == src)
+      result[e.first] = e.second;
+  }
+}
+
+template<typename NodeID, typename EdgeID>
+void
+TensorGraph<NodeID, EdgeID>::getEdgesToNode(
+  EdgeMap &result,
+  const GraphNode<NodeID, EdgeID> *n) const
+{
+  for (const auto &e : Edges) {
+    const GraphNode<NodeID, EdgeID> &tgt = *e.second->getTgtNode();
+    
+    if (*n == tgt)
       result[e.first] = e.second;
   }
 }
@@ -166,7 +179,7 @@ TensorGraph<NodeID, EdgeID>::getEdgesBetweenNodes(
   const GraphNode<NodeID, EdgeID> *tgt) const
 {
   EdgeMap tmp;
-  getEdgesAtNode(tmp, src);
+  getEdgesFromNode(tmp, src);
 
   for (const auto &e : tmp) {
     const GraphNode<NodeID, EdgeID> &edgeSrc = *e.second->getSrcNode();

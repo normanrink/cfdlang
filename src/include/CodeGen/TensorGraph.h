@@ -136,7 +136,9 @@ public:
   int getNumEdges() const;
   int getNumEdges(const NodeID &id) const;
 
-  void getEdgesAtNode(EdgeMap &result,
+  void getEdgesFromNode(EdgeMap &result,
+                        const GraphNode<NodeID, EdgeID> *n) const;
+  void getEdgesToNode(EdgeMap &result,
                       const GraphNode<NodeID, EdgeID> *n) const;
   void getEdgesBetweenNodes(EdgeMap &result,
                             const GraphNode<NodeID, EdgeID> *src,
