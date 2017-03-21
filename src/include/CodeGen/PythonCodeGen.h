@@ -64,55 +64,5 @@ private:
   }
 };
 
-/*
-class NumpyGraphCG : public GraphCodeGen {
-protected:
-  PythonFragBuilder Builder;
-
-public:
-  NumpyGraphCG(const Sema *sema, const std::string &prefix = "np");
-
-  virtual void visitProgramPrologue(const Program *p) override;
-
-  virtual void visitDeclEpilogue(const Decl *d) override;
-
-  virtual void
-  emitContraction(const std::string &result,
-                  const std::string &lhs, const List &lhsIndices,
-                  const std::string &rhs, const List &rhsIndices) override;
-  virtual void
-  emitTensorProduct(const std::string &result,
-                    const std::string &lhs, const std::string &rhs) override;
-  virtual void
-  emitTensorStack(const std::string &result,
-                  const std::list<std::string> &temps) override;
-  virtual void
-  emitAssignment(const std::string &result, const std::string &expr) override;
-
-  virtual void
-  emitAddExpr(const std::string &result,
-              const std::string &lhs, const std::string &rhs) override;
-  virtual void
-  emitSubExpr(const std::string &result,
-              const std::string &lhs, const std::string &rhs) override;
-  virtual void
-  emitMulExpr(const std::string &result,
-              const std::string &lhs, const std::string &rhs) override;
-  virtual void
-  emitDivExpr(const std::string &result,
-              const std::string &lhs, const std::string &rhs) override;
-};
-
-
-class TheanoGraphCG : public NumpyGraphCG {
-public:
-  TheanoGraphCG(const Sema *sema, const std::string &prefix = "T");
-
-  virtual void visitProgramPrologue(const Program *p) override;
-  virtual void visitProgramEpilogue(const Program *p) override;
-
-  virtual void visitDeclEpilogue(const Decl *d) override;
-};
-*/
 #endif /* __PYTHON_CODEGEN_H__ */
 
