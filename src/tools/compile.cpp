@@ -5,7 +5,7 @@
 
 #include "CodeGen/DirectCodeGen.h"
 #include "CodeGen/GraphCodeGen.h"
-#include "CodeGen/PythonCodeGen.h"
+#include "CodeGen/TheanoEmitter.h"
 #include "Parse/Parser.h"
 #include "Sema/Sema.h"
 

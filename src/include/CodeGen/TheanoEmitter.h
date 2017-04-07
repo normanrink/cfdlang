@@ -1,6 +1,6 @@
 
-#ifndef __PYTHON_CODEGEN_H__
-#define __PYTHON_CODEGEN_H__
+#ifndef __THEANO_EMITTER_H__
+#define __THEANO_EMITTER_H__
 
 #include <list>
 #include <string>
@@ -63,5 +63,5 @@ private:
   }
 };
 
-#endif /* __PYTHON_CODEGEN_H__ */
+#endif /* __THEANO_EMITTER_H__ */
 

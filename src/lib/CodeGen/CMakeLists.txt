@@ -4,7 +4,6 @@ add_library(CodeGen STATIC
             DirectCodeGen.cpp
             ExprTree.cpp
             GraphCodeGen.cpp
-            PythonCodeGen.cpp
-            # PythonFragmentBuilder.cpp
+            TheanoEmitter.cpp
             )
 

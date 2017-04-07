@@ -3,7 +3,7 @@
 
 
 #include "AST/AST.h"
-#include "CodeGen/PythonCodeGen.h"
+#include "CodeGen/TheanoEmitter.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
 
