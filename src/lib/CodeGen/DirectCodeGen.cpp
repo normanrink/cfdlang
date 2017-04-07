@@ -148,8 +148,9 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
     break;
   case ASTNode::NT_DivExpr:
     result = ENBuilder->createDivExpr(lhs, rhs);
+    break;
   case ASTNode::NT_ProductExpr:
-      result = ENBuilder->createProductExpr(lhs, rhs);
+    result = ENBuilder->createProductExpr(lhs, rhs);
     break;
   default:
     assert(0 && "internal error: invalid binary expression");
