@@ -2,5 +2,5 @@ var input a : [2 3]
 var input u : [3 3 3]
 var output v : [2 2 2]
 
-v = a * a * a * u . [[1 6] [3 7] [5 8]]
+v = a # a # a # u . [[1 6] [3 7] [5 8]]
 
