@@ -69,6 +69,9 @@ public:
     return Types.end();
   }
 
+  bool is_in_inputs(const std::string &name) const {
+    return (Inputs.find(getSymbol(name)) != Inputs.end());
+  }
   std::set<const Symbol *>::const_iterator inputs_begin() const {
     return Inputs.begin();
   }
@@ -77,6 +80,9 @@ public:
   }
   int inputs_size() const { return Inputs.size(); }
 
+  bool is_in_outputs(const std::string &name) const {
+    return (Outputs.find(getSymbol(name)) != Outputs.end());
+  }
   std::set<const Symbol *>::const_iterator outputs_begin() const {
     return Outputs.begin();
   }
