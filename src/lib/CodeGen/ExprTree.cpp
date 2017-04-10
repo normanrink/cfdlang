@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <list>
 
 
 #include "CodeGen/ExprTree.h"
@@ -25,8 +26,8 @@ std::map<ExprNode::ExprKind, std::string> ExprNode::ExprLabel = {
 };
 
 
-ExprNode::ExprNode(ExprKind ek, int numChildren)
-  : ExKind(ek), NumChildren(numChildren) {
+ExprNode::ExprNode(ExprKind ek, int numChildren, const ExprDimensions &dims)
+  : ExKind(ek), NumChildren(numChildren), Dims(dims) {
     for (int i = 0; i < getNumChildren(); i++)
       Children.push_back(nullptr);
 }
@@ -65,19 +66,76 @@ DEF_EXPR_NODE_CLASS_VISIT(Sub)
 DEF_EXPR_NODE_CLASS_VISIT(Mul)
 DEF_EXPR_NODE_CLASS_VISIT(Div)
 DEF_EXPR_NODE_CLASS_VISIT(Product)
+DEF_EXPR_NODE_CLASS_VISIT(Contraction)
+DEF_EXPR_NODE_CLASS_VISIT(Stack)
+DEF_EXPR_NODE_CLASS_VISIT(Identifier)
 
 #undef DEF_EXPR_NODE_CLASS_VISIT
 
 
-ContractionExpr::ContractionExpr(const ExprNode *lhs,
+#define DEF_EXPR_NODE_CLASS_TRANSFORM(Kind)          \
+void Kind##Expr::transform(ExprTreeTransformer *t) { \
+  t->transform##Kind##Expr(this);                    \
+}
+
+DEF_EXPR_NODE_CLASS_TRANSFORM(Add)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Sub)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Mul)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Div)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Product)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Contraction)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Stack)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Identifier)
+
+#undef DEF_EXPR_NODE_CLASS_TRANSFORM
+
+
+ProductExpr:: ProductExpr(ExprNode *lhs, ExprNode *rhs)
+  : ExprNode(EK_Product, 2) {
+  setChild(0, lhs);
+  setChild(1, rhs);
+
+  ExprDimensions lhsDims = lhs->getDims();
+  const ExprDimensions &rhsDims = rhs->getDims();
+  for (int i = 0; i < rhsDims.size(); i++)
+    lhsDims.push_back(rhsDims[i]);
+
+  setDims(lhsDims);
+}
+
+
+ContractionExpr::ContractionExpr(ExprNode *lhs,
                                  const CodeGen::List &leftIndices,
-                                 const ExprNode *rhs,
+                                 ExprNode *rhs,
                                  const CodeGen::List &rightIndices)
   : ExprNode(EK_Contraction, 2),
     LeftIndices(leftIndices),
     RightIndices(rightIndices) {
   setChild(0, lhs);
   setChild(1, rhs);
+
+  ExprDimensions lhsDims = lhs->getDims();
+  ExprDimensions rhsDims = rhs->getDims();
+
+  std::list<int> leftIndicesList(leftIndices.begin(), leftIndices.end());
+  leftIndicesList.sort();
+  std::list<int> rightIndicesList(rightIndices.begin(), rightIndices.end());
+  rightIndicesList.sort();
+  // the following only works if 'leftIndicesList'
+  // and 'rightIndicesList' are sorted:
+  int erased = 0;
+  for (const int index: leftIndicesList) {
+    lhsDims.erase(lhsDims.begin() + index - (erased++));
+  }
+  erased = 0;
+  for (const int index: rightIndicesList) {
+    rhsDims.erase(rhsDims.begin() + index - (erased++));
+  }
+
+  for (int i = 0; i < rhsDims.size(); i++)
+    lhsDims.push_back(rhsDims[i]);
+
+  setDims(lhsDims);
 }
 
 void ContractionExpr::print(unsigned indent) const {
@@ -101,21 +159,24 @@ void ContractionExpr::print(unsigned indent) const {
   std::cout << ")\n";
 }
 
-void ContractionExpr::visit(ExprTreeVisitor *v) const {
-  v->visitContractionExpr(this);
-}
 
-
-StackExpr::StackExpr(const std::vector<const ExprNode *> &members)
+StackExpr::StackExpr(const std::vector<ExprNode *> &members)
   : ExprNode(EK_Stack, members.size()) {
     for (int i = 0; i < members.size(); i++)
       setChild(i, members[i]);
-}
 
-void StackExpr::visit(ExprTreeVisitor *v) const {
-  v->visitStackExpr(this);
-}
+  ExprDimensions dims;
+  dims.push_back(members.size());
+  if (members.size()) {
+    // by type checking, all members have the same dimensions; hence, it
+    // is OK to use only the 0-th member here:
+    const ExprDimensions &memberDims = members[0]->getDims();
+    for (int i = 0; i < memberDims.size(); i++)
+      dims.push_back(memberDims[i]);
+  }
 
+  setDims(dims);
+}
 
 void IdentifierExpr::print(unsigned indent) const {
   std::string str = ExprLabel[getExprKind()];
@@ -125,11 +186,7 @@ void IdentifierExpr::print(unsigned indent) const {
 
   EMIT_INDENT(indent)
   std::cout << "(" << str << ss.str()
-            << " \"" << getSymbol()->getName() << "\")\n";
-}
-
-void IdentifierExpr::visit(ExprTreeVisitor *v) const {
-  v->visitIdentifierExpr(this);
+            << " \"" << getName() << "\")\n";
 }
 
 
@@ -139,8 +196,8 @@ ExprNodeBuilder::~ExprNodeBuilder() {
 }
 
 #define DEF_BUILDER_CREATE_EXPR_NODE(Kind)                             \
-Kind##Expr *ExprNodeBuilder::create##Kind##Expr(const ExprNode *lhs,   \
-                                                const ExprNode *rhs) { \
+Kind##Expr *ExprNodeBuilder::create##Kind##Expr(ExprNode *lhs,         \
+                                                ExprNode *rhs) {       \
   Kind##Expr *result = Kind ##Expr::create(lhs, rhs);                  \
   AllocatedNodes.insert(result);                                       \
   return result;                                                       \
@@ -155,9 +212,9 @@ DEF_BUILDER_CREATE_EXPR_NODE(Product)
 #undef DEF_BUILDER_CREATE_EXPR_NODE
 
 ContractionExpr *
-ExprNodeBuilder::createContractionExpr(const ExprNode *lhs,
+ExprNodeBuilder::createContractionExpr(ExprNode *lhs,
                                        const CodeGen::List &leftIndices,
-                                       const ExprNode *rhs,
+                                       ExprNode *rhs,
                                        const CodeGen::List &rightIndices) {
   ContractionExpr *result = ContractionExpr::create(lhs, leftIndices,
                                                     rhs, rightIndices);
@@ -166,15 +223,17 @@ ExprNodeBuilder::createContractionExpr(const ExprNode *lhs,
 }
 
 StackExpr *
-ExprNodeBuilder::createStackExpr(const std::vector<const ExprNode *> &members) {
+ExprNodeBuilder::createStackExpr(const std::vector<ExprNode *> &members) {
 
   StackExpr *result = StackExpr::create(members);
   AllocatedNodes.insert(result);
   return result;
 }
 
-IdentifierExpr *ExprNodeBuilder::createIdentifierExpr(const Symbol *sym) {
-  IdentifierExpr *result = IdentifierExpr::create(sym);
+IdentifierExpr *
+ExprNodeBuilder::createIdentifierExpr(const std::string &name,
+                                      const ExprNode::ExprDimensions &dims) {
+  IdentifierExpr *result = IdentifierExpr::create(name, dims);
   AllocatedNodes.insert(result);
   return result;
 }
