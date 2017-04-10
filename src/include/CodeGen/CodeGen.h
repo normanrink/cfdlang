@@ -17,6 +17,12 @@ class ExprNodeBuilder;
 
 
 class CodeGen : public ASTVisitor {
+public:
+  struct Assignment {
+    std::string variable;
+    const ExprNode *en;
+  };
+
 private:
   const Sema *TheSema;
 
