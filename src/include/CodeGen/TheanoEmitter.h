@@ -55,7 +55,7 @@ private:
   void append(const std::string &code) { CG->append(code); }
 
   const Sema *getSema() const { return CG->getSema(); }
-  void addExprNode(const Expr *expr, const ExprNode *en) {
+  void addExprNode(const Expr *expr, ExprNode *en) {
     CG->addExprNode(expr, en);
   }
   const ExprNode *getExprNode(const Expr *expr) const {

@@ -27,7 +27,7 @@ private:
   std::map<const TensorType *, std::string> EmittedTypes;
 
   // map each 'Expr' in the AST to an expression tree, rooted at an 'ExprNode':
-  std::map<const Expr *, const ExprNode *> ExprTrees;
+  std::map<const Expr *, ExprNode *> ExprTrees;
 
 protected:
   ExprNodeBuilder *ENBuilder;
@@ -35,10 +35,12 @@ protected:
   void EXPR_TREE_MAP_ASSERT(const Expr *expr) const ;
 
 public:
-  void addExprNode(const Expr *expr, const ExprNode *en) {
+  ExprNodeBuilder *getENBuilder() { return ENBuilder; }
+  
+  void addExprNode(const Expr *expr, ExprNode *en) {
     ExprTrees[expr] = en;
   }
-  const ExprNode *getExprNode(const Expr *expr) const {
+  ExprNode *getExprNode(const Expr *expr) const {
     return ExprTrees.at(expr);
   }
 

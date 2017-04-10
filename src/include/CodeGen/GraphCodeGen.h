@@ -63,7 +63,7 @@ private:
   void visitContraction(const Expr *e, const TupleList &indices);
 
   void buildExprTreeForExpr(const Expr *);
-  const ExprNode *buildExprTreeForGraph(GCG_Graph *);
+  ExprNode *buildExprTreeForGraph(GCG_Graph *);
 
   void selectEdgesToContract(EdgeSet &result, const GCG_Graph &g) const;
   void getRemainingEdgesAtNode(EdgeSet &result, const GCG_Node &n,

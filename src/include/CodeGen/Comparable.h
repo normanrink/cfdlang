@@ -72,14 +72,14 @@ public:
 template<typename T>
 class AddressID : public GraphComponentID<AddressID<T>> {
 private:
-  const T * ID;
+  T * ID;
 
 public:
-  AddressID(const T * id, const std::string label = "",
+  AddressID(T * id, const std::string label = "",
             const ASTNode *ast = nullptr)
     : GraphComponentID<AddressID>(label, ast), ID(id) {}
 
-  const T * get() const { return ID; }
+  T * get() const { return ID; }
 
   AddressID(const AddressID &rhs, const std::string label = "")
     : GraphComponentID<AddressID>(rhs.getLabel(), rhs.getAST()),
