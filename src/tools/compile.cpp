@@ -6,6 +6,7 @@
 #include "CodeGen/DirectCodeGen.h"
 #include "CodeGen/GraphCodeGen.h"
 #include "CodeGen/TheanoEmitter.h"
+#include "CodeGen/CEmitter.h"
 #include "Parse/Parser.h"
 #include "Sema/Sema.h"
 
@@ -45,21 +46,41 @@ int main(int argc, char* argv[]) {
   sema.visitProgram(parser.getAST());
 
   {
-    DirectCodeGen DCG(&sema);
-    TheanoEmitter emitter(&DCG);
+    DirectCodeGen CG(&sema);
+    TheanoEmitter emitter(&CG);
     emitter.codeGen(parser.getAST());
 
-    std::cout << "DIRECT code generation:\n";
+    std::cout << "DIRECT 'Theano' code generation:\n";
     std::cout << emitter.getCode();
     std::cout << "\n";
   }
 
   {
-    GraphCodeGen GCG(&sema);
-    TheanoEmitter emitter(&GCG);
+    GraphCodeGen CG(&sema);
+    TheanoEmitter emitter(&CG);
     emitter.codeGen(parser.getAST());
 
-    std::cout << "GRAPH code generation:\n";
+    std::cout << "GRAPH 'Theano' code generation:\n";
+    std::cout << emitter.getCode();
+    std::cout << "\n";
+  }
+
+  {
+    DirectCodeGen CG(&sema);
+    CEmitter emitter(&CG, /* rowMajor= */true);
+    emitter.codeGen(parser.getAST());
+
+    std::cout << "DIRECT 'C' code generation:\n";
+    std::cout << emitter.getCode();
+    std::cout << "\n";
+  }
+
+  {
+    GraphCodeGen CG(&sema);
+    CEmitter emitter(&CG, /* rowMajor= */true);
+    emitter.codeGen(parser.getAST());
+
+    std::cout << "GRAPH 'C' code generation:\n";
     std::cout << emitter.getCode();
     std::cout << "\n";
   }
