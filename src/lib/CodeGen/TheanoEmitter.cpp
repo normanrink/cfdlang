@@ -49,7 +49,7 @@ void TheanoEmitter::codeGen(const Program *p) {
     // we need this if-clause since code emission
     // for identifiers has been optimized out:
     if (en->isIdentifier())
-      append(result + " = " + en->getSymbol()->getName());
+      append(result + " = " + en->getName());
     else {
       setResultTemp(result);
       en->visit(this);
@@ -95,7 +95,7 @@ void TheanoEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
   assert(en->getNumChildren() == 2);
   for (int i = 0; i < 2; i++) {
     if (en->getChild(i)->isIdentifier()) {
-      temps[i] = en->getChild(i)->getSymbol()->getName();
+      temps[i] = en->getChild(i)->getName();
     } else {
       temps[i] = getTemp();
       setResultTemp(temps[i]);
@@ -131,7 +131,7 @@ void TheanoEmitter::visitTensordotExpr(const ExprNode *en,
   assert(en->getNumChildren() == 2);
   for (int i = 0; i < 2; i++) {
     if (en->getChild(i)->isIdentifier()) {
-      temps[i] = en->getChild(i)->getSymbol()->getName();
+      temps[i] = en->getChild(i)->getName();
     } else {
       temps[i] = getTemp();
       setResultTemp(temps[i]);
@@ -164,7 +164,7 @@ void TheanoEmitter::visitStackExpr(const StackExpr *en) {
     const ExprNode *child = en->getChild(i);
 
     if (child->isIdentifier()) {
-      append(child->getSymbol()->getName());
+      append(child->getName());
     } else {
       const std::string temp = getTemp();
       setResultTemp(temp);
