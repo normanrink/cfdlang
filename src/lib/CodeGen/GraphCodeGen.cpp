@@ -57,11 +57,10 @@ void GraphCodeGen::visitIdentifier(const Identifier *id) {
   const Sema &sema = *getSema();
 
   const std::string &name = id->getName();
-  const Symbol *sym = sema.getSymbol(name);
   const TensorType *type = sema.getType(id);
   const int rank = type->getRank();
 
-  const ExprNode *resNode = ENBuilder->createIdentifierExpr(sym);
+  ExprNode *resNode = ENBuilder->createIdentifierExpr(name, type->getDims());
   GCG_Node *n = curGraph->getNode(NodeID(resNode, name, id), rank);
 
   for (int i = 0; i < rank; i++)
@@ -81,18 +80,18 @@ void GraphCodeGen::visitParenExpr(const ParenExpr *pe) {
 }
 
 void GraphCodeGen::visitBrackExpr(const BrackExpr *be) {
-  std::vector<const ExprNode *> members;
+  std::vector<ExprNode *> members;
 
   const ExprList &exprs = *be->getExprs();
   for (unsigned i = 0; i < exprs.size(); i++) {
     buildExprTreeForExpr(exprs[i]);
     EXPR_TREE_MAP_ASSERT(exprs[i]);
 
-    const ExprNode *en = getExprNode(exprs[i]);
+    ExprNode *en = getExprNode(exprs[i]);
     members.push_back(en);
   }
 
-  const ExprNode *resNode = ENBuilder->createStackExpr(members);
+  ExprNode *resNode = ENBuilder->createStackExpr(members);
   addExprNode(be, resNode);
 
   const TensorType *type = getSema()->getType(be);
@@ -132,12 +131,12 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
       buildExprTreeForExpr(right);
       EXPR_TREE_MAP_ASSERT(right);
 
-      const ExprNode *lhs = getExprNode(left);
-      const ExprNode *rhs = getExprNode(right);
+      ExprNode *lhs = getExprNode(left);
+      ExprNode *rhs = getExprNode(right);
 
       const TensorType *leftType = getSema()->getType(be->getLeft());
       const int leftRank = leftType->getRank();
-      const ExprNode *resNode =
+      ExprNode *resNode =
         ENBuilder->createContractionExpr(lhs, {leftRank-1}, rhs, {0});
       addExprNode(be, resNode);
 
@@ -172,9 +171,9 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
   buildExprTreeForExpr(right);
   EXPR_TREE_MAP_ASSERT(right);
 
-  const ExprNode *resNode,
-                 *lhs = getExprNode(left),
-                 *rhs = getExprNode(right);
+  ExprNode *resNode,
+           *lhs = getExprNode(left),
+           *rhs = getExprNode(right);
   std::string OperatorLabel;
   switch(nt) {
     case ASTNode::NT_AddExpr:
@@ -302,7 +301,7 @@ void GraphCodeGen::dump(const GCG_Graph &g) {
   of.close();
 }
 
-const ExprNode *GraphCodeGen::buildExprTreeForGraph(GCG_Graph *graph) {
+ExprNode *GraphCodeGen::buildExprTreeForGraph(GCG_Graph *graph) {
   bool success;
 
   while (graph->getNumEdges()) {
@@ -326,9 +325,10 @@ const ExprNode *GraphCodeGen::buildExprTreeForGraph(GCG_Graph *graph) {
       tgtIndices.push_back(e->getTgtIndex());
     }
 
-    const ExprNode *resNode =
-      ENBuilder->createContractionExpr(src.getID().get(), srcIndices,
-                                       tgt.getID().get(), tgtIndices);
+    ExprNode *resNode = ENBuilder->createContractionExpr(src.getID().get(),
+                                                         srcIndices,
+                                                         tgt.getID().get(),
+                                                         tgtIndices);
 
     // find edges that remain at 'src' or 'tgt' after the contraction:
     EdgeSet edgesAtSrc, edgesAtTgt;
@@ -358,7 +358,7 @@ const ExprNode *GraphCodeGen::buildExprTreeForGraph(GCG_Graph *graph) {
   // graph has no edges left; hence, form the tensor product
   // of the remaining nodes from left to right:
   const GCG_Node *n = graph->getStartNode();
-  const ExprNode *resNode = n->getID().get();
+  ExprNode *resNode = n->getID().get();
   while (n->hasSucc()) {
     const GCG_Node *succ = n->getSucc();
     resNode = ENBuilder->createProductExpr(resNode, succ->getID().get());

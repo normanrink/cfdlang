@@ -113,10 +113,10 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
       EXPR_TREE_MAP_ASSERT(right);
 
       const int leftRank = getSema()->getType(left)->getRank();
-      addExprNode(be,ENBuilder->createContractionExpr(getExprNode(left),
-                                                      {leftRank-1},
-                                                      getExprNode(right),
-                                                      {0}));
+      addExprNode(be, ENBuilder->createContractionExpr(getExprNode(left),
+                                                       {leftRank-1},
+                                                       getExprNode(right),
+                                                       {0}));
     }
     return;
   }
@@ -133,9 +133,9 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
   right->visit(this);
   EXPR_TREE_MAP_ASSERT(right);
 
-  const ExprNode *result,
-                 *lhs = getExprNode(left),
-                 *rhs = getExprNode(right);
+  ExprNode *result,
+           *lhs = getExprNode(left),
+           *rhs = getExprNode(right);
   switch(nt) {
   case ASTNode::NT_AddExpr:
     result = ENBuilder->createAddExpr(lhs, rhs);
@@ -162,9 +162,9 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
 void DirectCodeGen::visitIdentifier(const Identifier *id) {
   const Sema &sema = *getSema();
   const std::string &name = id->getName();
-  const Symbol *sym = sema.getSymbol(name);
+  const TensorType &type = sema.getSymbol(name)->getType();
 
-  addExprNode(id, ENBuilder->createIdentifierExpr(sym));
+  addExprNode(id, ENBuilder->createIdentifierExpr(name, type.getDims()));
 }
 
 void DirectCodeGen::visitBrackExpr(const BrackExpr *be) {
@@ -172,7 +172,7 @@ void DirectCodeGen::visitBrackExpr(const BrackExpr *be) {
   assert(exprs.size() &&
          "internal error: tensor stack should not be empty here");
 
-  std::vector<const ExprNode *> members;
+  std::vector<ExprNode *> members;
   for (unsigned i = 0; i < exprs.size(); i++) {
     const Expr *e = exprs[i];
     e->visit(this);

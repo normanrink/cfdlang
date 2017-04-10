@@ -31,6 +31,8 @@ public:
   }
 
   const std::string getDimString() const;
+
+  const std::vector<int> &getDims() const { return Dims; }
 };
 
 #endif /* !__TENSOR_TYPE_H__ */
