@@ -38,10 +38,7 @@ void CEmitter::codeGen(const Program *p) {
       ExprTreeLifter lifter(CG, nodeLiftPredicate);
 
       en->transform(&lifter);
-
-      for (const auto &ass : lifter.getAssignments())
-        Assignments.push_back(ass);
-
+      Assignments = lifter.getAssignments();
       // the result of the expression tree that remains as 'en' after lifting
       // must be assigned to the variable on the LHS of the statement 's':
       Assignments.push_back({s->getIdentifier()->getName(), en});
