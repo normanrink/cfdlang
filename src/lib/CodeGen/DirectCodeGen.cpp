@@ -84,6 +84,7 @@ void DirectCodeGen::visitContraction(const Expr *e, const TupleList &indices) {
 }
 
 void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
+  const Sema &sema = *getSema();
   const ASTNode::NodeType nt = be->getNodeType();
 
   if (nt == ASTNode::NT_ContractionExpr)
@@ -112,7 +113,7 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
       right->visit(this);
       EXPR_TREE_MAP_ASSERT(right);
 
-      const int leftRank = getSema()->getType(left)->getRank();
+      const int leftRank = sema.getType(left)->getRank();
       addExprNode(be, ENBuilder->createContractionExpr(getExprNode(left),
                                                        {leftRank-1},
                                                        getExprNode(right),
@@ -144,10 +145,16 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
     result = ENBuilder->createSubExpr(lhs, rhs);
     break;
   case ASTNode::NT_MulExpr:
-    result = ENBuilder->createMulExpr(lhs, rhs);
+    if (sema.isScalar(*sema.getType(left)))
+      result = ENBuilder->createScalarMulExpr(lhs, rhs);
+    else
+      result = ENBuilder->createMulExpr(lhs, rhs);
     break;
   case ASTNode::NT_DivExpr:
-    result = ENBuilder->createDivExpr(lhs, rhs);
+    if (sema.isScalar(*sema.getType(right)))
+      result = ENBuilder->createScalarDivExpr(lhs, rhs);
+    else
+      result = ENBuilder->createDivExpr(lhs, rhs);
     break;
   case ASTNode::NT_ProductExpr:
     result = ENBuilder->createProductExpr(lhs, rhs);

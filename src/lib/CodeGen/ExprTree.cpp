@@ -18,7 +18,9 @@ std::map<ExprNode::ExprKind, std::string> ExprNode::ExprLabel = {
   { EK_Add, "Add" },
   { EK_Sub, "Sub" },
   { EK_Mul, "Mul" },
+  { EK_ScalarMul, "ScalarMul" },
   { EK_Div, "Div" },
+  { EK_ScalarDiv, "ScalarDiv" },
   { EK_Contraction, "Contraction" },
   { EK_Product, "Product" },
   { EK_Stack, "Stack" },
@@ -64,7 +66,9 @@ void Kind##Expr::visit(ExprTreeVisitor *v) const { \
 DEF_EXPR_NODE_CLASS_VISIT(Add)
 DEF_EXPR_NODE_CLASS_VISIT(Sub)
 DEF_EXPR_NODE_CLASS_VISIT(Mul)
+DEF_EXPR_NODE_CLASS_VISIT(ScalarMul)
 DEF_EXPR_NODE_CLASS_VISIT(Div)
+DEF_EXPR_NODE_CLASS_VISIT(ScalarDiv)
 DEF_EXPR_NODE_CLASS_VISIT(Product)
 DEF_EXPR_NODE_CLASS_VISIT(Contraction)
 DEF_EXPR_NODE_CLASS_VISIT(Stack)
@@ -81,7 +85,9 @@ void Kind##Expr::transform(ExprTreeTransformer *t) { \
 DEF_EXPR_NODE_CLASS_TRANSFORM(Add)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Sub)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Mul)
+DEF_EXPR_NODE_CLASS_TRANSFORM(ScalarMul)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Div)
+DEF_EXPR_NODE_CLASS_TRANSFORM(ScalarDiv)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Product)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Contraction)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Stack)
@@ -90,7 +96,21 @@ DEF_EXPR_NODE_CLASS_TRANSFORM(Identifier)
 #undef DEF_EXPR_NODE_CLASS_TRANSFORM
 
 
-ProductExpr:: ProductExpr(ExprNode *lhs, ExprNode *rhs)
+ScalarMulExpr::ScalarMulExpr(ExprNode *lhs, ExprNode *rhs)
+  : ExprNode(EK_ScalarMul, 2, rhs->getDims()) {
+  setChild(0, lhs);
+  setChild(1, rhs);
+}
+
+
+ScalarDivExpr::ScalarDivExpr(ExprNode *lhs, ExprNode *rhs)
+: ExprNode(EK_ScalarDiv, 2, lhs->getDims()) {
+  setChild(0, lhs);
+  setChild(1, rhs);
+}
+
+
+ProductExpr::ProductExpr(ExprNode *lhs, ExprNode *rhs)
   : ExprNode(EK_Product, 2) {
   setChild(0, lhs);
   setChild(1, rhs);
@@ -206,7 +226,9 @@ Kind##Expr *ExprNodeBuilder::create##Kind##Expr(ExprNode *lhs,         \
 DEF_BUILDER_CREATE_EXPR_NODE(Add)
 DEF_BUILDER_CREATE_EXPR_NODE(Sub)
 DEF_BUILDER_CREATE_EXPR_NODE(Mul)
+DEF_BUILDER_CREATE_EXPR_NODE(ScalarMul)
 DEF_BUILDER_CREATE_EXPR_NODE(Div)
+DEF_BUILDER_CREATE_EXPR_NODE(ScalarDiv)
 DEF_BUILDER_CREATE_EXPR_NODE(Product)
 
 #undef DEF_BUILDER_CREATE_EXPR_NODE
