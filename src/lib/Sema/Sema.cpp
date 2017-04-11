@@ -178,6 +178,9 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
       if (lists.empty())
         assert(0 && "semantic error: contracting over empty index list");
 
+      if (type0->getRank() == 0)
+        assert(0 && "semantic error: cannot contract scalar");
+
       std::vector<int> res;
       for (int i = 0; i < type0->getRank(); i++)
         res.push_back(type0->getDim(i));
