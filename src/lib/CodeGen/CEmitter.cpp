@@ -317,9 +317,18 @@ void CEmitter::visitMulExpr(const MulExpr *en) {
   visitBinOpExpr(en, "*");
 }
 
+void CEmitter::visitScalarMulExpr(const ScalarMulExpr *en) {
+  visitBinOpExpr(en, "*");
+}
+
 void CEmitter::visitDivExpr(const DivExpr *en) {
   visitBinOpExpr(en, "/");
 }
+
+void CEmitter::visitScalarDivExpr(const ScalarDivExpr *en) {
+  visitBinOpExpr(en, "/");
+}
+
 
 void CEmitter::visitProductExpr(const ProductExpr *en) {
   assert(en->getNumChildren() == 2);
