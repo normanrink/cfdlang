@@ -107,6 +107,12 @@ private:
   const std::vector<int> &getDims(const ExprNode *en) const {
     return en->getDims();
   }
+
+  void addFunctionArgument(const std::string &name) {
+    CG->addFunctionArgument(name);
+  }
+  
+  const std::string &getFunctionName() const { return CG->getFunctionName(); }
 };
 
 #endif /* __C_EMITTER_H__ */

@@ -23,6 +23,13 @@ public:
     const ExprNode *en;
   };
 
+  struct FunctionArgument {
+    int position;
+    std::string name;
+  };
+
+  typedef std::list<FunctionArgument> FunctionArgumentsListTy;
+
 private:
   const Sema *TheSema;
 
@@ -35,10 +42,14 @@ private:
   // map each 'Expr' in the AST to an expression tree, rooted at an 'ExprNode':
   std::map<const Expr *, ExprNode *> ExprTrees;
 
+  const std::string FunctionName;
+
 protected:
   ExprNodeBuilder *ENBuilder;
 
   void EXPR_TREE_MAP_ASSERT(const Expr *expr) const ;
+
+  FunctionArgumentsListTy FunctionArguments;
 
 public:
   ExprNodeBuilder *getENBuilder() { return ENBuilder; }
@@ -51,7 +62,7 @@ public:
   }
 
 public:
-  CodeGen(const Sema *sema);
+  CodeGen(const Sema *sema, const std::string &functionName);
   virtual ~CodeGen();
 
   const Sema *getSema() const { return TheSema; }
@@ -76,7 +87,19 @@ public:
     return Declarations;
   }
   const std::list<const Stmt *> &getStatements() const { return Statements; }
-  
+
+  const std::string &getFunctionName() const { return FunctionName; }
+
+  void addFunctionArgument(const std::string &name);
+
+  const FunctionArgumentsListTy &getFunctionArguments() const {
+    return FunctionArguments;
+  };
+  const FunctionArgumentsListTy::const_iterator
+  function_arguments_begin() const { return FunctionArguments.begin(); }
+  const FunctionArgumentsListTy::const_iterator
+  function_arguments_end() const { return FunctionArguments.end(); }
+
 // useful helpers:
 public:
   typedef std::vector<int> List;

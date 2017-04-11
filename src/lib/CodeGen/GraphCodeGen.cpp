@@ -20,8 +20,8 @@ void GraphCodeGen::updateCurEnd(GCG_Node *n) {
   return;
 }
 
-GraphCodeGen::GraphCodeGen(const Sema *sema)
-  : CodeGen(sema), curGraph(nullptr), curEnd(nullptr) {
+GraphCodeGen::GraphCodeGen(const Sema *sema, const std::string &functionName)
+  : CodeGen(sema, functionName), curGraph(nullptr), curEnd(nullptr) {
   curLegs.clear();
 }
 

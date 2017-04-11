@@ -104,7 +104,7 @@ void CEmitter::emitSignature() { // emit function signature
   const Sema &sema = *getSema();
 
   bool isFirstArgument = true;
-  append("void C_function(\n");
+  append("void " + getFunctionName() + "(\n");
 
   // emit inputs as function arguments:
   for (auto in = sema.inputs_begin(); in != sema.inputs_end(); in++) {
@@ -113,9 +113,12 @@ void CEmitter::emitSignature() { // emit function signature
     if (isFirstArgument) isFirstArgument = false;
     else append(",\n");
 
+    const std::string &ArgName = sym->getName();
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
-    append(getFPTypeName() + " *" + sym->getName());
+    append(getFPTypeName() + " *" + ArgName);
+
+    addFunctionArgument(ArgName);
   }
 
   // emit outputs as function arguments:
@@ -129,9 +132,12 @@ void CEmitter::emitSignature() { // emit function signature
     if (isFirstArgument) isFirstArgument = false;
     else append(",\n");
 
+    const std::string &ArgName = sym->getName();
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
-    append(getFPTypeName() + " *" + sym->getName());
+    append(getFPTypeName() + " *" + ArgName);
+
+    addFunctionArgument(ArgName);
   }
 
   // finish function signature:

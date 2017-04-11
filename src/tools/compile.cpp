@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   sema.visitProgram(parser.getAST());
 
   {
-    DirectCodeGen CG(&sema);
+    DirectCodeGen CG(&sema, "direct_theano_function");
     TheanoEmitter emitter(&CG);
     emitter.codeGen(parser.getAST());
 
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
   }
 
   {
-    GraphCodeGen CG(&sema);
+    GraphCodeGen CG(&sema, "graph_Theano_function");
     TheanoEmitter emitter(&CG);
     emitter.codeGen(parser.getAST());
 
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
   }
 
   {
-    DirectCodeGen CG(&sema);
+    DirectCodeGen CG(&sema, "direct_C_function");
     CEmitter emitter(&CG, /* rowMajor= */true);
     emitter.codeGen(parser.getAST());
 
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
   }
 
   {
-    GraphCodeGen CG(&sema);
+    GraphCodeGen CG(&sema, "graph_C_function");
     CEmitter emitter(&CG, /* rowMajor= */true);
     emitter.codeGen(parser.getAST());
 

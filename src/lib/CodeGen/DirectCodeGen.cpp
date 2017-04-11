@@ -10,8 +10,8 @@
 #include "Sema/TensorType.h"
 
 
-DirectCodeGen::DirectCodeGen(const Sema *sema)
-  : CodeGen(sema) {}
+DirectCodeGen::DirectCodeGen(const Sema *sema, const std::string &functionName)
+  : CodeGen(sema, functionName) {}
 
 void DirectCodeGen::visitStmt(const Stmt *s) {
   CodeGen::visitStmt(s);

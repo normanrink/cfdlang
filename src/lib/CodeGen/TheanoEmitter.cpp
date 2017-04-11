@@ -76,15 +76,21 @@ void TheanoEmitter::codeGen(const Program *p) {
 
   IO_SYMBOL_LIST(inputs)
 
+  const std::string &functionName = getFunctionName();
   std::string output;
   if (sema.outputs_size() == 1) {
     const Symbol *sym = *sema.outputs_begin();
-    append(getTemp() + " = theano_function(" + inputsList + ", "
-                                             + sym->getName() + ")\n");
+    append(getTemp() + " = " + functionName + "(" + inputsList + ", "
+                                                  + sym->getName() + ")\n");
   } else {
     IO_SYMBOL_LIST(outputs)
-    append(getTemp() + " = theano_function(" + inputsList + ", "
-                                             + outputsList + ")\n");
+    append(getTemp() + " = " + functionName + "(" + inputsList + ", "
+                                                  + outputsList + ")\n");
+  }
+
+  for (auto in = sema.inputs_begin(), e = sema.inputs_end(); in != e; in++) {
+    const Symbol *sym = *in;
+    addFunctionArgument(sym->getName());
   }
 }
 

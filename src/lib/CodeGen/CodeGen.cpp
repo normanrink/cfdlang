@@ -10,8 +10,8 @@
 #include "Sema/TensorType.h"
 
 
-CodeGen::CodeGen(const Sema *sema)
-  : TheSema(sema), TempCounter(0), Code("") {
+CodeGen::CodeGen(const Sema *sema, const std::string &functionName)
+  : TheSema(sema), TempCounter(0), Code(""), FunctionName(functionName) {
   ENBuilder = new ExprNodeBuilder;
 }
 
@@ -35,6 +35,11 @@ const std::string &CodeGen::getEmittedTypeName(const TensorType *type) const {
 void CodeGen::addEmittedType(const TensorType *type, const std::string &name) {
   assert(!typeEmitted(type));
   EmittedTypes[type] = name;
+}
+
+void CodeGen::addFunctionArgument(const std::string &name) {
+  const int position = FunctionArguments.size();
+  FunctionArguments.push_back({position, name});
 }
 
 void CodeGen::EXPR_TREE_MAP_ASSERT(const Expr *expr) const {

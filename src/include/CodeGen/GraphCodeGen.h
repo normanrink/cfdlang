@@ -46,7 +46,7 @@ private:
   std::set<const GCG_Graph *> Graphs;
 
 public:
-  GraphCodeGen(const Sema *sema);
+  GraphCodeGen(const Sema *sema, const std::string &functionName);
 
 public:
   virtual void visitStmt(const Stmt *) override;

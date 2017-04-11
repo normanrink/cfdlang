@@ -13,7 +13,7 @@
 
 class DirectCodeGen : public CodeGen {
 public:
-  DirectCodeGen(const Sema *sema);
+  DirectCodeGen(const Sema *sema, const std::string &functionName);
 
   virtual void visitStmt(const Stmt *s) override;
 

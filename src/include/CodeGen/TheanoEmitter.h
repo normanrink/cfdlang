@@ -63,6 +63,12 @@ private:
   const ExprNode *getExprNode(const Expr *expr) const {
     return CG->getExprNode(expr);
   }
+
+  void addFunctionArgument(const std::string &name) {
+    CG->addFunctionArgument(name);
+  }
+  
+  const std::string &getFunctionName() const { return CG->getFunctionName(); }
 };
 
 #endif /* __THEANO_EMITTER_H__ */
