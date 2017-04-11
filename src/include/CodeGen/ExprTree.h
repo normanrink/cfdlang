@@ -23,7 +23,9 @@ public:
     EK_Add,
     EK_Sub,
     EK_Mul,
+    EK_ScalarMul,
     EK_Div,
+    EK_ScalarDiv,
     EK_Contraction,
     EK_Product,
     EK_Stack,
@@ -121,6 +123,32 @@ DECL_EXPR_NODE_CLASS(Div)
 #undef DECL_EXPR_NODE_CLASS
 
 
+class ScalarMulExpr : public ExprNode {
+public:
+  ScalarMulExpr(ExprNode *lhs, ExprNode *rhs);
+
+  virtual void visit(ExprTreeVisitor *v) const;
+  virtual void transform(ExprTreeTransformer *t);
+
+  static ScalarMulExpr *create(ExprNode *lhs, ExprNode *rhs) {
+    return new ScalarMulExpr(lhs, rhs);
+  }
+};
+
+
+class ScalarDivExpr : public ExprNode {
+public:
+  ScalarDivExpr(ExprNode *lhs, ExprNode *rhs);
+
+  virtual void visit(ExprTreeVisitor *v) const;
+  virtual void transform(ExprTreeTransformer *t);
+
+  static ScalarDivExpr *create(ExprNode *lhs, ExprNode *rhs) {
+    return new ScalarDivExpr(lhs, rhs);
+  }
+};
+
+
 class ProductExpr : public ExprNode {
 public:
   ProductExpr(ExprNode *lhs, ExprNode *rhs);
@@ -213,7 +241,9 @@ public:
   DECL_VISIT_EXPR_NODE(Add)
   DECL_VISIT_EXPR_NODE(Sub)
   DECL_VISIT_EXPR_NODE(Mul)
+  DECL_VISIT_EXPR_NODE(ScalarMul)
   DECL_VISIT_EXPR_NODE(Div)
+  DECL_VISIT_EXPR_NODE(ScalarDiv)
   DECL_VISIT_EXPR_NODE(Contraction)
   DECL_VISIT_EXPR_NODE(Product)
   DECL_VISIT_EXPR_NODE(Stack)
@@ -234,7 +264,9 @@ public:
   DECL_TRANSFORM_EXPR_NODE(Add)
   DECL_TRANSFORM_EXPR_NODE(Sub)
   DECL_TRANSFORM_EXPR_NODE(Mul)
+  DECL_TRANSFORM_EXPR_NODE(ScalarMul)
   DECL_TRANSFORM_EXPR_NODE(Div)
+  DECL_TRANSFORM_EXPR_NODE(ScalarDiv)
   DECL_TRANSFORM_EXPR_NODE(Contraction)
   DECL_TRANSFORM_EXPR_NODE(Product)
   DECL_TRANSFORM_EXPR_NODE(Stack)
@@ -261,7 +293,9 @@ public:
   DECL_BUILDER_CREATE_EXPR_NODE(Add)
   DECL_BUILDER_CREATE_EXPR_NODE(Sub)
   DECL_BUILDER_CREATE_EXPR_NODE(Mul)
+  DECL_BUILDER_CREATE_EXPR_NODE(ScalarMul)
   DECL_BUILDER_CREATE_EXPR_NODE(Div)
+  DECL_BUILDER_CREATE_EXPR_NODE(ScalarDiv)
   DECL_BUILDER_CREATE_EXPR_NODE(Product)
 
   #undef DECL_BUILDER_CREATE_EXPR_NODE

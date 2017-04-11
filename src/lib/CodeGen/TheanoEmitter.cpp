@@ -119,7 +119,15 @@ void TheanoEmitter::visitMulExpr(const MulExpr *en) {
   visitBinOpExpr(en, "*");
 }
 
+void TheanoEmitter::visitScalarMulExpr(const ScalarMulExpr *en) {
+  visitBinOpExpr(en, "*");
+}
+
 void TheanoEmitter::visitDivExpr(const DivExpr *en) {
+  visitBinOpExpr(en, "/");
+}
+
+void TheanoEmitter::visitScalarDivExpr(const ScalarDivExpr *en) {
   visitBinOpExpr(en, "/");
 }
 
