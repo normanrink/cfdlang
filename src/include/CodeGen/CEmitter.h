@@ -72,6 +72,9 @@ protected:
   void emitLoopHeaderNest(const std::vector<int> &exprDims);
   void emitLoopFooterNest();
 
+  std::string visitChildExpr(const ExprNode *en,
+                             const std::vector<int> &childExprDims);
+
   #define DECL_VISIT_EXPR_NODE(Kind)                            \
   virtual void visit##Kind##Expr(const Kind##Expr *e) override;
 
