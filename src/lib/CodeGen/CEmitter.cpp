@@ -12,6 +12,12 @@
 
 void CEmitter::codeGen(const Program *p) {
   nestingLevel = initialNestingLevel = 0;
+
+  if (EmitWrapper) {
+    // if a wrapper will be emitted, mark the
+    // wrapped function as "static inline":
+    append("static inline\n");
+  }
   //emit function signature:
   emitSignature();
 
@@ -94,6 +100,31 @@ void CEmitter::codeGen(const Program *p) {
 
   // close block of function body:
   append("}\n");
+
+  if (EmitWrapper) {
+    const int numArgs = getNumFunctionArguments();
+
+    append("\n");
+    append("void " + getFunctionName() + "(" +
+           getFPTypeName() + " *args[" + std::to_string(numArgs) + "]){\n");
+
+    const std::string &functionCall = getFunctionNameWrapped() + "(";
+    // emit the call of 'FunctionName':
+    EMIT_INDENT(INDENT_PER_LEVEL)
+    append(functionCall);
+    // emit the list of actual arguments of 'FunctionName':
+    for (int i = 0; i < numArgs; i++) {
+      if (i != 0) {
+        append(",\n");
+        EMIT_INDENT(INDENT_PER_LEVEL + functionCall.length())
+      }
+
+      append("args[" + std::to_string(i) + "]");
+    }
+    append(");\n");
+
+    append("}\n");  
+  }
 }
 
 std::string CEmitter::getIndex() {
@@ -104,7 +135,7 @@ void CEmitter::emitSignature() { // emit function signature
   const Sema &sema = *getSema();
 
   bool isFirstArgument = true;
-  append("void " + getFunctionName() + "(\n");
+  append("void " + getFunctionNameWrapped() + "(\n");
 
   // emit inputs as function arguments:
   for (auto in = sema.inputs_begin(); in != sema.inputs_end(); in++) {

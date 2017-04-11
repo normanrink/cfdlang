@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
 
   {
     GraphCodeGen CG(&sema, "graph_C_function");
-    CEmitter emitter(&CG, /* rowMajor= */true);
+    CEmitter emitter(&CG, /* rowMajor= */true, /* emitWrapper= */true);
     emitter.codeGen(parser.getAST());
 
     std::cout << "GRAPH 'C' code generation:\n";

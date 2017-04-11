@@ -25,6 +25,8 @@ private:
 
   const bool RowMajor;
 
+  const bool EmitWrapper;
+
 private:
   // context for the emission of expression trees:
   std::set<std::string> loopedOverIndices;
@@ -33,12 +35,13 @@ private:
   std::vector<std::string> exprIndices;
 
 public:
-  CEmitter(CodeGen *cg, bool rowMajor = true,
+  CEmitter(CodeGen *cg, bool rowMajor = true, bool emitWrapper = false,
            const std::string fpTypeName = "double")
   : CG(cg),
     FPTypeName(fpTypeName),
     IndexCounter(0),
-    RowMajor(rowMajor) {}
+    RowMajor(rowMajor),
+    EmitWrapper(emitWrapper) {}
 
   void codeGen(const Program *p);
   const std::string &getCode() const { return CG->getCode(); }
@@ -111,8 +114,18 @@ private:
   void addFunctionArgument(const std::string &name) {
     CG->addFunctionArgument(name);
   }
-  
+  int getNumFunctionArguments() const {
+    return CG->getFunctionArguments().size();
+  }
+
   const std::string &getFunctionName() const { return CG->getFunctionName(); }
+  std::string getFunctionNameWrapped() const {
+    std::string name = CG->getFunctionName();
+    if (EmitWrapper)
+      name += "_wrapped";
+
+    return name;
+  }
 };
 
 #endif /* __C_EMITTER_H__ */
