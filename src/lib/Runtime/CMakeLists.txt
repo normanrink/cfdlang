@@ -8,3 +8,9 @@ add_library(Runtime STATIC
                     TensorContext.cpp
                     TensorExecution.cpp
                     TensorKernel.cpp)
+
+add_library(obj.Runtime OBJECT
+                        TensorCodeGen.cpp
+                        TensorContext.cpp
+                        TensorExecution.cpp
+                        TensorKernel.cpp)

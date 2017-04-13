@@ -4,4 +4,8 @@ add_library(Sema STATIC
             Symbol.cpp
             TensorType.cpp)
 
+add_library(obj.Sema OBJECT
+            Sema.cpp
+            Symbol.cpp
+            TensorType.cpp)
 
