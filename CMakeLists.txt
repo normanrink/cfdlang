@@ -11,3 +11,5 @@ add_custom_command(TARGET ExtraOutputDirectory
 
 add_subdirectory(src)
 
+include_directories(src/include)
+add_subdirectory(tests)
