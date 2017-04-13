@@ -28,7 +28,7 @@ public:
     std::string name;
   };
 
-  typedef std::list<FunctionArgument> FunctionArgumentsListTy;
+  typedef std::vector<FunctionArgument> FunctionArgumentsListTy;
 
 private:
   const Sema *TheSema;
@@ -94,6 +94,14 @@ public:
 
   const FunctionArgumentsListTy &getFunctionArguments() const {
     return FunctionArguments;
+  };
+  unsigned getNumFunctionArguments() const {
+    return FunctionArguments.size();
+  };
+  const FunctionArgument &getFunctionArgument(unsigned i) const {
+    assert(i < getNumFunctionArguments()
+           && "internal error: index out of bounds for function arguments");
+    return FunctionArguments.at(i);
   };
   const FunctionArgumentsListTy::const_iterator
   function_arguments_begin() const { return FunctionArguments.begin(); }
