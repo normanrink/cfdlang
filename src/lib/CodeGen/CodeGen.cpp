@@ -55,6 +55,19 @@ void CodeGen::visitStmt(const Stmt *s) {
   Statements.push_back(s);
 }
 
+void CodeGen::addAssignment(const Stmt *s) {
+  const Sema *sema = getSema();
+  const std::string &name = s->getIdentifier()->getName();
+  const TensorType &type = sema->getSymbol(name)->getType();
+  ExprNode *lhs = ENBuilder->createIdentifierExpr(name, type.getDims());
+
+  const Expr *e = s->getExpr();
+  EXPR_TREE_MAP_ASSERT(e);
+  ExprNode *rhs = ExprTrees[e];
+
+  Assignments.push_back({lhs, rhs});
+}
+
 bool CodeGen::allCompare(const List &list, Comparison cmp, int pivot) {
   std::function<bool(int)> compare = [cmp, pivot](int i) {
     switch (cmp) {

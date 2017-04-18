@@ -2,6 +2,13 @@
 #include "CodeGen/ExprTreeLifter.h"
 
 
+void ExprTreeLifter::transformAssignments() {
+  for (curPos = Assignments.begin(); curPos != Assignments.end(); curPos++) {
+    ExprNode *rhs = curPos->rhs;
+    rhs->transform(this);
+  }
+}
+
 void ExprTreeLifter::transformNode(ExprNode *en) {
   if (isNodeToBeLifted(en))
     liftNode(en);
@@ -30,7 +37,10 @@ void ExprTreeLifter::liftNode(ExprNode *en) {
     setChildIndex(-1);
     transformChildren(en);
 
-    Assignments.push_back({temp, en});
+    ExprNode *newLHS = getENBuilder()->createIdentifierExpr(temp,
+                                                            en->getDims());
+
+    Assignments.insert(curPos, {newLHS, en});
   }
 
   setChildIndex(childIndex);

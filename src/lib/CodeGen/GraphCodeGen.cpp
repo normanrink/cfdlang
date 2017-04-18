@@ -29,6 +29,8 @@ void GraphCodeGen::visitStmt(const Stmt *s) {
   CodeGen::visitStmt(s);
 
   buildExprTreeForExpr(s->getExpr());
+
+  addAssignment(s);
 }
 
 void GraphCodeGen::buildExprTreeForExpr(const Expr *expr) {

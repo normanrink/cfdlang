@@ -19,22 +19,21 @@ class ExprNodeBuilder;
 class CodeGen : public ASTVisitor {
 public:
   struct Assignment {
-    std::string variable;
-    const ExprNode *en;
+    ExprNode *lhs;
+    ExprNode *rhs;
   };
+  typedef std::list<Assignment> AssignmentsListTy;
 
   struct FunctionArgument {
     int position;
     std::string name;
   };
-
   typedef std::vector<FunctionArgument> FunctionArgumentsListTy;
 
 private:
   const Sema *TheSema;
 
   int TempCounter;
-
   std::string Code;
   
   std::map<const TensorType *, std::string> EmittedTypes;
@@ -50,6 +49,8 @@ protected:
   void EXPR_TREE_MAP_ASSERT(const Expr *expr) const ;
 
   FunctionArgumentsListTy FunctionArguments;
+
+  AssignmentsListTy Assignments;
 
 public:
   ExprNodeBuilder *getENBuilder() { return ENBuilder; }
@@ -83,12 +84,16 @@ public:
   virtual void visitDecl(const Decl *d) override;
   virtual void visitStmt(const Stmt *s) override;
 
+  virtual void addAssignment(const Stmt *s);
+
   const std::list<const Decl *> &getDeclarations() const {
     return Declarations;
   }
   const std::list<const Stmt *> &getStatements() const { return Statements; }
 
   const std::string &getFunctionName() const { return FunctionName; }
+
+  AssignmentsListTy &getAssignments() { return Assignments; }
 
   void addFunctionArgument(const std::string &name);
 

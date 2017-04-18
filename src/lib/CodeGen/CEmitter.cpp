@@ -30,72 +30,59 @@ void CEmitter::codeGen(const Program *p) {
   // construct the expression trees, one for each statement in the program:
   CG->visitProgram(p);
 
-  for (const auto *s: CG->getStatements()) {
-    std::list<CodeGen::Assignment> Assignments;
+  const auto &nodeLiftPredicate = [](const ExprNode *en) {
+    return (en->isStackExpr() || en->isContractionExpr());
+  };
+  ExprTreeLifter lifter(CG, nodeLiftPredicate);
+  lifter.transformAssignments();
 
-    // lift contractions and tensor stacks out of the expression tree
-    // on the RHS of the statement 's':
-    {
-      ExprNode *en = getExprNode(s->getExpr());
+  for (const auto &a: CG->getAssignments()) {
+    const Sema &sema = *getSema();
 
-      const auto &nodeLiftPredicate = [](const ExprNode *en) {
-        return (en->isStackExpr() || en->isContractionExpr());
+    assert(a.lhs->isIdentifier() &&
+           "internal error: left-hand side must be an identifier expression");
+    const std::string result = a.lhs->getName();
+    const ExprNode *en = a.rhs;
+    const std::vector<int> &dims = getDims(en);
+
+    nestingLevel = initialNestingLevel;
+
+    // emit defintion of 'result' if necessary:
+    if (!sema.is_in_inputs(result) && !sema.is_in_outputs(result)) {
+      auto elements = [](const std::vector<int> &ds) {
+        int es = 1;
+        for (int i = 0; i < ds.size(); i++)
+          es *= ds[i];
+        return es;
       };
-      ExprTreeLifter lifter(CG, nodeLiftPredicate);
 
-      en->transform(&lifter);
-      Assignments = lifter.getAssignments();
-      // the result of the expression tree that remains as 'en' after lifting
-      // must be assigned to the variable on the LHS of the statement 's':
-      Assignments.push_back({s->getIdentifier()->getName(), en});
+      EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
+      append(getFPTypeName() + " " + result +
+             "[" + std::to_string(elements(dims)) + "];\n");
     }
 
-    for (const auto &ass: Assignments) {
-      const Sema &sema = *getSema();
-
-      const std::string result = ass.variable;
-      const ExprNode *en = ass.en;
-      const std::vector<int> &dims = getDims(en);
-
-      nestingLevel = initialNestingLevel;
-
-      // emit defintion of 'result' if necessary:
-      if (!sema.is_in_inputs(result) && !sema.is_in_outputs(result)) {
-        auto elements = [](const std::vector<int> &ds) {
-          int es = 1;
-          for (int i = 0; i < ds.size(); i++)
-            es *= ds[i];
-          return es;
-        };
-
-        EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-        append(getFPTypeName() + " " + result +
-               "[" + std::to_string(elements(dims)) + "];\n");
-      }
-
-      // generate enough indices for the expression:
-      exprIndices.clear();
-      for (int i = 0; i < dims.size(); i++) {
-        const std::string index = getIndex();
-        exprIndices.push_back(index);
-      }
-
-      loopedOverIndices.clear();
-
-      // we need this if-clause since code emission
-      // for identifiers has been optimized out:
-      if (en->isIdentifier()) {
-        assert(0 && "internal error: assigning from identifier at top level");
-      } else {
-        setResultTemp(result + subscriptString(exprIndices, dims));
-        en->visit(this);
-      }
-
-      assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
-
-      // close all for-loops:
-      emitLoopFooterNest();
+    // generate enough indices for the expression:
+    exprIndices.clear();
+    for (int i = 0; i < dims.size(); i++) {
+      const std::string index = getIndex();
+      exprIndices.push_back(index);
     }
+
+    loopedOverIndices.clear();
+
+    // we need this if-clause since code emission
+    // for identifiers has been optimized out:
+    if (en->isIdentifier()) {
+      assert(0 && "internal error: assigning from identifier at top level");
+    } else {
+      setResultTemp(result + subscriptString(exprIndices, dims));
+      en->visit(this);
+    }
+
+    assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
+
+    // close all for-loops:
+    emitLoopFooterNest();
   }
 
   // close block of function body:

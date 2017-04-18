@@ -19,6 +19,8 @@ void DirectCodeGen::visitStmt(const Stmt *s) {
   const Expr *expr = s->getExpr();
   expr->visit(this);
   EXPR_TREE_MAP_ASSERT(expr);
+
+  addAssignment(s);
 }
 
 void DirectCodeGen::visitContraction(const Expr *e, const TupleList &indices) {

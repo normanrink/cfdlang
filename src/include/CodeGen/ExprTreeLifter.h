@@ -11,9 +11,8 @@
 #include "CodeGen/ExprTree.h"
 
 
-// This class lifts 'Contraction' and 'Stack' nodes out of expression
-// trees and replaces them with temporary variables. This should help
-// generate better C code.
+// This class can lift nodes out of expression trees and replace them with
+// temporary variables. This can help generate better C code.
 
 class ExprTreeLifter : public ExprTreeTransformer {
 public:
@@ -21,9 +20,12 @@ public:
 
 private:
   CodeGen *CG;
+  CodeGen::AssignmentsListTy &Assignments;
 
   ExprNode *Parent;
   int ChildIndex;
+
+  CodeGen::AssignmentsListTy::iterator curPos;
 
   const LiftPredicate isNodeToBeLifted;
 
@@ -35,14 +37,12 @@ protected:
   int getChildIndex() const { return ChildIndex; }
 
 public:
-  typedef std::list<CodeGen::Assignment> AssignmentsListTy;
-
-private:
-  AssignmentsListTy Assignments;
-
-public:
   ExprTreeLifter(CodeGen *cg, const LiftPredicate &lp)
-    : CG(cg), Parent(nullptr), ChildIndex(-1), isNodeToBeLifted(lp) {}
+    : CG(cg),
+      Assignments(CG->getAssignments()),
+      Parent(nullptr),
+      ChildIndex(-1),
+      isNodeToBeLifted(lp) {}
   
   #define DECL_TRANSFORM_EXPR_NODE(Kind)                       \
   virtual void transform##Kind##Expr(Kind##Expr *en) override;
@@ -64,15 +64,7 @@ public:
   void transformChildren(ExprNode *en);
   void liftNode(ExprNode *en);
 
-  const AssignmentsListTy &getAssignments() const {
-    return Assignments;
-  };
-  const AssignmentsListTy::const_iterator assignments_begin() const {
-    return Assignments.begin();
-  }
-  const AssignmentsListTy::const_iterator assignments_end() const {
-    return Assignments.end();
-  }
+  void transformAssignments();
 
   // helper methods that implement functionality from the code generator 'cg':
 private:
