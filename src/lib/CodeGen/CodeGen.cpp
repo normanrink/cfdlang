@@ -23,20 +23,6 @@ std::string CodeGen::getTemp() {
   return "t" + std::to_string(TempCounter++);
 }
 
-bool CodeGen::typeEmitted(const TensorType *type) const {
-  return EmittedTypes.count(type);
-}
-
-const std::string &CodeGen::getEmittedTypeName(const TensorType *type) const {
-  assert(typeEmitted(type));
-  return EmittedTypes.at(type);
-}
-
-void CodeGen::addEmittedType(const TensorType *type, const std::string &name) {
-  assert(!typeEmitted(type));
-  EmittedTypes[type] = name;
-}
-
 void CodeGen::addFunctionArgument(const std::string &name) {
   const int position = FunctionArguments.size();
   FunctionArguments.push_back({position, name});

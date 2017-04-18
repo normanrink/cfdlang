@@ -35,8 +35,6 @@ private:
 
   int TempCounter;
   std::string Code;
-  
-  std::map<const TensorType *, std::string> EmittedTypes;
 
   // map each 'Expr' in the AST to an expression tree, rooted at an 'ExprNode':
   std::map<const Expr *, ExprNode *> ExprTrees;
@@ -71,10 +69,6 @@ public:
   const std::string &getCode() const { return Code; }
 
   void append(const std::string &code) { Code += code; }
-
-  bool typeEmitted(const TensorType *type) const;
-  const std::string &getEmittedTypeName(const TensorType *type) const;
-  void addEmittedType(const TensorType *type, const std::string &name);
 
 private:
   std::list<const Decl *> Declarations;

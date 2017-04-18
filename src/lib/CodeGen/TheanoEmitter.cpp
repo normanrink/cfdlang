@@ -17,6 +17,8 @@ void TheanoEmitter::codeGen(const Program *p) {
 
   const Sema &sema = *getSema();
 
+  std::map<const TensorType *, std::string> EmittedTypes;
+
   for (const auto *d: CG->getDeclarations()) {
     if (d->getNodeType() == ASTNode::NT_TypeDecl)
       continue;
@@ -26,8 +28,8 @@ void TheanoEmitter::codeGen(const Program *p) {
     const TensorType *type = &sym->getType();
 
     std::string typeName;
-    if (CG->typeEmitted(type)) {
-      typeName = CG->getEmittedTypeName(type);
+    if (EmittedTypes.count(type)) {
+      typeName = EmittedTypes[type];
     } else {
       typeName = (sema.isNamedType(type)) ? sema.getTypeSymbol(type)->getName()
       : getTemp();
@@ -35,7 +37,7 @@ void TheanoEmitter::codeGen(const Program *p) {
       append(typeName + " = " + getModulePrefix()
              + ".TensorType('float64', (False,)*"
              + std::to_string(type->getRank()) + ")\n");
-      CG->addEmittedType(type, typeName);
+      EmittedTypes[type] = typeName;
     }
 
     append(name + " = " + getModulePrefix() + ".TensorVariable("
