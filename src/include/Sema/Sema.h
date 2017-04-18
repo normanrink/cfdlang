@@ -37,6 +37,7 @@ public:
 
   const TensorType *createType(const std::vector<int> &dims);
   const TensorType *getType(const std::vector<int> &dims);
+  const TensorType *getType(const std::vector<int> &dims) const;
   const TensorType *getType(const Expr *e) const { return ExprTypes.at(e); }
   const TensorType &getScalar() const { return *scalar; }
   bool isScalar(const TensorType &t) const { return (t == getScalar()); }

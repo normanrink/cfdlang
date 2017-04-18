@@ -103,10 +103,6 @@ private:
 
   const Sema *getSema() const { return CG->getSema(); }
 
-  ExprNode *getExprNode(const Expr *expr) const {
-    return CG->getExprNode(expr);
-  }
-
   const std::vector<int> &getDims(const ExprNode *en) const {
     return en->getDims();
   }

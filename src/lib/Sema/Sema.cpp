@@ -40,6 +40,15 @@ const TensorType *Sema::getType(const std::vector<int> &dims) {
   return createType(dims);
 }
 
+const TensorType *Sema::getType(const std::vector<int> &dims) const {
+  for (auto it : Types) {
+    if (it->equals(dims))
+      return it;
+  }
+
+  return nullptr;
+}
+
 const Symbol *Sema::createSymbol(Symbol::SymbolKind k, const std::string &name,
                                  const TensorType &type, const Decl *decl) {
   Symbol *sym = new Symbol(k, name, type, decl);

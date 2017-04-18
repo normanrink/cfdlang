@@ -14,13 +14,11 @@ DirectCodeGen::DirectCodeGen(const Sema *sema, const std::string &functionName)
   : CodeGen(sema, functionName) {}
 
 void DirectCodeGen::visitStmt(const Stmt *s) {
-  CodeGen::visitStmt(s);
-  
   const Expr *expr = s->getExpr();
   expr->visit(this);
   EXPR_TREE_MAP_ASSERT(expr);
 
-  addAssignment(s);
+  CodeGen::visitStmt(s);
 }
 
 void DirectCodeGen::visitContraction(const Expr *e, const TupleList &indices) {

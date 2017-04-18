@@ -18,12 +18,18 @@ class ExprNodeBuilder;
 
 class CodeGen : public ASTVisitor {
 public:
+  // a program consists of delcared identifiers ...
+  typedef std::list<ExprNode *> DeclaredIdListTy;
+
+  // .. and assignments:
   struct Assignment {
     ExprNode *lhs;
     ExprNode *rhs;
   };
   typedef std::list<Assignment> AssignmentsListTy;
 
+  // additionally, a program has input and output, both of which
+  // are implemented as function arguments:
   struct FunctionArgument {
     int position;
     std::string name;
@@ -31,28 +37,45 @@ public:
   typedef std::vector<FunctionArgument> FunctionArgumentsListTy;
 
 private:
+  // member variables that capture the state of this object:
   const Sema *TheSema;
 
   int TempCounter;
   std::string Code;
 
-  // map each 'Expr' in the AST to an expression tree, rooted at an 'ExprNode':
-  std::map<const Expr *, ExprNode *> ExprTrees;
-
   const std::string FunctionName;
 
-protected:
-  ExprNodeBuilder *ENBuilder;
+public:
+  // methods for accessing and manipulating this object's state:
+  const Sema *getSema() const { return TheSema; }
+  std::string getTemp();
+  const std::string &getCode() const { return Code; }
 
-  void EXPR_TREE_MAP_ASSERT(const Expr *expr) const ;
+  void append(const std::string &code) { Code += code; }
 
-  FunctionArgumentsListTy FunctionArguments;
-
-  AssignmentsListTy Assignments;
+  const std::string &getFunctionName() const { return FunctionName; }
 
 public:
-  ExprNodeBuilder *getENBuilder() { return ENBuilder; }
-  
+  // constructor and deconstructor:
+  CodeGen(const Sema *sema, const std::string &functionName);
+  virtual ~CodeGen();
+
+protected:
+  // state that is built up during code generation:
+
+  // for creating new 'ExprNode' objects:
+  ExprNodeBuilder *ENBuilder;
+
+  // the three components of the resulting program:
+  DeclaredIdListTy DeclaredIds;
+  AssignmentsListTy Assignments;
+  FunctionArgumentsListTy FunctionArguments;
+
+  // each 'Expr' in the AST ismapped to an 'ExprNode':
+  std::map<const Expr *, ExprNode *> ExprTrees;
+  void EXPR_TREE_MAP_ASSERT(const Expr *expr) const ;
+
+protected:
   void addExprNode(const Expr *expr, ExprNode *en) {
     ExprTrees[expr] = en;
   }
@@ -61,39 +84,25 @@ public:
   }
 
 public:
-  CodeGen(const Sema *sema, const std::string &functionName);
-  virtual ~CodeGen();
+  // methods for accessing and manipulating state
+  // that is built up during code generation:
 
-  const Sema *getSema() const { return TheSema; }
-  std::string getTemp();
-  const std::string &getCode() const { return Code; }
+  ExprNodeBuilder *getENBuilder() { return ENBuilder; }
 
-  void append(const std::string &code) { Code += code; }
-
-private:
-  std::list<const Decl *> Declarations;
-  std::list<const Stmt *> Statements;
-
-public:
-  virtual void visitDecl(const Decl *d) override;
-  virtual void visitStmt(const Stmt *s) override;
-
+  virtual void addDeclaredId(const Decl *d);
   virtual void addAssignment(const Stmt *s);
+  virtual void addFunctionArgument(const std::string &name);
 
-  const std::list<const Decl *> &getDeclarations() const {
-    return Declarations;
-  }
-  const std::list<const Stmt *> &getStatements() const { return Statements; }
-
-  const std::string &getFunctionName() const { return FunctionName; }
-
+  DeclaredIdListTy &getDeclaredIds() { return DeclaredIds; }
   AssignmentsListTy &getAssignments() { return Assignments; }
+  FunctionArgumentsListTy &getFunctionArguments() { return FunctionArguments; }
 
-  void addFunctionArgument(const std::string &name);
-
+  const DeclaredIdListTy &getDeclaredIds() const { return DeclaredIds; }
+  const AssignmentsListTy &getAssignments() const { return Assignments; }
   const FunctionArgumentsListTy &getFunctionArguments() const {
     return FunctionArguments;
   };
+
   unsigned getNumFunctionArguments() const {
     return FunctionArguments.size();
   };
@@ -102,13 +111,13 @@ public:
            && "internal error: index out of bounds for function arguments");
     return FunctionArguments.at(i);
   };
-  const FunctionArgumentsListTy::const_iterator
-  function_arguments_begin() const { return FunctionArguments.begin(); }
-  const FunctionArgumentsListTy::const_iterator
-  function_arguments_end() const { return FunctionArguments.end(); }
 
-// useful helpers:
 public:
+  virtual void visitDecl(const Decl *d) override;
+  virtual void visitStmt(const Stmt *s) override;
+
+public:
+  // useful helpers:
   typedef std::vector<int> List;
   typedef std::vector<int> Tuple;
   typedef std::vector<Tuple> TupleList;

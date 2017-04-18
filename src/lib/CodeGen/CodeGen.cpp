@@ -34,11 +34,23 @@ void CodeGen::EXPR_TREE_MAP_ASSERT(const Expr *expr) const {
 }
 
 void CodeGen::visitDecl(const Decl *d) {
-  Declarations.push_back(d);
+  if (d->getNodeType() == ASTNode::NT_TypeDecl)
+    return;
+
+  addDeclaredId(d);
 }
 
 void CodeGen::visitStmt(const Stmt *s) {
-  Statements.push_back(s);
+  addAssignment(s);
+}
+
+void CodeGen::addDeclaredId(const Decl *d) {
+  const Sema *sema = getSema();
+  const std::string &name = d->getIdentifier()->getName();
+  const TensorType &type = sema->getSymbol(name)->getType();
+  ExprNode *id = ENBuilder->createIdentifierExpr(name, type.getDims());
+
+  DeclaredIds.push_back(id);
 }
 
 void CodeGen::addAssignment(const Stmt *s) {

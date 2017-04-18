@@ -51,24 +51,18 @@ protected:
   void visitBinOpExpr(const ExprNode *en, const std::string &op);
   void visitTensordotExpr(const ExprNode *en, const std::string &axes);
 
-// helper methods that implement functionality from the code generator 'cg':
 private:
-  std::string getTemp() { return CG->getTemp(); }
-  void append(const std::string &code) { CG->append(code); }
+  // helper methods that implement functionality from the code generator 'cg':
 
   const Sema *getSema() const { return CG->getSema(); }
-  void addExprNode(const Expr *expr, ExprNode *en) {
-    CG->addExprNode(expr, en);
-  }
-  const ExprNode *getExprNode(const Expr *expr) const {
-    return CG->getExprNode(expr);
-  }
+  const std::string &getFunctionName() const { return CG->getFunctionName(); }
+
+  std::string getTemp() { return CG->getTemp(); }
+  void append(const std::string &code) { CG->append(code); }
 
   void addFunctionArgument(const std::string &name) {
     CG->addFunctionArgument(name);
   }
-  
-  const std::string &getFunctionName() const { return CG->getFunctionName(); }
 };
 
 #endif /* __THEANO_EMITTER_H__ */

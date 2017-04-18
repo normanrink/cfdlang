@@ -26,11 +26,9 @@ GraphCodeGen::GraphCodeGen(const Sema *sema, const std::string &functionName)
 }
 
 void GraphCodeGen::visitStmt(const Stmt *s) {
-  CodeGen::visitStmt(s);
-
   buildExprTreeForExpr(s->getExpr());
 
-  addAssignment(s);
+  CodeGen::visitStmt(s);
 }
 
 void GraphCodeGen::buildExprTreeForExpr(const Expr *expr) {

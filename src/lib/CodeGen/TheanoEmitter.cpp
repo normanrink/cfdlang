@@ -18,21 +18,20 @@ void TheanoEmitter::codeGen(const Program *p) {
   const Sema &sema = *getSema();
 
   std::map<const TensorType *, std::string> EmittedTypes;
+  for (const auto *id: CG->getDeclaredIds()) {
+    assert(id->isIdentifier() && "internal error: expected 'IdentifierExpr'");
 
-  for (const auto *d: CG->getDeclarations()) {
-    if (d->getNodeType() == ASTNode::NT_TypeDecl)
-      continue;
-
-    const std::string &name = d->getIdentifier()->getName();
-    const Symbol *sym = sema.getSymbol(name);
-    const TensorType *type = &sym->getType();
+    const std::string &name = id->getName();
+    const TensorType *type = sema.getType(id->getDims());
+    assert(type && "internal error: expected valdi type");
 
     std::string typeName;
     if (EmittedTypes.count(type)) {
       typeName = EmittedTypes[type];
     } else {
-      typeName = (sema.isNamedType(type)) ? sema.getTypeSymbol(type)->getName()
-      : getTemp();
+      typeName = sema.isNamedType(type)
+                 ? sema.getTypeSymbol(type)->getName()
+                 : getTemp();
 
       append(typeName + " = " + getModulePrefix()
              + ".TensorType('float64', (False,)*"
@@ -44,9 +43,10 @@ void TheanoEmitter::codeGen(const Program *p) {
            + typeName + ")\n");
   }
 
-  for (const auto *s: CG->getStatements()) {
-    const ExprNode *en = getExprNode(s->getExpr());
-    const std::string result = s->getIdentifier()->getName();
+  for (const auto &a: CG->getAssignments()) {
+    assert(a.lhs->isIdentifier() && "internal error: LHS must be indentifier");
+    const std::string result = a.lhs->getName();
+    const ExprNode *en = a.rhs;
 
     // we need this if-clause since code emission
     // for identifiers has been optimized out:
