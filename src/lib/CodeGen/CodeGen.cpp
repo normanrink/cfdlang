@@ -66,6 +66,13 @@ void CodeGen::addAssignment(const Stmt *s) {
   Assignments.push_back({lhs, rhs});
 }
 
+const CodeGen::FunctionArgument &
+CodeGen::getFunctionArgument(unsigned i) const {
+  assert(i < getNumFunctionArguments()
+         && "internal error: index out of bounds for function arguments");
+  return FunctionArguments.at(i);
+};
+
 bool CodeGen::allCompare(const List &list, Comparison cmp, int pivot) {
   std::function<bool(int)> compare = [cmp, pivot](int i) {
     switch (cmp) {

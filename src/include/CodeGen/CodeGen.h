@@ -106,11 +106,7 @@ public:
   unsigned getNumFunctionArguments() const {
     return FunctionArguments.size();
   };
-  const FunctionArgument &getFunctionArgument(unsigned i) const {
-    assert(i < getNumFunctionArguments()
-           && "internal error: index out of bounds for function arguments");
-    return FunctionArguments.at(i);
-  };
+  const FunctionArgument &getFunctionArgument(unsigned i) const;
 
 public:
   virtual void visitDecl(const Decl *d) override;
