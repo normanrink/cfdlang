@@ -141,6 +141,22 @@ void Sema::visitDecl(const Decl *d) {
 
   const Symbol *sym = createSymbol(k, name, *type, d);
 
+  if ((d->getIOSpecifier() & Decl::IO_Input) &&
+      (d->getIOSpecifier() & Decl::IO_Output)) {
+    // variables that are both input and output are not handled correctly by
+    // code generation; e.g. when an input variable is contracted over and the
+    // result is assigned back to the same variable
+    assert(0 && ("semantic error: symbol \'" + name +
+                 "\' declared as both 'input' and output'").c_str());
+    // FIXME
+    // the same problem obviously occurs for variables that are
+    // neither input not output; e.g.:
+    // "var input v : [3]"
+    // "var       t : [3]"
+    // "t = v # t . [[0 1]"
+    // here, 't' is likely to contain incorrect values!!! 
+  }
+
   if (d->getIOSpecifier() & Decl::IO_Input)
     Inputs.insert(sym);
   if (d->getIOSpecifier() & Decl::IO_Output)
