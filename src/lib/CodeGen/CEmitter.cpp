@@ -518,6 +518,10 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
   // the current implementation of this function yields correct results
   // ONLY if it emits code at the top level (no nestinf in any for loops):
   assert(nestingLevel == initialNestingLevel);
+  // since this method has been called from the top level, 'exprIndices'
+  // and 'resultIndices' must agree:
+  assert(exprIndices == resultIndices);
+
   const ExprNode *result = getResultTemp();
 
   const std::vector<std::string> savedExprIndices = exprIndices;
