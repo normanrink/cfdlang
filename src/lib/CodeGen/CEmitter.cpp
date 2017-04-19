@@ -76,9 +76,11 @@ void CEmitter::codeGen(const Program *p) {
 
     // generate enough indices for the expression:
     exprIndices.clear();
+    resultIndices.clear();
     for (int i = 0; i < dims.size(); i++) {
       const std::string index = getIndex();
       exprIndices.push_back(index);
+      resultIndices.push_back(index);
     }
 
     loopedOverIndices.clear();
@@ -199,13 +201,9 @@ void CEmitter::emitForLoopFooter(unsigned indent) {
 }
 
 void CEmitter::emitTempDefinition(unsigned indent,
-                                  const std::string &temp,
-                                  const std::string &init) {
+                                  const std::string &temp) {
   EMIT_INDENT(indent)
-  append(getFPTypeName() + " " + temp);
-  if (init.length())
-    append(" = " + init);
-  append(";\n");
+  append(getFPTypeName() + " " + temp + "[1];\n");
 }
 
 std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
@@ -288,23 +286,23 @@ void CEmitter::emitLoopFooterNest() {
   }
 }
 
-std::string CEmitter::visitChildExpr(const ExprNode *en,
-                                     const std::vector<int> &childExprDims) {
-  std::string temp;
-
+std::string CEmitter::visitChildExpr(const ExprNode *en) {
   if (en->isIdentifier()) {
-    temp = subscriptedIdentifier(en, exprIndices);
+    return subscriptedIdentifier(en, exprIndices);
   } else {
-    temp = getTemp();
+    const std::string temp = getTemp();
     emitTempDefinition(nestingLevel*INDENT_PER_LEVEL, temp);
     ExprNode *tempNode =
-      CG->getENBuilder()->createIdentifierExpr(getTemp(), childExprDims);
+      CG->getENBuilder()->createIdentifierExpr(temp, {});
 
+    std::vector<std::string> savedResultIndices = resultIndices;
     setResultTemp(tempNode);
+    resultIndices = {};
     en->visit(this);
-  }
+    resultIndices = savedResultIndices;
 
-  return temp;
+    return subscriptedIdentifier(tempNode);
+  }
 }
 
 void CEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
@@ -346,18 +344,18 @@ void CEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
 
   // emit the 'lhs':
   exprIndices = lhsIndices;
-  lhsTemp = visitChildExpr(lhsExpr, lhsDims);
+  lhsTemp = visitChildExpr(lhsExpr);
 
   // emit the 'rhs':
   exprIndices = rhsIndices;
-  rhsTemp = visitChildExpr(rhsExpr, rhsDims);
+  rhsTemp = visitChildExpr(rhsExpr);
 
   // emit for-loop nest as appropriate:
   exprIndices = savedExprIndices;
   emitLoopHeaderNest(exprDims);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(subscriptedIdentifier(result, exprIndices)
+  append(subscriptedIdentifier(result, resultIndices)
          + " = " + lhsTemp + " " + op + " " + rhsTemp + ";\n");
 }
 
@@ -415,17 +413,17 @@ void CEmitter::visitProductExpr(const ProductExpr *en) {
 
   // visit the 'lhs':
   exprIndices = lhsIndices;
-  lhsTemp = visitChildExpr(lhsExpr, lhsDims);
+  lhsTemp = visitChildExpr(lhsExpr);
 
   // visit the 'rhs', emit loop headers as necessary:
   exprIndices = rhsIndices;
-  rhsTemp = visitChildExpr(rhsExpr, rhsDims);
+  rhsTemp = visitChildExpr(rhsExpr);
 
   exprIndices = savedExprIndices;
   emitLoopHeaderNest(exprDims);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(subscriptedIdentifier(result, exprIndices)
+  append(subscriptedIdentifier(result, resultIndices)
          + " = " + lhsTemp + " * " + rhsTemp + ";\n");
 }
 
@@ -484,24 +482,24 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   // emit for-loop nest for the result:
   emitLoopHeaderNest(exprDims);
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(subscriptedIdentifier(result, exprIndices) + " = 0.0;\n");
+  append(subscriptedIdentifier(result, resultIndices) + " = 0.0;\n");
 
   const std::vector<std::string> savedExprIndices = exprIndices;
 
   // visit the 'lhs':
   exprIndices = lhsIndices;
-  lhsTemp = visitChildExpr(lhsExpr, lhsDims);
+  lhsTemp = visitChildExpr(lhsExpr);
   // emit for-loop nest for the 'lhs' early:
   emitLoopHeaderNest(lhsDims);
 
   // visit the 'rhs', emit loop headers as necessary:
   exprIndices = rhsIndices;
-  rhsTemp = visitChildExpr(rhsExpr, rhsDims);
+  rhsTemp = visitChildExpr(rhsExpr);
   // emit for-loop nest for the 'rhs':
   emitLoopHeaderNest(rhsDims);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(subscriptedIdentifier(result, savedExprIndices)
+  append(subscriptedIdentifier(result, resultIndices)
          + " += " + lhsTemp + " * " + rhsTemp + ";\n");
 
   // close the for-loops that iterate over the contracted indices ...
@@ -548,7 +546,7 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
     const std::vector<int> childDims = getDims(child);
 
     exprIndices = childExprIndices;
-    std::string temp = visitChildExpr(child, childDims);
+    std::string temp = visitChildExpr(child);
     emitLoopHeaderNest(childDims);
 
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);

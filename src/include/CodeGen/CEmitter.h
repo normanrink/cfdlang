@@ -32,7 +32,7 @@ private:
   std::set<std::string> loopedOverIndices;
   unsigned nestingLevel,
            initialNestingLevel;
-  std::vector<std::string> exprIndices;
+  std::vector<std::string> exprIndices, resultIndices;
 
 public:
   CEmitter(CodeGen *cg, bool rowMajor = true, bool emitWrapper = false,
@@ -66,20 +66,18 @@ protected:
   void emitForLoopFooter(unsigned indent);
 
   void emitTempDefinition(unsigned indent,
-                          const std::string &temp,
-                          const std::string &init = "");
+                          const std::string &temp);
 
   std::string subscriptString(const std::vector<std::string> &indices,
                               const std::vector<int> &dims) const;
   std::string
   subscriptedIdentifier(const ExprNode *en,
-                        const std::vector<std::string> &indices) const;
+                        const std::vector<std::string> &indices = {}) const;
 
   void emitLoopHeaderNest(const std::vector<int> &exprDims);
   void emitLoopFooterNest();
 
-  std::string visitChildExpr(const ExprNode *en,
-                             const std::vector<int> &childExprDims);
+  std::string visitChildExpr(const ExprNode *en);
 
   #define DECL_VISIT_EXPR_NODE(Kind)                            \
   virtual void visit##Kind##Expr(const Kind##Expr *e) override;
