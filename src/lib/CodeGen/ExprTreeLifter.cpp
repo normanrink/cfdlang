@@ -5,6 +5,9 @@
 void ExprTreeLifter::transformAssignments() {
   for (curPos = Assignments.begin(); curPos != Assignments.end(); curPos++) {
     ExprNode *rhs = curPos->rhs;
+
+    setParent(nullptr);
+    setChildIndex(-1);
     rhs->transform(this);
   }
 }

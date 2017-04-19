@@ -40,8 +40,6 @@ public:
   ExprTreeLifter(CodeGen *cg, const LiftPredicate &lp)
     : CG(cg),
       Assignments(CG->getAssignments()),
-      Parent(nullptr),
-      ChildIndex(-1),
       isNodeToBeLifted(lp) {}
   
   #define DECL_TRANSFORM_EXPR_NODE(Kind)                       \
