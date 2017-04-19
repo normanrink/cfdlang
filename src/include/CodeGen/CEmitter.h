@@ -18,7 +18,7 @@ private:
 
   const std::string FPTypeName;
 
-  std::string resultTemp;
+  const ExprNode *resultTemp;
   unsigned Indent;
 
   unsigned IndexCounter;
@@ -49,8 +49,8 @@ public:
 protected:
   const std::string &getFPTypeName() const { return FPTypeName; }
 
-  std::string getResultTemp() const { return resultTemp; }
-  void setResultTemp(const std::string &temp) { resultTemp = temp; }
+  const ExprNode *getResultTemp() const { return resultTemp; }
+  void setResultTemp(const ExprNode *temp) { resultTemp = temp; }
 
   unsigned getIndent() const { return Indent; }
   void setIndent(unsigned indent) { Indent = indent; }
@@ -71,6 +71,9 @@ protected:
 
   std::string subscriptString(const std::vector<std::string> &indices,
                               const std::vector<int> &dims) const;
+  std::string
+  subscriptedIdentifier(const ExprNode *en,
+                        const std::vector<std::string> &indices) const;
 
   void emitLoopHeaderNest(const std::vector<int> &exprDims);
   void emitLoopFooterNest();
@@ -95,6 +98,7 @@ protected:
   #undef DECL_VISIT_EXPR_NODE
 
   void visitBinOpExpr(const ExprNode *en, const std::string &op);
+  void visitTopLevelIdentifier(const ExprNode *en);
 
   // helper methods:
 private:

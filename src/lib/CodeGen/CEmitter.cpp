@@ -2,6 +2,7 @@
 #include "AST/AST.h"
 #include "CodeGen/CEmitter.h"
 #include "CodeGen/ExprTreeLifter.h"
+#include "CodeGen/StackExprRemover.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
 
@@ -30,36 +31,48 @@ void CEmitter::codeGen(const Program *p) {
   // construct the expression trees, one for each statement in the program:
   CG->visitProgram(p);
 
+  StackExprRemover remover(CG);
+  remover.transformAssignments();
+
   const auto &nodeLiftPredicate = [](const ExprNode *en) {
     return (en->isStackExpr() || en->isContractionExpr());
   };
   ExprTreeLifter lifter(CG, nodeLiftPredicate);
   lifter.transformAssignments();
 
+  std::set<std::string> emittedNames;
+
   for (const auto &a: CG->getAssignments()) {
     const Sema &sema = *getSema();
 
     assert(a.lhs->isIdentifier() &&
            "internal error: left-hand side must be an identifier expression");
-    const std::string result = a.lhs->getName();
-    const ExprNode *en = a.rhs;
-    const std::vector<int> &dims = getDims(en);
+
+    const ExprNode *result = a.lhs;
+    const std::string &resultName = result->getName();
+    const std::vector<int> &resultDims = getDims(result);
 
     nestingLevel = initialNestingLevel;
 
     // emit defintion of 'result' if necessary:
-    if (!sema.is_in_inputs(result) && !sema.is_in_outputs(result)) {
+    if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
+        && !emittedNames.count(resultName)) {
       auto elements = [](const std::vector<int> &ds) {
-        int es = 1;
+        unsigned long long es = 1;
         for (int i = 0; i < ds.size(); i++)
           es *= ds[i];
         return es;
       };
 
       EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-      append(getFPTypeName() + " " + result +
-             "[" + std::to_string(elements(dims)) + "];\n");
+      append(getFPTypeName() + " " + resultName +
+             "[" + std::to_string(elements(resultDims)) + "];\n");
+
+      emittedNames.insert(resultName);
     }
+
+    const ExprNode *en = a.rhs;
+    const std::vector<int> &dims = getDims(en);
 
     // generate enough indices for the expression:
     exprIndices.clear();
@@ -70,12 +83,15 @@ void CEmitter::codeGen(const Program *p) {
 
     loopedOverIndices.clear();
 
+    setResultTemp(a.lhs);
     // we need this if-clause since code emission
-    // for identifiers has been optimized out:
+    // for identifiers has been optimized out ...
     if (en->isIdentifier()) {
-      assert(0 && "internal error: assigning from identifier at top level");
+      // ... however, as a result of transforming stack expressions,
+      // assignments with nothing but an identifier on the 'rhs' may
+      // appear at the top level:
+      visitTopLevelIdentifier(en);
     } else {
-      setResultTemp(result + subscriptString(exprIndices, dims));
       en->visit(this);
     }
 
@@ -223,6 +239,20 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
   return "[" + result + "]";
 }
 
+std::string
+CEmitter::subscriptedIdentifier(const ExprNode *en,
+                                const std::vector<std::string> &indices) const {
+  assert(en->isIdentifier());
+
+  std::vector<std::string> allIndices;
+  for (unsigned i = 0; i < en->getNumIndices(); i++)
+    allIndices.push_back(en->getIndex(i));
+  for (unsigned i = 0; i < indices.size(); i++)
+    allIndices.push_back(indices.at(i));
+
+  return (en->getName() + subscriptString(allIndices, en->getDims()));
+}
+
 void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims) {
   const int rank = exprIndices.size();
 
@@ -263,11 +293,14 @@ std::string CEmitter::visitChildExpr(const ExprNode *en,
   std::string temp;
 
   if (en->isIdentifier()) {
-    temp = en->getName() + subscriptString(exprIndices, childExprDims);
+    temp = subscriptedIdentifier(en, exprIndices);
   } else {
     temp = getTemp();
     emitTempDefinition(nestingLevel*INDENT_PER_LEVEL, temp);
-    setResultTemp(temp);
+    ExprNode *tempNode =
+      CG->getENBuilder()->createIdentifierExpr(getTemp(), childExprDims);
+
+    setResultTemp(tempNode);
     en->visit(this);
   }
 
@@ -278,7 +311,8 @@ void CEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
   // NOTE that 'BinOp' includes elementwise and scalar operations
   assert(en->getNumChildren() == 2);
 
-  const std::string result = getResultTemp();
+  const ExprNode *result = getResultTemp();
+
   std::string lhsTemp, rhsTemp;
 
   const std::vector<std::string> savedExprIndices = exprIndices;
@@ -323,7 +357,8 @@ void CEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
   emitLoopHeaderNest(exprDims);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(result + " = " + lhsTemp + " " + op + " " + rhsTemp + ";\n");
+  append(subscriptedIdentifier(result, exprIndices)
+         + " = " + lhsTemp + " " + op + " " + rhsTemp + ";\n");
 }
 
 void CEmitter::visitAddExpr(const AddExpr *en) {
@@ -354,7 +389,7 @@ void CEmitter::visitScalarDivExpr(const ScalarDivExpr *en) {
 void CEmitter::visitProductExpr(const ProductExpr *en) {
   assert(en->getNumChildren() == 2);
 
-  const std::string result = getResultTemp();
+  const ExprNode *result = getResultTemp();
   std::string lhsTemp, rhsTemp;
 
   const ExprNode *lhsExpr = en->getChild(0);
@@ -390,13 +425,14 @@ void CEmitter::visitProductExpr(const ProductExpr *en) {
   emitLoopHeaderNest(exprDims);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(result + " = " + lhsTemp + " * " + rhsTemp + ";\n");
+  append(subscriptedIdentifier(result, exprIndices)
+         + " = " + lhsTemp + " * " + rhsTemp + ";\n");
 }
 
 void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   assert(en->getNumChildren() == 2);
 
-  const std::string result = getResultTemp();
+  const ExprNode *result = getResultTemp();
   std::string lhsTemp, rhsTemp;
 
   const ExprNode *lhsExpr = en->getChild(0);
@@ -448,7 +484,7 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   // emit for-loop nest for the result:
   emitLoopHeaderNest(exprDims);
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(result + " = 0.0;\n");
+  append(subscriptedIdentifier(result, exprIndices) + " = 0.0;\n");
 
   const std::vector<std::string> savedExprIndices = exprIndices;
 
@@ -465,7 +501,8 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   emitLoopHeaderNest(rhsDims);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(result + " += " + lhsTemp + " * " + rhsTemp + ";\n");
+  append(subscriptedIdentifier(result, savedExprIndices)
+         + " += " + lhsTemp + " * " + rhsTemp + ";\n");
 
   // close the for-loops that iterate over the contracted indices ...
   for (int i = 0; i < contrIndices.size(); i++) {
@@ -483,7 +520,7 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
   // the current implementation of this function yields correct results
   // ONLY if it emits code at the top level (no nestinf in any for loops):
   assert(nestingLevel == initialNestingLevel);
-  const std::string result = getResultTemp();
+  const ExprNode *result = getResultTemp();
 
   const std::vector<std::string> savedExprIndices = exprIndices;
   const int savedNestingLevel = nestingLevel;
@@ -500,13 +537,12 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
 
   for (int e = 0; e < en->getNumChildren(); e++) {
     // replace the first index in 'result' with the constant 'e':
-    const std::string &firstResultConstantIndex = std::to_string(e);
-    const size_t i = result.find(firstResultIndex);
-    std::string resultWithConstantFirstIndex = result;
-    if (i != std::string::npos)
-      resultWithConstantFirstIndex.replace(i,
-                                           firstResultIndex.length(),
-                                           firstResultConstantIndex);
+    IdentifierExpr *id =
+      CG->getENBuilder()->createIdentifierExpr(result->getName(),
+                                               result->getDims());
+    for (unsigned i = 0; i < result->getNumIndices(); i++)
+      id->addIndex(result->getIndex(i));
+    id->addIndex(std::to_string(e));
 
     const ExprNode *child = en->getChild(e);
     const std::vector<int> childDims = getDims(child);
@@ -516,7 +552,7 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
     emitLoopHeaderNest(childDims);
 
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-    append(resultWithConstantFirstIndex + " = " + temp + ";\n");
+    append(subscriptedIdentifier(id, childExprIndices) + " = " + temp + ";\n");
 
     // close the for-loops over the 'childExprIndices' ...
     while(nestingLevel > savedNestingLevel) {
@@ -529,6 +565,22 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
   }
 
   exprIndices = savedExprIndices;
+}
+
+void CEmitter::visitTopLevelIdentifier(const ExprNode *en) {
+  // this function is only allowed to be called from the top level:
+  assert(nestingLevel == initialNestingLevel);
+  const ExprNode *result = getResultTemp();
+
+  const int savedNestingLevel = nestingLevel;
+
+  const std::vector<int> &dims = getDims(en);
+
+  emitLoopHeaderNest(dims);
+
+  EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
+  append(subscriptedIdentifier(result, exprIndices)
+         + " = " + subscriptedIdentifier(en, exprIndices) + ";\n");
 }
 
 void CEmitter::visitIdentifierExpr(const IdentifierExpr *en) {

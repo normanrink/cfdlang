@@ -209,6 +209,12 @@ void IdentifierExpr::print(unsigned indent) const {
             << " \"" << getName() << "\")\n";
 }
 
+const std::string IdentifierExpr::getIndex(unsigned i) const {
+  assert(i < Indices.size()
+         && "internal error: index out of bounds for identifier indices");
+  return Indices.at(i);
+}
+
 
 ExprNodeBuilder::~ExprNodeBuilder() {
   for (auto *en: AllocatedNodes)

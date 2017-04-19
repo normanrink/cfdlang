@@ -87,8 +87,12 @@ public:
 
   virtual bool isIdentifier() const { return false; }
   virtual std::string getName() const { return ""; }
+  virtual const std::string getIndex(unsigned i) const { return ""; };
+  virtual unsigned getNumIndices() const { return 0; }
+
   virtual bool isContractionExpr() const { return false; }
   virtual bool isStackExpr() const { return false; }
+
 };
 
 
@@ -209,9 +213,15 @@ class IdentifierExpr : public ExprNode {
 private:
   const std::string Name;
 
+  std::vector<std::string> Indices;
+
 public:
   IdentifierExpr(const std::string &name, const ExprDimensions &dims)
     : ExprNode(EK_Identifier, 0, dims), Name(name) {}
+
+  void addIndex(const std::string &idx) { Indices.push_back(idx); }
+  virtual const std::string getIndex(unsigned i) const override;
+  virtual unsigned getNumIndices() const override { return Indices.size(); }
 
   virtual bool isIdentifier() const override { return true; }
   virtual std::string getName() const override { return Name; }
