@@ -54,7 +54,11 @@ int main(int argc, char** argv) {
   TC.addArgument(&eh, "t", &s[0]);
   TC.addArgument(&eh, "v", &v[0]);
 
-   // initialize input tensors:
+  // print source code:
+  printf("SOURCE CODE:\n");
+  printf("%s\n", Source.c_str());
+
+  // initialize input tensors:
   {
     for (int i = 0; i < n*n; i++) {
       A[i] = 0.0;
