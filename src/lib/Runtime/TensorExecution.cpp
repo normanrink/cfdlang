@@ -45,5 +45,10 @@ void TensorExecution::execute() const {
   const TensorKernel *k = getContext()->getKernel(getKernelHandle());
   assert(k->isCodeValid() && "runtime error: kernel code absent");
 
+  if (getNumSetArguments() != k->getNumFormalArguments()) {
+    assert(0 && "runtime error: insuffient actual arguments for execution");
+    return;
+  }
+
   (k->getCode())(ActualArguments);
 }
