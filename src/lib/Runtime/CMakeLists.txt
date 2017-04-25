@@ -7,10 +7,12 @@ add_library(Runtime STATIC
                     TensorCodeGen.cpp
                     TensorContext.cpp
                     TensorExecution.cpp
-                    TensorKernel.cpp)
+                    TensorKernel.cpp
+		     TensorWrappers.cpp)
 
 add_library(obj.Runtime OBJECT
                         TensorCodeGen.cpp
                         TensorContext.cpp
                         TensorExecution.cpp
-                        TensorKernel.cpp)
+                        TensorKernel.cpp
+                        TensorWrappers.cpp)
