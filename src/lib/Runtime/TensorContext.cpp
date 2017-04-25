@@ -185,7 +185,7 @@ void TensorContext::initKernel(KernelHandle *h,
                                const CodeGenHandle *cg,
                                bool cleanOnDestruction) {
   *h = getHandle();
-  TheKernels[*h] = new TensorKernel(this, cg, cleanOnDestruction);
+  TheKernels[*h] = new TensorKernel(this, *cg, cleanOnDestruction);
 }
 
 void TensorContext::buildKernel(const KernelHandle *h) {
@@ -215,7 +215,7 @@ TensorContext::getFormalArgumentPosition(const KernelHandle *h,
 void TensorContext::initExecution(ExecutionHandle *h,
                                   const KernelHandle *k) {
   *h = getHandle();
-  TheExecutions[*h] = new TensorExecution(this, k);
+  TheExecutions[*h] = new TensorExecution(this, *k);
 }
 
 void TensorContext::finalExecution(const ExecutionHandle *h) {

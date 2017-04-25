@@ -10,10 +10,10 @@
 
 
 TensorExecution::TensorExecution(TensorContext *ctx,
-                                 const TensorContext::KernelHandle *k)
+                                 const TensorContext::KernelHandle k)
   : Context(ctx),
     TheKernel(k),
-    TotalNumArguments(Context->getNumFormalArguments(TheKernel)),
+    TotalNumArguments(Context->getNumFormalArguments(&TheKernel)),
     NumSetArguments(0) {
   ActualArguments = new ArgPtr[TotalNumArguments];
   memset(ActualArguments, 0, sizeof(ArgPtr)*TotalNumArguments);
@@ -27,8 +27,9 @@ void TensorExecution::addArgument(const std::string &name, ArgPtr arg) {
   assert(getNumSetArguments() < TotalNumArguments
          && "runtime error: attempting to set to many actual arguments");
 
+  const TensorContext::KernelHandle kh = getKernelHandle();
   const unsigned position =
-    getContext()->getFormalArgumentPosition(getKernelHandle(), name);
+    getContext()->getFormalArgumentPosition(&kh, name);
   assert(position != TensorKernel::UNKNOWN_FORMAL_ARG
          && "runtime error: invalid argument name");
 
@@ -42,7 +43,8 @@ void TensorExecution::clearArguments() {
 }
 
 void TensorExecution::execute() const {
-  const TensorKernel *k = getContext()->getKernel(getKernelHandle());
+  const TensorContext::KernelHandle kh = getKernelHandle();
+  const TensorKernel *k = getContext()->getKernel(&kh);
   assert(k->isCodeValid() && "runtime error: kernel code absent");
 
   if (getNumSetArguments() != k->getNumFormalArguments()) {

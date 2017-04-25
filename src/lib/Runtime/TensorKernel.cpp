@@ -24,7 +24,7 @@ void TensorKernel::reset() {
 }
 
 TensorKernel::TensorKernel(TensorContext *ctx,
-                           const TensorContext::CodeGenHandle *cg,
+                           const TensorContext::CodeGenHandle cg,
                            bool cleanOnDestruction)
   : Context(ctx),
     TheCodeGen(cg),
@@ -71,21 +71,21 @@ void TensorKernel::clean() {
 }
 
 void TensorKernel::build() {
-  const TensorContext::CodeGenHandle *h = getCodeGenHandle();
-  CFunctionName = getContext()->getFunctionName(h);
+  const TensorContext::CodeGenHandle h = getCodeGenHandle();
+  CFunctionName = getContext()->getFunctionName(&h);
   
   CSourceFilePath = getTmpFolder() + "/" + \
                     CFDLANG_FILENAME_PREFIX + "-" + \
                     getUniqueIdentifier() + ".c";
-  getContext()->generateCSourceFile(h, CSourceFilePath);
+  getContext()->generateCSourceFile(&h, CSourceFilePath);
 
-  for (int i = 0; i < getContext()->getNumFunctionArguments(h); i++)
-    addFormalArgument(getContext()->getFunctionArgumentName(h, i));
+  for (int i = 0; i < getContext()->getNumFunctionArguments(&h); i++)
+    addFormalArgument(getContext()->getFunctionArgumentName(&h, i));
 
   LibSOFilePath = getTmpFolder() + "/" + \
                   CFDLANG_FILENAME_PREFIX + "-" + \
                   getUniqueIdentifier() + ".so";
-  getContext()->generateLibSOFile(h, LibSOFilePath, CSourceFilePath);
+  getContext()->generateLibSOFile(&h, LibSOFilePath, CSourceFilePath);
 }
 
 std::string TensorKernel::getUniqueIdentifier() {

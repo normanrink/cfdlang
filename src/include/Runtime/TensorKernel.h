@@ -18,7 +18,7 @@ public:
 private:
   TensorContext *Context;
 
-  const TensorContext::CodeGenHandle *TheCodeGen;
+  const TensorContext::CodeGenHandle TheCodeGen;
   const bool CleanOnDestruction;
 
   //std::string Source;
@@ -36,7 +36,7 @@ protected:
   TensorContext *getContext() { return Context; }
 
 public:
-  const TensorContext::CodeGenHandle *getCodeGenHandle() const {
+  const TensorContext::CodeGenHandle getCodeGenHandle() const {
     return TheCodeGen;
   }
 
@@ -55,7 +55,7 @@ private:
 
 public:
   TensorKernel(TensorContext *ctx,
-               const TensorContext::CodeGenHandle *cg,
+               const TensorContext::CodeGenHandle cg,
                bool CleanOnDestruction = false);
   ~TensorKernel();
 

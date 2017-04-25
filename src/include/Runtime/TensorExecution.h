@@ -16,7 +16,7 @@ public:
 private:
   TensorContext *Context;
 
-  const TensorContext::KernelHandle *TheKernel;
+  const TensorContext::KernelHandle TheKernel;
   const unsigned TotalNumArguments;
 
   unsigned NumSetArguments;
@@ -27,11 +27,11 @@ public:
 
 public:
   TensorExecution(TensorContext *ctx,
-                  const TensorContext::KernelHandle *k);
+                  const TensorContext::KernelHandle k);
   ~TensorExecution();
 
   const TensorContext *getContext() const { return Context; }
-  const TensorContext::KernelHandle *getKernelHandle() const {
+  const TensorContext::KernelHandle getKernelHandle() const {
     return TheKernel;
   }
 
