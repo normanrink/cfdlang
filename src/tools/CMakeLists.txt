@@ -21,10 +21,3 @@ target_link_libraries(compile AST
                               Parser
                               Sema)
 
-add_executable(context_test context_test.cpp)
-target_link_libraries(context_test AST
-                                   CodeGen
-                                   Parser
-				     Runtime
-                                   Sema)
-
