@@ -8,7 +8,8 @@ add_library(Runtime STATIC
                     TensorContext.cpp
                     TensorExecution.cpp
                     TensorKernel.cpp
-		     TensorWrappers.cpp)
+                    TensorWrappers.cpp)
+target_link_libraries(Runtime dl)
 
 add_library(obj.Runtime OBJECT
                         TensorCodeGen.cpp
