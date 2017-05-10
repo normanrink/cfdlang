@@ -20,7 +20,7 @@ TensorExecution::TensorExecution(TensorContext *ctx,
 }
 
 TensorExecution::~TensorExecution() {
-  delete ActualArguments;
+  delete [] ActualArguments;
 }
 
 void TensorExecution::addArgument(const std::string &name, ArgPtr arg) {
