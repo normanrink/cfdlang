@@ -16,12 +16,13 @@
 
 class ExprTreeLifter : public ExprTreeTransformer {
 public:
-  typedef std::function<bool(const ExprNode *)> LiftPredicate;
+  typedef std::function<bool(const ExprNode *, const ExprNode *)> LiftPredicate;
 
 private:
   CodeGen *CG;
   CodeGen::AssignmentsListTy &Assignments;
 
+  ExprNode *Root;
   ExprNode *Parent;
   int ChildIndex;
 
@@ -30,6 +31,9 @@ private:
   const LiftPredicate isNodeToBeLifted;
 
 protected:
+  void setRoot(ExprNode *r) { Root = r; }
+  ExprNode *getRoot() const { return Root; }
+
   void setParent(ExprNode *p) { Parent = p; }
   ExprNode *getParent() const { return Parent; }
 

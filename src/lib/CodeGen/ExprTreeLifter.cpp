@@ -6,6 +6,7 @@ void ExprTreeLifter::transformAssignments() {
   for (curPos = Assignments.begin(); curPos != Assignments.end(); curPos++) {
     ExprNode *rhs = curPos->rhs;
 
+    setRoot(rhs);
     setParent(nullptr);
     setChildIndex(-1);
     rhs->transform(this);
@@ -13,13 +14,14 @@ void ExprTreeLifter::transformAssignments() {
 }
 
 void ExprTreeLifter::transformNode(ExprNode *en) {
-  if (isNodeToBeLifted(en))
+  if (isNodeToBeLifted(en, getRoot()))
     liftNode(en);
   else
     transformChildren(en);
 }
 
 void ExprTreeLifter::liftNode(ExprNode *en) {
+  ExprNode *root = getRoot();
   ExprNode *parent = getParent();
   unsigned childIndex = getChildIndex();
 
@@ -33,21 +35,33 @@ void ExprTreeLifter::liftNode(ExprNode *en) {
     const std::string temp = getTemp();
     ExprNode *newNode = getENBuilder()->createIdentifierExpr(temp,
                                                              en->getDims());
-
+    // replace sub-expression 'en' (which is to be lifted)
+    // with the identifier 'temp': 
     parent->setChild(childIndex, newNode);
-
+    // recursively lift expressions out of the sub-expression 'en':
+    setRoot(en);
     setParent(nullptr);
     setChildIndex(-1);
     transformChildren(en);
 
+    // add a new assignment that assigns the lifted sub-expression ('en')
+    // to the new identifier 'temp':
     ExprNode *newLHS = getENBuilder()->createIdentifierExpr(temp,
                                                             en->getDims());
-
+    // NOTE that the new assignment is inserted before 'curPos' on purpose:
     Assignments.insert(curPos, {newLHS, en});
+
+    // now that 'en' has been lifted, the expression tree
+    // rooted at 'root' must be re-visited:
+    setRoot(root);
+    setParent(nullptr);
+    setChildIndex(-1);
+    transformChildren(root);
   }
 
   setChildIndex(childIndex);
   setParent(parent);
+  setRoot(root);
 }
 
 void ExprTreeLifter::transformChildren(ExprNode *en) {
