@@ -2,6 +2,7 @@
 #include "AST/AST.h"
 #include "CodeGen/CEmitter.h"
 #include "CodeGen/ExprTreeLifter.h"
+#include "CodeGen/ContractionExprCounter.h"
 #include "CodeGen/StackExprRemover.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
@@ -34,8 +35,19 @@ void CEmitter::codeGen(const Program *p) {
   StackExprRemover remover(CG);
   remover.transformAssignments();
 
-  const auto &nodeLiftPredicate = [](const ExprNode *en) {
-    return (en->isStackExpr() || en->isContractionExpr());
+  const auto &nodeLiftPredicate = [](const ExprNode *en, const ExprNode *root) {
+    if (en->isStackExpr())
+      return true;
+
+    if (en->isContractionExpr()) {
+      ContractionExprCounter CEC(root);
+      CEC.run();
+      // lift contractions only if there are more than one,
+      // starting with the most deeply nested contraction:
+      if (CEC.getCount() > 1 && en == CEC.getDeepest())
+        return true;
+    }
+    return false;
   };
   ExprTreeLifter lifter(CG, nodeLiftPredicate);
   lifter.transformAssignments();
