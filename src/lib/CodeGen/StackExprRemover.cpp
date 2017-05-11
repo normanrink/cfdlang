@@ -39,7 +39,7 @@ bool StackExprRemover::isDeclaredId(const ExprNode *en) const {
 
 void StackExprRemover::transformAssignments() {
   // first, lift all stack expressions up to the top level:
-  const auto &nodeLiftPredicate = [](const ExprNode *en) {
+  const auto &nodeLiftPredicate = [](const ExprNode *en, const ExprNode *root) {
     return en->isStackExpr();
   };
   ExprTreeLifter lifter(CG, nodeLiftPredicate);
@@ -76,7 +76,7 @@ void StackExprRemover::transformAssignments() {
         // been inserted by a transformation, i.e. by lifting stack expressions
         // to the top level. Therefore, the identifier only has a single use:
         // inside the current stack expression. (Since the identifier has been
-        // inseted by a transformation, it also has only a single definition.)
+        // inserted by a transformation, it also has only a single definition.)
         Replacements[child->getName()] = id;
       } else {
         // The assignemnt of the 'child' node is inserted before the next
