@@ -109,6 +109,16 @@ extern "C" void TensorAddArgument(handle *h_ctx, handle *h_ex,
   ctx->addArgument(&eh, std::string(name), arg);
 }
 
+extern "C" void TensorAddArguments(handle *h_ctx, handle *h_ex,
+                                   const char **names,
+                                   void **args,
+                                   const int *num_args) {
+  TensorContext *ctx = castToTensorContext(h_ctx);
+  TensorContext::ExecutionHandle eh = castToExecutionHandle(h_ex);
+
+  ctx->addArguments(&eh, names, args, num_args);
+}
+
 extern "C" void TensorClearArguments(handle *h_ctx, handle *h_ex) {
   TensorContext *ctx = castToTensorContext(h_ctx);
   TensorContext::ExecutionHandle eh = castToExecutionHandle(h_ex);
@@ -121,6 +131,16 @@ extern "C" void TensorExecute(handle *h_ctx, handle *h_ex) {
   TensorContext::ExecutionHandle eh = castToExecutionHandle(h_ex);
 
   ctx->execute(&eh);
+}
+
+extern "C" void TensorExecuteWithArguments(handle *h_ctx, handle *h_ex,
+                                           const char **names,
+                                           void **args,
+                                           const int *num_args) {
+  TensorContext *ctx = castToTensorContext(h_ctx);
+  TensorContext::ExecutionHandle eh = castToExecutionHandle(h_ex);
+
+  ctx->executeWithArguments(&eh, names, args, num_args);
 }
 
 extern "C" void TensorFinalExecution(handle *h_ctx, handle *h_ex) {

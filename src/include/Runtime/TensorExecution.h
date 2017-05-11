@@ -36,9 +36,11 @@ public:
   }
 
   void addArgument(const std::string &name, ArgPtr arg);
+  void addArguments(const char **names, ArgPtr *args, const int num_args);
   void clearArguments();
 
   void execute() const;
 };
 
 #endif /* __TENSOR_EXECUTION_H__ */
+

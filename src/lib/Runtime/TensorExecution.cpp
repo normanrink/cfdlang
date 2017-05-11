@@ -37,6 +37,23 @@ void TensorExecution::addArgument(const std::string &name, ArgPtr arg) {
   ++NumSetArguments;
 }
 
+void TensorExecution::addArguments(const char **names, ArgPtr *args, const int num_args) {
+  const TensorContext::KernelHandle kh = getKernelHandle();
+
+  for (int i = 0; i < num_args; i++) {
+    const unsigned position =
+      getContext()->getFormalArgumentPosition(&kh, names[i]);
+    assert(position != TensorKernel::UNKNOWN_FORMAL_ARG
+           && "runtime error: invalid argument name");
+
+    ActualArguments[position] = args[i];
+    ++NumSetArguments;
+  }
+
+  assert(getNumSetArguments() <= TotalNumArguments
+         && "runtime error: attempting to set to many actual arguments");
+}
+
 void TensorExecution::clearArguments() {
   memset(ActualArguments, 0, sizeof(ArgPtr)*TotalNumArguments);
   NumSetArguments = 0;

@@ -74,6 +74,18 @@ module Tensor_Wrappers
       character(c_char), intent(in)        :: name(*)
       type(c_ptr),       intent(in), value :: arg
     end subroutine Tensor_Add_Argument
+
+    subroutine Tensor_Add_Arguments(h_ctx, h_ex, &
+                                    names,       &
+                                    args,        &
+                                    num_args)    &
+               bind(C, name="TensorAddArguments")
+      use iso_c_binding
+      integer(c_long),    intent(inout)      :: h_ctx, h_ex
+      type(c_ptr), intent(in)                :: names
+      type(c_ptr), intent(in)                :: args
+      integer(c_int), intent(in)             :: num_args
+    end subroutine Tensor_Add_Arguments
                          
     subroutine Tensor_Clear_Arguments(h_ctx, h_ex) &
                bind(C, name="TensorClearArguments")
@@ -86,6 +98,18 @@ module Tensor_Wrappers
       use iso_c_binding
       integer(c_long), intent(inout) :: h_ctx, h_ex
     end subroutine Tensor_Execute
+
+    subroutine Tensor_Execute_With_Arguments(h_ctx, h_ex, &
+                                             names,       &
+                                             args,        &
+                                             num_args)    &
+               bind(C, name="TensorExecuteWithArguments")
+      use iso_c_binding
+      integer(c_long),    intent(inout)      :: h_ctx, h_ex
+      type(c_ptr), intent(in)                :: names
+      type(c_ptr), intent(in)                :: args
+      integer(c_int), intent(in)             :: num_args
+    end subroutine Tensor_Execute_With_Arguments
     
     subroutine Tensor_Final_Execution(h_ctx, h_ex) &
                bind(C, name="TensorFinalExecution")

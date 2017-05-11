@@ -29,8 +29,16 @@ void TensorInitExecution(handle *h_ctx, handle *h_k, handle *h_ex);
 void TensorAddArgument(handle *h_ctx, handle *h_ex,
                        const char *name,
                        void *arg);
+void TensorAddArguments(handle *h_ctx, handle *h_ex,
+                        const char **name,
+                        void **arg,
+                        const int *num_args);
 void TensorClearArguments(handle *h_ctx, handle *h_ex);
 void TensorExecute(handle *h_ctx, handle *h_ex);
+void TensorExecuteWithArguments(handle *h_ctx, handle *h_ex,
+                                const char **name,
+                                void **arg,
+                                const int *num_args);
 void TensorFinalExecution(handle *h_ctx, handle *h_ex);
 
 #endif /* __TENSOR_WRAPPERS_H__ */
