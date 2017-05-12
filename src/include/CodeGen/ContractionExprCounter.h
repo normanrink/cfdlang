@@ -45,6 +45,7 @@ public:
   DEF_VISIT_EXPR_NODE(ScalarDiv)
   DEF_VISIT_EXPR_NODE(Product)
   DEF_VISIT_EXPR_NODE(Stack)
+  DEF_VISIT_EXPR_NODE(Transposition)
   DEF_VISIT_EXPR_NODE(Identifier)
 
   #undef DECL_VISIT_EXPR_NODE

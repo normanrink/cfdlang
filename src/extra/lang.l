@@ -36,6 +36,7 @@ DASH      "-"
 STAR      "*"
 SLASH     "/"
 HASH      "#"
+CARET     "\^"
 EQUAL     "="
 INT       [0-9]+
 ID        [_a-zA-Z][_a-zA-Z0-9]*
@@ -61,6 +62,7 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
 {STAR}      { return STAR; }
 {SLASH}     { return SLASH; }
 {HASH}      { return HASH; }
+{CARET}     { return CARET; }
 {EQUAL}     { return EQUAL; }
 {INT}       { 
               yylval->integer_literal = atoi(yytext);

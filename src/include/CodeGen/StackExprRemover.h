@@ -27,7 +27,7 @@ private:
   std::map<std::string, const IdentifierExpr *> Replacements;
 
 protected:
-  IdentifierExpr *buildReplacement(ExprNode *original);
+  ExprNode *buildReplacement(ExprNode *original, bool forLHS);
 
   void setParent(ExprNode *p) { Parent = p; }
   ExprNode *getParent() const { return Parent; }
@@ -53,6 +53,7 @@ public:
   DECL_TRANSFORM_EXPR_NODE(Contraction)
   DECL_TRANSFORM_EXPR_NODE(Product)
   DECL_TRANSFORM_EXPR_NODE(Stack)
+  DECL_TRANSFORM_EXPR_NODE(Transposition)
   DECL_TRANSFORM_EXPR_NODE(Identifier)
 
   #undef DECL_TRANSFORM_EXPR_NODE

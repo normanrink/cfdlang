@@ -29,6 +29,7 @@ public:
     EK_Contraction,
     EK_Product,
     EK_Stack,
+    EK_Transposition,
     EK_Identifier,
 
     EK_EXPRKIND_COUNT
@@ -92,6 +93,7 @@ public:
 
   virtual bool isContractionExpr() const { return false; }
   virtual bool isStackExpr() const { return false; }
+  virtual bool isTranspositionExpr() const { return false; }
 
 };
 
@@ -209,15 +211,41 @@ public:
 };
 
 
+class TranspositionExpr : public ExprNode {
+private:
+  const CodeGen::TupleList IndexPairs;
+
+public:
+  TranspositionExpr(ExprNode *en, const CodeGen::TupleList &indexPairs);
+
+  virtual bool isTranspositionExpr() const override { return true; }
+
+  const CodeGen::TupleList &getIndexPairs() const { return IndexPairs; }
+
+  virtual void print(unsigned indent = 0) const override;
+
+  virtual void visit(ExprTreeVisitor *v) const override;
+  virtual void transform(ExprTreeTransformer *t) override;
+
+  static TranspositionExpr *create(ExprNode *en,
+                                   const CodeGen::TupleList &indexPairs) {
+    return new TranspositionExpr(en, indexPairs);
+  }
+};
+
+
 class IdentifierExpr : public ExprNode {
 private:
   const std::string Name;
 
   std::vector<std::string> Indices;
 
+  bool Permute;
+  CodeGen::TupleList IndexPairs;
+
 public:
   IdentifierExpr(const std::string &name, const ExprDimensions &dims)
-    : ExprNode(EK_Identifier, 0, dims), Name(name) {}
+    : ExprNode(EK_Identifier, 0, dims), Name(name), Permute(false) {}
 
   void addIndex(const std::string &idx) { Indices.push_back(idx); }
   virtual const std::string getIndex(unsigned i) const override;
@@ -235,6 +263,11 @@ public:
                                 const ExprDimensions &dims) {
     return new IdentifierExpr(name, dims);
   }
+
+  bool permute() const { return Permute; }
+  void setPermute(bool p) { Permute = p; }
+  const CodeGen::TupleList &getIndexPairs() const { return IndexPairs; }
+  void setIndexPairs(const CodeGen::TupleList &pairs) { IndexPairs = pairs; }
 };
 
 
@@ -257,6 +290,7 @@ public:
   DECL_VISIT_EXPR_NODE(Contraction)
   DECL_VISIT_EXPR_NODE(Product)
   DECL_VISIT_EXPR_NODE(Stack)
+  DECL_VISIT_EXPR_NODE(Transposition)
   DECL_VISIT_EXPR_NODE(Identifier)
 
   #undef DECL_VISIT_EXPR_NODE
@@ -280,6 +314,7 @@ public:
   DECL_TRANSFORM_EXPR_NODE(Contraction)
   DECL_TRANSFORM_EXPR_NODE(Product)
   DECL_TRANSFORM_EXPR_NODE(Stack)
+  DECL_TRANSFORM_EXPR_NODE(Transposition)
   DECL_TRANSFORM_EXPR_NODE(Identifier)
 
   #undef DECL_TRANSFORM_EXPR_NODE
@@ -315,6 +350,8 @@ public:
                                          ExprNode *rhs,
                                          const CodeGen::List &rightIndices);
   StackExpr *createStackExpr(const std::vector<ExprNode *> &members);
+  TranspositionExpr *
+  createTranspositionExpr(ExprNode *en, const CodeGen::TupleList &indexPairs);
   IdentifierExpr *createIdentifierExpr(const std::string &name,
                                        const ExprNode::ExprDimensions &dims);
 };

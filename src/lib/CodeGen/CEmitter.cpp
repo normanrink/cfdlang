@@ -32,25 +32,49 @@ void CEmitter::codeGen(const Program *p) {
   // construct the expression trees, one for each statement in the program:
   CG->visitProgram(p);
 
-  StackExprRemover remover(CG);
-  remover.transformAssignments();
+  // various transformations:
+  {
+    // (1) move transpositions over to the 'lhs':
+    //     (do this before lifting stack expressions)
+    for (auto &a: CG->getAssignments()) {
+      if (!a.rhs->isTranspositionExpr())
+        continue;
 
-  const auto &nodeLiftPredicate = [](const ExprNode *en, const ExprNode *root) {
-    if (en->isStackExpr())
-      return true;
+      IdentifierExpr *id = static_cast<IdentifierExpr *>(a.lhs);
+      TranspositionExpr *rhs = static_cast<TranspositionExpr *>(a.rhs);
 
-    if (en->isContractionExpr()) {
-      ContractionExprCounter CEC(root);
-      CEC.run();
-      // lift contractions only if there are more than one,
-      // starting with the most deeply nested contraction:
-      if (CEC.getCount() > 1 && en == CEC.getDeepest())
-        return true;
+      id->setPermute(true);
+      id->setIndexPairs(rhs->getIndexPairs());
+
+      a.rhs = rhs->getChild(0);
     }
-    return false;
-  };
-  ExprTreeLifter lifter(CG, nodeLiftPredicate);
-  lifter.transformAssignments();
+
+    // (2) remove stack expressions:
+    StackExprRemover remover(CG);
+    remover.transformAssignments();
+
+    // (3) lift contractions to the top level:
+    const auto &nodeLiftPredicate = [](const ExprNode *en,
+                                       const ExprNode *root) {
+      if (en->isStackExpr()) {
+        assert(0 &&
+               "internal error: stack expressions should not occur any more");
+      }
+
+      if (en->isContractionExpr()) {
+        ContractionExprCounter CEC(root);
+        CEC.run();
+        // lift contractions only if there are more than one,
+        // starting with the most deeply nested contraction:
+        if (CEC.getCount() > 1 && en == CEC.getDeepest())
+          return true;
+      }
+      return false;
+    };
+    ExprTreeLifter lifter(CG, nodeLiftPredicate);
+    lifter.transformAssignments();
+  }
+  // end of transformations
 
   std::set<std::string> emittedNames;
 
@@ -260,7 +284,25 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
   for (unsigned i = 0; i < indices.size(); i++)
     allIndices.push_back(indices.at(i));
 
-  return (en->getName() + subscriptString(allIndices, en->getDims()));
+  const IdentifierExpr *id = static_cast<const IdentifierExpr *>(en);
+  std::vector<int> dims = en->getDims();
+  if (id->permute()) {
+    // the indices must be permuted going through the transpositions forwards:
+    // (when 'TranspositionExpr' is emitted (on the 'rhs' of assignments), the
+    // index pairs are traversed backwards; here the permutations appear on the
+    // 'lhs' of assignments, hence index pairs are traversed forwards)
+    const auto &indexPairs = id->getIndexPairs();
+    for (auto pi = indexPairs.begin(); pi != indexPairs.end(); pi++) {
+      const auto p = *pi;
+      assert(p.size() == 2);
+
+      const std::string index0 = allIndices[p[0]];
+      allIndices[p[0]] = allIndices[p[1]];
+      allIndices[p[1]] = index0;
+    }
+  }
+
+  return (en->getName() + subscriptString(allIndices, dims));
 }
 
 void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims) {
@@ -529,10 +571,10 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
 void CEmitter::visitStackExpr(const StackExpr *en) {
   // the current implementation of this function yields correct results
   // ONLY if it emits code at the top level (no nestinf in any for loops):
-  assert(nestingLevel == initialNestingLevel);
+  //assert(nestingLevel == initialNestingLevel);
   // since this method has been called from the top level, 'exprIndices'
   // and 'resultIndices' must agree:
-  assert(exprIndices == resultIndices);
+  //assert(exprIndices == resultIndices);
 
   const ExprNode *result = getResultTemp();
 
@@ -576,6 +618,46 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
     // ... and remove the loop indices from 'loopedOverIndices':
     for (int i = 0; i < childExprIndices.size(); i++)
       loopedOverIndices.erase(exprIndices[i]);
+  }
+
+  exprIndices = savedExprIndices;
+}
+
+void CEmitter::visitTranspositionExpr(const TranspositionExpr *en) {
+  const std::vector<std::string> savedExprIndices = exprIndices;
+  //const int savedNestingLevel = nestingLevel;
+
+  // emit loop header before transposing indices:
+  emitLoopHeaderNest(getDims(en));
+
+  std::vector<std::string> transposedExprIndices = exprIndices;
+  const std::vector<std::vector<int>> &indexPairs = en->getIndexPairs();
+  // traverse index pairs in reverse order and apply transpositions
+  // (previously, e.g. in 'Sema', index pairs are traversed in order to
+  // synthesize the type of an expression bottom-up; now going top-down
+  // to construct the 'exprIndices')
+  for (auto pi = indexPairs.rbegin(); pi != indexPairs.rend(); pi++) {
+    const auto p = *pi;
+    assert(p.size() == 2);
+    const std::string index0 = transposedExprIndices[p[0]];
+    transposedExprIndices[p[0]] = transposedExprIndices[p[1]];
+    transposedExprIndices[p[1]] = index0;
+  }
+
+  exprIndices = transposedExprIndices;
+
+  const ExprNode *child = en->getChild(0);
+  const ExprNode *result = getResultTemp();
+
+  if (child->isIdentifier()) {
+    const IdentifierExpr *id = static_cast<const IdentifierExpr *>(child);
+    assert(!id->permute() &&
+           "internal error: only identifiers on the 'lhs' may be transposed");
+    EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
+    append(subscriptedIdentifier(result, resultIndices)
+           + " = " + subscriptedIdentifier(child, exprIndices) + ";\n");
+  } else {
+    child->visit(this);
   }
 
   exprIndices = savedExprIndices;

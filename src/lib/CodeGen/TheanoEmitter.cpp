@@ -197,6 +197,10 @@ void TheanoEmitter::visitStackExpr(const StackExpr *en) {
   setResultTemp(result);
 }
 
+void TheanoEmitter::visitTranspositionExpr(const TranspositionExpr *en) {
+  append("# transposition not implemented yet\n");
+}
+
 void TheanoEmitter::visitIdentifierExpr(const IdentifierExpr *en) {
   assert(0 &&
          "internal error: code emission for identifier has been optimized out");

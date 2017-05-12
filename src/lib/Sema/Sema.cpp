@@ -270,10 +270,46 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
     }
     // each branch of the above if-statement should return:
     assert(0 && "internal error: should have returned");
+  } else if (nt == ASTNode::NT_TranspositionExpr) {
+    const Expr *left = be->getLeft();
+    left->visit(this);
+    TYPE_MAP_ASSERT(left);
+    const TensorType *type0 = ExprTypes[left];
+    const int rank = type0->getRank();
+
+    std::vector<std::vector<int>> lists;
+    if (!isListOfLists(be->getRight(), lists)) {
+      assert(0 && "semantic error: right member of transposition not a list");
+    }
+
+    if (lists.empty()) {
+      assert(0 && "semantic error: empty index list in transposition");
+    }
+
+    std::vector<int> dimsToTranspose = type0->getDims();
+    for (const auto &list : lists) {
+      if (list.size() != 2) {
+        assert(0 && "semantic error: non-pair in transposition indices");
+      }
+      const int i0 = list[0], i1 = list[1];
+
+      if (!(i0 < rank) || !(i1 < rank)) {
+        assert(0 && "semantic error: transposition index out of range");
+      }
+
+      // transpose the dimensions:
+      const int dim0 = dimsToTranspose[i0];
+      dimsToTranspose[i0] = dimsToTranspose[i1];
+      dimsToTranspose[i1] = dim0;
+    }
+
+    ExprTypes[be] = getType(dimsToTranspose);
+    return;
   }
 
-  // binary expression is NOT a contraction:
+  // binary expression is NOT a contraction and NOT a transposition:
   assert(nt != ASTNode::NT_ContractionExpr &&
+         nt != ASTNode::NT_TranspositionExpr &&
          "internal error: should not be here");
 
   const Expr *left = be->getLeft();

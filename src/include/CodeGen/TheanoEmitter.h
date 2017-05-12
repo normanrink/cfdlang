@@ -44,6 +44,7 @@ protected:
   DECL_VISIT_EXPR_NODE(Contraction)
   DECL_VISIT_EXPR_NODE(Product)
   DECL_VISIT_EXPR_NODE(Stack)
+  DECL_VISIT_EXPR_NODE(Transposition)
   DECL_VISIT_EXPR_NODE(Identifier)
 
   #undef DECL_VISIT_EXPR_NODE

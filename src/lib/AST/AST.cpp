@@ -25,6 +25,7 @@ std::map<ASTNode::NodeType, std::string> ASTNode::NodeLabel = {
 
   { NT_Stmt, "Stmt" },
 
+  { NT_TranspositionExpr, "TranspositionExpr" },
   { NT_ContractionExpr, "ContractionExpr" },
   { NT_AddExpr, "AddExpr" },
   { NT_SubExpr, "SubExpr" },

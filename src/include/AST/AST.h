@@ -29,6 +29,7 @@ public:
     NT_Stmt,
 
     /* expressions: */
+    NT_TranspositionExpr,
     NT_ContractionExpr,
     NT_AddExpr,
     NT_SubExpr,
@@ -149,7 +150,8 @@ private:
 public:
   BinaryExpr(NodeType nt, const Expr *left, const Expr *right)
     : Expr(nt), LeftExpr(left), RightExpr(right) {
-    assert(nt == NT_ContractionExpr ||
+    assert(nt == NT_TranspositionExpr ||
+           nt == NT_ContractionExpr ||
            nt == NT_AddExpr ||
            nt == NT_SubExpr ||
            nt == NT_MulExpr ||

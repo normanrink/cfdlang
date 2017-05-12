@@ -24,6 +24,7 @@ std::map<ExprNode::ExprKind, std::string> ExprNode::ExprLabel = {
   { EK_Contraction, "Contraction" },
   { EK_Product, "Product" },
   { EK_Stack, "Stack" },
+  { EK_Transposition, "Transposition" },
   { EK_Identifier, "Identifier"}
 };
 
@@ -72,6 +73,7 @@ DEF_EXPR_NODE_CLASS_VISIT(ScalarDiv)
 DEF_EXPR_NODE_CLASS_VISIT(Product)
 DEF_EXPR_NODE_CLASS_VISIT(Contraction)
 DEF_EXPR_NODE_CLASS_VISIT(Stack)
+DEF_EXPR_NODE_CLASS_VISIT(Transposition)
 DEF_EXPR_NODE_CLASS_VISIT(Identifier)
 
 #undef DEF_EXPR_NODE_CLASS_VISIT
@@ -91,6 +93,7 @@ DEF_EXPR_NODE_CLASS_TRANSFORM(ScalarDiv)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Product)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Contraction)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Stack)
+DEF_EXPR_NODE_CLASS_TRANSFORM(Transposition)
 DEF_EXPR_NODE_CLASS_TRANSFORM(Identifier)
 
 #undef DEF_EXPR_NODE_CLASS_TRANSFORM
@@ -167,11 +170,11 @@ void ContractionExpr::print(unsigned indent) const {
   EMIT_INDENT(indent)
   std::cout << "(" << str << ss.str() << "\n";
 
-  getChild(1)->print(indent + str.length() + 1);
+  getChild(0)->print(indent + str.length() + 1);
   EMIT_INDENT(indent + str.length() + 1)
   std::cout << CodeGen::getListString(getLeftIndices()) << "\n";
 
-  getChild(0)->print(indent + str.length() + 1);
+  getChild(1)->print(indent + str.length() + 1);
   EMIT_INDENT(indent + str.length() + 1)
   std::cout << CodeGen::getListString(getRightIndices()) << "\n";
 
@@ -182,8 +185,8 @@ void ContractionExpr::print(unsigned indent) const {
 
 StackExpr::StackExpr(const std::vector<ExprNode *> &members)
   : ExprNode(EK_Stack, members.size()) {
-    for (int i = 0; i < members.size(); i++)
-      setChild(i, members[i]);
+  for (int i = 0; i < members.size(); i++)
+    setChild(i, members[i]);
 
   ExprDimensions dims;
   dims.push_back(members.size());
@@ -197,6 +200,42 @@ StackExpr::StackExpr(const std::vector<ExprNode *> &members)
 
   setDims(dims);
 }
+
+
+TranspositionExpr::TranspositionExpr(ExprNode *en,
+                                     const CodeGen::TupleList &indexPairs)
+  : ExprNode(EK_Transposition, 1),
+    IndexPairs(indexPairs) {
+  setChild(0, en);
+
+  ExprDimensions dimsToTranspose = en->getDims();
+  for (const auto &p: indexPairs) {
+    assert(p.size() == 2);
+    const int dim0 = dimsToTranspose[p[0]];
+    dimsToTranspose[p[0]] = dimsToTranspose[p[1]];
+    dimsToTranspose[p[1]] = dim0;
+  }
+
+  setDims(dimsToTranspose);
+}
+
+void TranspositionExpr::print(unsigned indent) const {
+  std::string str = ExprLabel[getExprKind()];
+
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
+  EMIT_INDENT(indent)
+  std::cout << "(" << str << ss.str() << "\n";
+
+  getChild(0)->print(indent + str.length() + 1);
+  EMIT_INDENT(indent + str.length() + 1)
+  std::cout << CodeGen::getTupleListString(getIndexPairs()) << "\n";
+
+  EMIT_INDENT(indent + 1)
+  std::cout << ")\n";
+}
+
 
 void IdentifierExpr::print(unsigned indent) const {
   std::string str = ExprLabel[getExprKind()];
@@ -252,10 +291,18 @@ ExprNodeBuilder::createContractionExpr(ExprNode *lhs,
 
 StackExpr *
 ExprNodeBuilder::createStackExpr(const std::vector<ExprNode *> &members) {
-
   StackExpr *result = StackExpr::create(members);
   AllocatedNodes.insert(result);
   return result;
+}
+
+TranspositionExpr *
+ExprNodeBuilder::createTranspositionExpr(ExprNode *en,
+                                         const CodeGen::TupleList &indexPairs) {
+  TranspositionExpr *result = TranspositionExpr::create(en, indexPairs);
+  AllocatedNodes.insert(result);
+  return result;
+
 }
 
 IdentifierExpr *

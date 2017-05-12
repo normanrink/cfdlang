@@ -120,10 +120,26 @@ void DirectCodeGen::visitBinaryExpr(const BinaryExpr *be) {
                                                        {0}));
     }
     return;
+  } else if (nt == ASTNode::NT_TranspositionExpr) {
+    const Expr *left = be->getLeft();
+    left->visit(this);
+    EXPR_TREE_MAP_ASSERT(left);
+
+    TupleList indexPairs;
+    if (!Sema::isListOfLists(be->getRight(), indexPairs))
+      assert(0 && "internal error: right member of transposition not a list");
+
+    if (indexPairs.empty())
+      assert(0 && "internal error: cannot have an empty list here");
+
+    addExprNode(be, ENBuilder->createTranspositionExpr(getExprNode(left),
+                                                       indexPairs));
+    return;
   }
-  
-  // binary expression is NOT a contraction:
+
+  // binary expression is NOT a contraction and NOT a transposition:
   assert(nt != ASTNode::NT_ContractionExpr &&
+         nt != ASTNode::NT_TranspositionExpr &&
          "internal error: should not be here");
 
   const Expr *left = be->getLeft();

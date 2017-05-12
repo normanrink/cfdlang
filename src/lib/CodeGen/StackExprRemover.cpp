@@ -6,7 +6,7 @@
 #include "CodeGen/StackExprRemover.h"
 
 
-IdentifierExpr *StackExprRemover::buildReplacement(ExprNode *original) {
+ExprNode *StackExprRemover::buildReplacement(ExprNode *original, bool forLHS) {
   assert(original->isIdentifier());
   const std::string &name = original->getName();
   assert(Replacements.count(name));
@@ -22,7 +22,21 @@ IdentifierExpr *StackExprRemover::buildReplacement(ExprNode *original) {
     replacement->addIndex(original->getIndex(j));
   }
 
-  return replacement;
+  if (!id->permute()) {
+    return replacement;
+  } else if (forLHS) {
+    replacement->setPermute(true);
+    replacement->setIndexPairs(id->getIndexPairs());
+    return replacement;
+  } else /* if (!forLHS) */ {
+    // on the 'rhs', transpositions are not represented within an
+    // 'IdentifierExpr' directly; instead, a 'TranspositionExpr'
+    // must be used:
+    return ENBuilder->createTranspositionExpr(replacement,
+                                              replacement->getIndexPairs());
+  }
+  // all branches of the above if-else-statement return:
+  assert(0 && "internal error: should not be here");
 }
 
 bool StackExprRemover::isDeclaredId(const ExprNode *en) const {
@@ -48,7 +62,7 @@ void StackExprRemover::transformAssignments() {
   // second, find all stack expressions and remove them:
   curPos = Assignments.begin();
   while (curPos != Assignments.end()) {
-    ExprNode *lhs = curPos->lhs;
+    IdentifierExpr *lhs = static_cast<IdentifierExpr *>(curPos->lhs);
     ExprNode *rhs = curPos->rhs;
 
     if (!rhs->isStackExpr()) {
@@ -69,6 +83,10 @@ void StackExprRemover::transformAssignments() {
         id->addIndex(lhs->getIndex(j));
       }
       id->addIndex(std::to_string(i));
+      if (lhs->permute()) {
+        id->setPermute(true);
+        id->setIndexPairs(lhs->getIndexPairs());
+      }
 
       if (child->isIdentifier() && !isDeclaredId(child)) {
         // The 'child' node is an identifier that has not been declared
@@ -100,7 +118,7 @@ void StackExprRemover::transformAssignments() {
       assert(lhs->isIdentifier());
 
       if (Replacements.count(lhs->getName()))
-        curPos->lhs = buildReplacement(lhs);
+        curPos->lhs = buildReplacement(lhs, /* forLHS */ true);
     }
 
     // handle replacements of uses (i.e. replacements on the 'rhs'):
@@ -142,6 +160,7 @@ DEF_TRANSFORM_EXPR_NODE(ScalarDiv)
 DEF_TRANSFORM_EXPR_NODE(Contraction)
 DEF_TRANSFORM_EXPR_NODE(Product)
 DEF_TRANSFORM_EXPR_NODE(Stack)
+DEF_TRANSFORM_EXPR_NODE(Transposition)
 
 #undef DECL_TRANSFORM_EXPR_NODE
 
@@ -149,7 +168,7 @@ void StackExprRemover::transformIdentifierExpr(IdentifierExpr *en) {
   if (Replacements.count(en->getName()) == 0)
     return; // nothing to do
 
-  IdentifierExpr *replacement = buildReplacement(en);
+  ExprNode *replacement = buildReplacement(en, /* forLHS */ false);
 
   ExprNode *parent = getParent();
   if (parent == nullptr)

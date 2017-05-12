@@ -74,6 +74,7 @@
 %token STAR
 %token SLASH
 %token HASH
+%token CARET
 %token EQUAL
 %token <integer_literal> INT
 %token <string_literal> ID
@@ -147,6 +148,9 @@ term : factor
 factor : atom
        | atom HASH factor {
            $$ = BinaryExpr::create(ASTNode::NT_ProductExpr, $1, $3);
+         }
+       | atom CARET factor {
+           $$ = BinaryExpr::create(ASTNode::NT_TranspositionExpr, $1, $3);
          }
 
 atom : identifier { $$ = (const Expr *)$1; }

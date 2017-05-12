@@ -35,6 +35,8 @@ std::map<int, const std::string> Lexer::TokenStrings = {
   { RBRACK, "RBRACK" },
   { STAR, "STAR" },
   { DOT, "DOT" },
+  { HASH, "HASH" },
+  { CARET, "CARET" },
   { EQUAL, "EQUAL" },
   { INT, "INT" },
   { ID, "ID" }

@@ -158,10 +158,39 @@ void GraphCodeGen::visitBinaryExpr(const BinaryExpr *be) {
     be->getRight()->visit(this);
     return;
   }
+  else if (nt == ASTNode::NT_TranspositionExpr) {
+    const Expr *left = be->getLeft();
+    // need a single expression node at which the
+    // expression tree for 'left' is rooted:
+    buildExprTreeForExpr(left);
 
-  // binary expression is NOT a contraction, and NOT a (tensor) product:
+    TupleList indexPairs;
+    if (!Sema::isListOfLists(be->getRight(), indexPairs))
+      assert(0 && "internal error: right member of transposition not a list");
+
+    if (indexPairs.empty())
+      assert(0 && "internal error: cannot have an empty list here");
+
+    ExprNode *resNode = ENBuilder->createTranspositionExpr(getExprNode(left),
+                                                           indexPairs);
+    addExprNode(be, resNode);
+
+    const TensorType *type = sema.getType(be);
+    const int rank = type->getRank();
+    GCG_Node *n = curGraph->getNode(NodeID(resNode, "transpose", be), rank);
+
+    for (int i = 0; i < rank; i++)
+      curLegs.push_back(GCG_Edge::NodeIndexPair(n, i));
+
+    updateCurEnd(n);
+    return;
+  }
+
+  // binary expression is NOT a contraction, and NOT a (tensor) product,
+  // and NOT a transposition:
   assert(nt != ASTNode::NT_ContractionExpr &&
          nt != ASTNode::NT_ProductExpr &&
+         nt != ASTNode::NT_TranspositionExpr &&
          "internal error: should not be here");
 
   const Expr *left = be->getLeft();
