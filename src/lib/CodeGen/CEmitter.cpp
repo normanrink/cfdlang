@@ -53,18 +53,12 @@ void CEmitter::codeGen(const Program *p) {
   lifter.transformAssignments();
 
   std::set<std::string> emittedNames;
-
   for (const auto &a: CG->getAssignments()) {
     const Sema &sema = *getSema();
-
-    assert(a.lhs->isIdentifier() &&
-           "internal error: left-hand side must be an identifier expression");
 
     const ExprNode *result = a.lhs;
     const std::string &resultName = result->getName();
     const std::vector<int> &resultDims = getDims(result);
-
-    nestingLevel = initialNestingLevel;
 
     // emit defintion of 'result' if necessary:
     if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
@@ -82,20 +76,118 @@ void CEmitter::codeGen(const Program *p) {
 
       emittedNames.insert(resultName);
     }
+  }
+
+  std::vector<int> prevRHSDims;
+
+  exprIndices.clear();
+  resultIndices.clear();
+  loopIndices.clear();
+  loopedOverIndices.clear();
+
+  nestingLevel = initialNestingLevel;
+  bool first = true;
+
+  for (const auto &a: CG->getAssignments()) {
+    const Sema &sema = *getSema();
+
+    assert(a.lhs->isIdentifier() &&
+           "internal error: left-hand side must be an identifier expression");
+
+    const ExprNode *result = a.lhs;
+    const std::string &resultName = result->getName();
+    const std::vector<int> &resultDims = getDims(result);
 
     const ExprNode *en = a.rhs;
     const std::vector<int> &dims = getDims(en);
 
-    // generate enough indices for the expression:
-    exprIndices.clear();
-    resultIndices.clear();
-    for (int i = 0; i < dims.size(); i++) {
-      const std::string index = getIndex();
-      exprIndices.push_back(index);
-      resultIndices.push_back(index);
+    if (first) {
+      prevRHSDims = dims;
+      
+      for (int i = 0; i < dims.size(); i++) {
+        const std::string index = getIndex();
+        exprIndices.push_back(index);
+        resultIndices.push_back(index);
+      }
+
+      first = false;
+    } else {
+      const int rank = dims.size();
+      std::vector<int> jointRHSDims;
+      if (RowMajor) {
+        for (int i = 0; i < rank; i++) {
+          if (prevRHSDims[i] == dims[i]) jointRHSDims.push_back(dims[i]);
+          else break;
+        }
+      } else {
+        for (int i = (rank-1); i >= 0; i--) {
+          if (prevRHSDims[i] == dims[i]) jointRHSDims.push_back(dims[i]);
+          else break;
+        }
+      }
+      const unsigned jointSize = jointRHSDims.size() >= 1 ? 1 : 0;
+      const unsigned commonNestingLevel = initialNestingLevel + jointSize;
+
+      emitLoopFooterNest(commonNestingLevel); 
+
+      std::vector<std::string> newExprIndices, newResultIndices;
+      if (RowMajor) {
+        for (int i = 0; i < rank; i++) {
+          if (i < jointSize) {
+            newExprIndices.push_back(exprIndices[i]);
+            newResultIndices.push_back(resultIndices[i]);
+          } else {
+            const std::string index = getIndex();
+            newExprIndices.push_back(index);
+            newResultIndices.push_back(index);
+          }
+        }
+      } else {
+        for (int i = 0; i < rank; i++) {
+          if (i < rank - jointSize) {
+            const std::string index = getIndex();
+            newExprIndices.push_back(index);
+            newResultIndices.push_back(index);
+          } else {
+            newExprIndices.push_back(exprIndices[i]);
+            newResultIndices.push_back(resultIndices[i]);
+          }
+        }
+      }
+      exprIndices = newExprIndices;
+      resultIndices = newResultIndices;
+
+      prevRHSDims = dims;
     }
 
-    loopedOverIndices.clear();
+    /*
+    // emit defintion of 'result' if necessary:
+    if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
+        && !emittedNames.count(resultName)) {
+      auto elements = [](const std::vector<int> &ds) {
+        unsigned long long es = 1;
+        for (int i = 0; i < ds.size(); i++)
+          es *= ds[i];
+        return es;
+      };
+
+      EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
+      append(getFPTypeName() + " " + resultName +
+             "[" + std::to_string(elements(resultDims)) + "];\n");
+
+      emittedNames.insert(resultName);
+    }
+    */
+
+    // generate enough indices for the expression:
+    // exprIndices.clear();
+    // resultIndices.clear();
+    //for (int i = 0; i < dims.size(); i++) {
+    //  const std::string index = getIndex();
+    //  exprIndices.push_back(index);
+    //  resultIndices.push_back(index);
+    //}
+
 
     setResultTemp(a.lhs);
     // we need this if-clause since code emission
@@ -109,12 +201,14 @@ void CEmitter::codeGen(const Program *p) {
       en->visit(this);
     }
 
-    assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
+    //assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
 
     // close all for-loops:
-    emitLoopFooterNest();
+   // emitLoopFooterNest();
   }
-
+  
+  // close all for-loops:
+  emitLoopFooterNest(initialNestingLevel);
   // close block of function body:
   append("}\n");
 
@@ -274,8 +368,9 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims) {
         continue;
       }
       emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i]);
-      loopedOverIndices.insert(index);
       ++nestingLevel;
+      loopIndices[nestingLevel] = index;
+      loopedOverIndices.insert(index);
     }
   } else {
     for (int i = (rank-1); i >= 0; i--) {
@@ -285,14 +380,18 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims) {
         continue;
       }
       emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i]);
-      loopedOverIndices.insert(index);
       ++nestingLevel;
+      loopIndices[nestingLevel] = index;
+      loopedOverIndices.insert(index);
     }
   }
 }
 
-void CEmitter::emitLoopFooterNest() {
-  while(nestingLevel > initialNestingLevel) {
+void CEmitter::emitLoopFooterNest(unsigned toNestingLevel) {
+  while(nestingLevel > toNestingLevel) {
+    const std::string index = loopIndices[nestingLevel];
+    loopedOverIndices.erase(index);
+    loopIndices.erase(nestingLevel);
     --nestingLevel;
     emitForLoopFooter(nestingLevel*INDENT_PER_LEVEL);
   }
@@ -497,6 +596,7 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   append(subscriptedIdentifier(result, resultIndices) + " = 0.0;\n");
 
   const std::vector<std::string> savedExprIndices = exprIndices;
+  const int savedNestingLevel = nestingLevel;
 
   // visit the 'lhs':
   exprIndices = lhsIndices;
@@ -515,13 +615,13 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
          + " += " + lhsTemp + " * " + rhsTemp + ";\n");
 
   // close the for-loops that iterate over the contracted indices ...
-  for (int i = 0; i < contrIndices.size(); i++) {
+  /*for (int i = 0; i < contrIndices.size(); i++) {
+    loopIndices.erase(nestingLevel);
+    loopedOverIndices.erase(contrIndices[i]);
     --nestingLevel;
     emitForLoopFooter(nestingLevel*INDENT_PER_LEVEL);
-  }
-  // ... and remove the contracted indices from 'loopedOverIndices':
-  for (int i = 0; i < contrIndices.size(); i++)
-    loopedOverIndices.erase(contrIndices[i]);
+  }*/
+  emitLoopFooterNest(savedNestingLevel);
 
   exprIndices = savedExprIndices;
 }
@@ -569,13 +669,7 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
     append(subscriptedIdentifier(id, childExprIndices) + " = " + temp + ";\n");
 
     // close the for-loops over the 'childExprIndices' ...
-    while(nestingLevel > savedNestingLevel) {
-      --nestingLevel;
-      emitForLoopFooter(nestingLevel*INDENT_PER_LEVEL);
-    }
-    // ... and remove the loop indices from 'loopedOverIndices':
-    for (int i = 0; i < childExprIndices.size(); i++)
-      loopedOverIndices.erase(exprIndices[i]);
+    emitLoopFooterNest(savedNestingLevel);
   }
 
   exprIndices = savedExprIndices;

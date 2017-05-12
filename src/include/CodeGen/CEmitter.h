@@ -4,6 +4,7 @@
 
 #include <list>
 #include <vector>
+#include <map>
 #include <string>
 
 
@@ -29,6 +30,9 @@ private:
 
 private:
   // context for the emission of expression trees:
+  // maps nesting levels to loop indives:
+  std::map<unsigned, std::string> loopIndices;
+  // keeps track of all loop indices:
   std::set<std::string> loopedOverIndices;
   unsigned nestingLevel,
            initialNestingLevel;
@@ -75,7 +79,7 @@ protected:
                         const std::vector<std::string> &indices = {}) const;
 
   void emitLoopHeaderNest(const std::vector<int> &exprDims);
-  void emitLoopFooterNest();
+  void emitLoopFooterNest(unsigned toNestingLevel);
 
   std::string visitChildExpr(const ExprNode *en);
 
