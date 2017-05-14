@@ -243,9 +243,14 @@ private:
   bool Permute;
   CodeGen::TupleList IndexPairs;
 
+  int ElementIndexPosition;
+
 public:
   IdentifierExpr(const std::string &name, const ExprDimensions &dims)
-    : ExprNode(EK_Identifier, 0, dims), Name(name), Permute(false) {}
+    : ExprNode(EK_Identifier, 0, dims),
+      Name(name),
+      Permute(false),
+      ElementIndexPosition(-1) {}
 
   void addIndex(const std::string &idx) { Indices.push_back(idx); }
   virtual const std::string getIndex(unsigned i) const override;
@@ -268,6 +273,9 @@ public:
   void setPermute(bool p) { Permute = p; }
   const CodeGen::TupleList &getIndexPairs() const { return IndexPairs; }
   void setIndexPairs(const CodeGen::TupleList &pairs) { IndexPairs = pairs; }
+  bool isElementIndexPositionSet() const { return ElementIndexPosition >= 0; }
+  int getElementIndexPosition() const { return ElementIndexPosition; }
+  void setElementIndexPosition(int pos) {ElementIndexPosition = pos; }
 };
 
 

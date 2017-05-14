@@ -291,7 +291,12 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
       if (list.size() != 2) {
         assert(0 && "semantic error: non-pair in transposition indices");
       }
+
       const int i0 = list[0], i1 = list[1];
+
+      if (i0 == i1) {
+        assert(0 && "semantic error: equal transposition indices");
+      }
 
       if (!(i0 < rank) || !(i1 < rank)) {
         assert(0 && "semantic error: transposition index out of range");

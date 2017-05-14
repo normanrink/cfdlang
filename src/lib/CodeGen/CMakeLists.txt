@@ -6,6 +6,7 @@ add_library(CodeGen STATIC
 
             ExprTree.cpp
             ExprTreeLifter.cpp
+            ElementLoopFuser.cpp
             StackExprRemover.cpp
 
             TheanoEmitter.cpp
@@ -19,6 +20,7 @@ add_library(obj.CodeGen OBJECT
 
             ExprTree.cpp
             ExprTreeLifter.cpp
+            ElementLoopFuser.cpp
             StackExprRemover.cpp
 
             TheanoEmitter.cpp

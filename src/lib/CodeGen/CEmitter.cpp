@@ -3,6 +3,7 @@
 #include "CodeGen/CEmitter.h"
 #include "CodeGen/ExprTreeLifter.h"
 #include "CodeGen/ContractionExprCounter.h"
+#include "CodeGen/ElementLoopFuser.h"
 #include "CodeGen/StackExprRemover.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
@@ -32,6 +33,8 @@ void CEmitter::codeGen(const Program *p) {
   // construct the expression trees, one for each statement in the program:
   CG->visitProgram(p);
 
+  int elementLoopDim;
+  const std::string elementLoopIndex = getIndex();
   // various transformations:
   {
     // (1) move transpositions over to the 'lhs':
@@ -73,10 +76,21 @@ void CEmitter::codeGen(const Program *p) {
     };
     ExprTreeLifter lifter(CG, nodeLiftPredicate);
     lifter.transformAssignments();
+
+    // (4) fuse outermost loop (i.e. the "element loop"):
+    ElementLoopFuser fuser(CG);
+    elementLoopDim = fuser.transformAssignments();
   }
   // end of transformations
 
   std::set<std::string> emittedNames;
+
+  if (elementLoopDim) {
+    emitForLoopHeader(initialNestingLevel*INDENT_PER_LEVEL,
+                      elementLoopIndex,
+                      elementLoopDim);
+    ++initialNestingLevel;
+  }
 
   for (const auto &a: CG->getAssignments()) {
     const Sema &sema = *getSema();
@@ -84,9 +98,12 @@ void CEmitter::codeGen(const Program *p) {
     assert(a.lhs->isIdentifier() &&
            "internal error: left-hand side must be an identifier expression");
 
-    const ExprNode *result = a.lhs;
+    const IdentifierExpr *result = static_cast<const IdentifierExpr *>(a.lhs);
     const std::string &resultName = result->getName();
-    const std::vector<int> &resultDims = getDims(result);
+    std::vector<int> resultDims = getDims(result);
+
+    if (result->isElementIndexPositionSet())
+      resultDims.erase(resultDims.begin() + result->getElementIndexPosition());
 
     nestingLevel = initialNestingLevel;
 
@@ -113,13 +130,18 @@ void CEmitter::codeGen(const Program *p) {
     // generate enough indices for the expression:
     exprIndices.clear();
     resultIndices.clear();
-    for (int i = 0; i < dims.size(); i++) {
-      const std::string index = getIndex();
-      exprIndices.push_back(index);
-      resultIndices.push_back(index);
-    }
-
     loopedOverIndices.clear();
+    for (int i = 0; i < dims.size(); i++) {
+      if ((i == 0) && elementLoopDim) {
+        exprIndices.push_back(elementLoopIndex);
+        resultIndices.push_back(elementLoopIndex);
+        loopedOverIndices.insert(elementLoopIndex);
+      } else {
+        const std::string index = getIndex();
+        exprIndices.push_back(index);
+        resultIndices.push_back(index);
+      }
+    }
 
     setResultTemp(a.lhs);
     // we need this if-clause since code emission
@@ -133,10 +155,18 @@ void CEmitter::codeGen(const Program *p) {
       en->visit(this);
     }
 
-    assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
+    if (elementLoopDim)
+      assert((nestingLevel-initialNestingLevel+1) == loopedOverIndices.size());
+    else
+      assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
 
     // close all for-loops:
     emitLoopFooterNest();
+  }
+
+  if (elementLoopDim) {
+    --initialNestingLevel;
+    emitForLoopFooter(initialNestingLevel*INDENT_PER_LEVEL);
   }
 
   // close block of function body:
@@ -286,6 +316,8 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
 
   const IdentifierExpr *id = static_cast<const IdentifierExpr *>(en);
   std::vector<int> dims = en->getDims();
+  int elementIndex = id->isElementIndexPositionSet()
+                     ? id->getElementIndexPosition() : (-1);
   if (id->permute()) {
     // the indices must be permuted going through the transpositions forwards:
     // (when 'TranspositionExpr' is emitted (on the 'rhs' of assignments), the
@@ -299,7 +331,16 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
       const std::string index0 = allIndices[p[0]];
       allIndices[p[0]] = allIndices[p[1]];
       allIndices[p[1]] = index0;
+
+      if (p[0] == elementIndex) elementIndex = p[1];
+      else if (p[1] == elementIndex) elementIndex = p[0];
     }
+  }
+
+  if (id->isElementIndexPositionSet()) {
+    assert(elementIndex != -1);
+    allIndices.erase(allIndices.begin() + elementIndex);
+    dims.erase(dims.begin() + elementIndex);
   }
 
   return (en->getName() + subscriptString(allIndices, dims));
