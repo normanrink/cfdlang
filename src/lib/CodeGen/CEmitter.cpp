@@ -78,7 +78,7 @@ void CEmitter::codeGen(const Program *p) {
     lifter.transformAssignments();
 
     // (4) fuse outermost loop (i.e. the "element loop"):
-    ElementLoopFuser fuser(CG);
+    ElementLoopFuser fuser(CG, RowMajor);
     elementLoopDim = fuser.transformAssignments();
   }
   // end of transformations
@@ -95,17 +95,24 @@ void CEmitter::codeGen(const Program *p) {
   for (const auto &a: CG->getAssignments()) {
     const Sema &sema = *getSema();
 
+    nestingLevel = initialNestingLevel;
+
     assert(a.lhs->isIdentifier() &&
            "internal error: left-hand side must be an identifier expression");
 
     const IdentifierExpr *result = static_cast<const IdentifierExpr *>(a.lhs);
     const std::string &resultName = result->getName();
-    std::vector<int> resultDims = getDims(result);
+    std::vector<int> sizeDims = getDims(result);
 
-    if (result->isElementIndexPositionSet())
-      resultDims.erase(resultDims.begin() + result->getElementIndexPosition());
+    if (result->isElementIndexPositionSet()) {
+      assert(elementLoopDim
+             && "internal error: element loop should have been detected");
 
-    nestingLevel = initialNestingLevel;
+      const int elementIndexPos = result->getElementIndexPosition();
+      // note that neither 'sizeDims' or 'elementIndexPos' are permuted,
+      // both refer to the 'IdentifierExpr' without permuted indices:
+      sizeDims.erase(sizeDims.begin() + elementIndexPos);
+    }
 
     // emit defintion of 'result' if necessary:
     if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
@@ -119,7 +126,7 @@ void CEmitter::codeGen(const Program *p) {
 
       EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
       append(getFPTypeName() + " " + resultName +
-             "[" + std::to_string(elements(resultDims)) + "];\n");
+             "[" + std::to_string(elements(sizeDims)) + "];\n");
 
       emittedNames.insert(resultName);
     }
@@ -132,7 +139,8 @@ void CEmitter::codeGen(const Program *p) {
     resultIndices.clear();
     loopedOverIndices.clear();
     for (int i = 0; i < dims.size(); i++) {
-      if ((i == 0) && elementLoopDim) {
+      if (elementLoopDim &&
+          ((RowMajor && (i == 0)) || (!RowMajor && (i == dims.size() - 1)))) {
         exprIndices.push_back(elementLoopIndex);
         resultIndices.push_back(elementLoopIndex);
         loopedOverIndices.insert(elementLoopIndex);
@@ -339,6 +347,8 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
 
   if (id->isElementIndexPositionSet()) {
     assert(elementIndex != -1);
+    // note that 'elementIndex' has been permuted (better: transposed)
+    // as necessary:
     allIndices.erase(allIndices.begin() + elementIndex);
     dims.erase(dims.begin() + elementIndex);
   }

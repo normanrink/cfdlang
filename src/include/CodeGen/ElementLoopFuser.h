@@ -20,10 +20,17 @@ private:
   CodeGen *CG;
   CodeGen::AssignmentsListTy &Assignments;
 
+  const bool RowMajor;
+
+  // the index of the dimension of the outermost loop;
+  // this changes value as one descends into expression trees:
+  int CommonDimIndex;
+
 public:
-  ElementLoopFuser(CodeGen *cg)
+  ElementLoopFuser(CodeGen *cg, bool rowMajor)
     : CG(cg),
-      Assignments(CG->getAssignments()) {}
+      Assignments(CG->getAssignments()),
+      RowMajor(rowMajor) {}
 
   #define DECL_TRANSFORM_EXPR_NODE(Kind)                       \
   virtual void transform##Kind##Expr(Kind##Expr *en) override;
@@ -42,7 +49,8 @@ public:
 
   #undef DECL_TRANSFORM_EXPR_NODE
 
-  void transformChildren(ExprNode *en);
+  void transformExprWithRepeatedDims(ExprNode *en);
+  void transformExprWithSequentialDims(ExprNode *en);
 
   int transformAssignments();
 
