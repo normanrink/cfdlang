@@ -33,7 +33,7 @@ void CEmitter::codeGen(const Program *p) {
   // construct the expression trees, one for each statement in the program:
   CG->visitProgram(p);
 
-  int elementLoopDim;
+  int elementLoopDim = 0;
   const std::string elementLoopIndex = getIndex();
   // various transformations:
   {
@@ -77,9 +77,11 @@ void CEmitter::codeGen(const Program *p) {
     ExprTreeLifter lifter(CG, nodeLiftPredicate);
     lifter.transformAssignments();
 
-    // (4) fuse outermost loop (i.e. the "element loop"):
-    ElementLoopFuser fuser(CG, RowMajor);
-    elementLoopDim = fuser.transformAssignments();
+    if (FuseElementLoop) {
+      // (4) try to fuse outermost loop (i.e. the "element loop"):
+      ElementLoopFuser fuser(CG, RowMajor);
+      elementLoopDim = fuser.transformAssignments();
+    }
   }
   // end of transformations
 

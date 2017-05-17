@@ -112,9 +112,11 @@ TensorContext::getExecution(const ExecutionHandle *h) const {
 }
 
 void TensorContext::initCodeGen(CodeGenHandle *h, const char *source,
-                                bool rowMajor, bool graphCodeGen) {
+                                bool rowMajor, bool fuseElementLoop,
+                                bool graphCodeGen) {
   *h = getHandle();
-  TheCodeGens[*h] = new TensorCodeGen(source, rowMajor, graphCodeGen);
+  TheCodeGens[*h] = new TensorCodeGen(source, rowMajor, fuseElementLoop,
+                                      graphCodeGen);
 }
 
 void TensorContext::finalCodeGen(const CodeGenHandle *h) {

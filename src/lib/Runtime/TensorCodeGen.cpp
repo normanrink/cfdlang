@@ -13,9 +13,11 @@
 
 TensorCodeGen::TensorCodeGen(const char *source,
                              bool rowMajor,
+                             bool fuseElementLoop,
                              bool graphCodeGen)
   : Source(source),
     RowMajor(rowMajor),
+    FuseElementLoop(fuseElementLoop),
     GraphCodeGen(graphCodeGen),
     CG(nullptr),
     CCode("") {}
@@ -53,7 +55,8 @@ void TensorCodeGen::generate(const std::string &resultName) {
   else
     CG = new DirectCodeGen(&S, resultName);
 
-  CEmitter emitter(CG, /* rowMajor */ RowMajor, /* emitWrappe= */ true);
+  CEmitter emitter(CG, /* rowMajor */ RowMajor, /* emitWrapper */ true,
+                   /* fuseElementLoop */ FuseElementLoop);
   emitter.codeGen(P.getAST());
   CCode = emitter.getCode();
   FunctionName = CG->getFunctionName();

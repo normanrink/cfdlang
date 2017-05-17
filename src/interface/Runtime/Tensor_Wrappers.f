@@ -16,14 +16,17 @@ module Tensor_Wrappers
     end subroutine Tensor_Final_Context
 
 
-    subroutine Tensor_Init_Code_Gen(h_ctx, h_cg,            &
-                                    source,                 &
-                                    rowMajor, graphCodeGen) &
+    subroutine Tensor_Init_Code_Gen(h_ctx, h_cg,     &
+                                    source,          &
+                                    rowMajor,        &
+                                    fuseElementLoop, &
+                                    graphCodeGen)    &
                bind(C, name="TensorInitCodeGen")
       use iso_c_binding
       integer(c_long),    intent(inout) :: h_ctx, h_cg
       character(c_char), intent(in)    :: source(*)
-      integer(c_int),    intent(in)    :: rowMajor, graphCodeGen
+      integer(c_int),    intent(in)    :: rowMajor, graphCodeGen, &
+                                          fuseElementLoop
     end subroutine Tensor_Init_Code_Gen
       
     subroutine Tensor_Generate_C_Code(h_ctx, h_cg) &

@@ -27,6 +27,8 @@ private:
 
   const bool EmitWrapper;
 
+  const bool FuseElementLoop;
+
 private:
   // context for the emission of expression trees:
   std::set<std::string> loopedOverIndices;
@@ -36,12 +38,14 @@ private:
 
 public:
   CEmitter(CodeGen *cg, bool rowMajor = true, bool emitWrapper = false,
+           bool fuseElementLoop = false,
            const std::string fpTypeName = "double")
   : CG(cg),
     FPTypeName(fpTypeName),
     IndexCounter(0),
     RowMajor(rowMajor),
-    EmitWrapper(emitWrapper) {}
+    EmitWrapper(emitWrapper),
+    FuseElementLoop(fuseElementLoop) {}
 
   void codeGen(const Program *p);
   const std::string &getCode() const { return CG->getCode(); }
