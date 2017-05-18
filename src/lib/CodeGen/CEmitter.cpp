@@ -1,9 +1,11 @@
 
 #include "AST/AST.h"
 #include "CodeGen/CEmitter.h"
-#include "CodeGen/ExprTreeLifter.h"
 #include "CodeGen/ContractionExprCounter.h"
 #include "CodeGen/ElementLoopFuser.h"
+#include "CodeGen/ExprTreeLifter.h"
+#include "CodeGen/IdCopier.h"
+#include "CodeGen/IdFinder.h"
 #include "CodeGen/StackExprRemover.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
@@ -56,9 +58,13 @@ void CEmitter::codeGen(const Program *p) {
     StackExprRemover remover(CG);
     remover.transformAssignments();
 
+    std::map<const ExprNode *, std::string> RhsToLhsNamesMap;
+    for (auto &a: CG->getAssignments())
+      RhsToLhsNamesMap[a.rhs] = a.lhs->getName();
+
     // (3) lift contractions to the top level:
-    const auto &nodeLiftPredicate = [](const ExprNode *en,
-                                       const ExprNode *root) {
+    const auto &nodeLiftPredicate = [&RhsToLhsNamesMap](const ExprNode *en,
+                                                        const ExprNode *root) {
       if (en->isStackExpr()) {
         assert(0 &&
                "internal error: stack expressions should not occur any more");
@@ -71,14 +77,27 @@ void CEmitter::codeGen(const Program *p) {
         // starting with the most deeply nested contraction:
         if (CEC.getCount() > 1 && en == CEC.getDeepest())
           return true;
+
+        // contractions should also be lifted if the identifier from
+        // the 'lhs' appears in the contraction (on the 'rhs'); this
+        // will produce more efficient code than lifting identifiers
+        // later in the 'IdCopier' (cf. transformation no. 4)
+        IdFinder IF(root);
+        if (IF.find(RhsToLhsNamesMap[root]))
+          return true;
       }
       return false;
     };
     ExprTreeLifter lifter(CG, nodeLiftPredicate);
     lifter.transformAssignments();
 
+    // (4) copy identifiers if they appear on 'lhs' and 'rhs'
+    // in incompatible ways:
+    IdCopier IDC(CG);
+    IDC.transformAssignments();
+
     if (FuseElementLoop) {
-      // (4) try to fuse outermost loop (i.e. the "element loop"):
+      // (5) try to fuse outermost loop (i.e. the "element loop"):
       ElementLoopFuser fuser(CG, RowMajor);
       elementLoopDim = fuser.transformAssignments();
     }
