@@ -37,7 +37,8 @@ void TensorExecution::addArgument(const std::string &name, ArgPtr arg) {
   ++NumSetArguments;
 }
 
-void TensorExecution::addArguments(const char **names, ArgPtr *args, const int num_args) {
+void TensorExecution::addArguments(const char **names, ArgPtr *args,
+                                   const int num_args) {
   const TensorContext::KernelHandle kh = getKernelHandle();
 
   for (int i = 0; i < num_args; i++) {
@@ -71,3 +72,15 @@ void TensorExecution::execute() const {
 
   (k->getCode())(ActualArguments);
 }
+
+void TensorExecution::executeWithPositionalArgs(ArgPtr *args,
+                                                const int num_args) const {
+  const TensorContext::KernelHandle kh = getKernelHandle();
+  const TensorKernel *k = getContext()->getKernel(&kh);
+
+  assert(num_args == TotalNumArguments
+         && "runtime error: incorrect number of actual arguments");
+
+  (k->getCode())(args);
+}
+

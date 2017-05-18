@@ -242,9 +242,9 @@ void TensorContext::addArgument(const ExecutionHandle *h,
 void TensorContext::addArguments(const ExecutionHandle *h,
                                  const char **names,
                                  void **args,
-                                 const int *num_args) {
+                                 const int num_args) {
   TensorExecution *e = getExecution(h);
-  e->addArguments(names, args, *num_args);
+  e->addArguments(names, args, num_args);
 }
 
 void TensorContext::clearArguments(const ExecutionHandle *h) {
@@ -260,11 +260,18 @@ void TensorContext::execute(const ExecutionHandle *h) const {
 void TensorContext::executeWithArguments(const ExecutionHandle *h,
                                          const char **names,
                                          void **args,
-                                         const int *num_args) {
+                                         const int num_args) {
   TensorExecution *e = getExecution(h);
-  e->addArguments(names, args, *num_args);
+  e->addArguments(names, args, num_args);
   e->execute();
   e->clearArguments();
+}
+
+void TensorContext::executeWithPositionalArgs(const ExecutionHandle *h,
+                                              void **args,
+                                              const int num_args) {
+  TensorExecution *e = getExecution(h);
+  e->executeWithPositionalArgs(args, num_args);
 }
 
 std::string TensorContext::getUniqueIdentifier(const std::string &separator) {

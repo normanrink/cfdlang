@@ -40,6 +40,7 @@ public:
   void clearArguments();
 
   void execute() const;
+  void executeWithPositionalArgs(ArgPtr *args, const int num_args) const;
 };
 
 #endif /* __TENSOR_EXECUTION_H__ */

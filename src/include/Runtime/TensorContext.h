@@ -109,14 +109,17 @@ public:
   void addArguments(const ExecutionHandle *h,
                     const char **names,
                     void **arg,
-                    const int *num_args);
+                    const int num_args);
   void clearArguments(const ExecutionHandle *h);
 
   void execute(const ExecutionHandle *h) const;
   void executeWithArguments(const ExecutionHandle *h,
                             const char **names,
                             void **arg,
-                            const int *num_args);
+                            const int num_args);
+  void executeWithPositionalArgs(const ExecutionHandle *h,
+                                 void **arg,
+                                 const int num_args);
 
 
   std::string getUniqueIdentifier(const std::string &separator);
