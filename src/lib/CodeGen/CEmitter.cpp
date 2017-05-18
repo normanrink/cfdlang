@@ -58,13 +58,13 @@ void CEmitter::codeGen(const Program *p) {
     StackExprRemover remover(CG);
     remover.transformAssignments();
 
-    std::map<const ExprNode *, std::string> RhsToLhsNamesMap;
+    std::map<const ExprNode *, const IdentifierExpr *> RhsToLhsMap;
     for (auto &a: CG->getAssignments())
-      RhsToLhsNamesMap[a.rhs] = a.lhs->getName();
+      RhsToLhsMap[a.rhs] = static_cast<const IdentifierExpr *>(a.lhs);
 
     // (3) lift contractions to the top level:
-    const auto &nodeLiftPredicate = [&RhsToLhsNamesMap](const ExprNode *en,
-                                                        const ExprNode *root) {
+    const auto &nodeLiftPredicate = [&RhsToLhsMap](const ExprNode *en,
+                                                   const ExprNode *root) {
       if (en->isStackExpr()) {
         assert(0 &&
                "internal error: stack expressions should not occur any more");
@@ -83,8 +83,11 @@ void CEmitter::codeGen(const Program *p) {
         // will produce more efficient code than lifting identifiers
         // later in the 'IdCopier' (cf. transformation no. 4)
         IdFinder IF(root);
-        if (IF.find(RhsToLhsNamesMap[root]))
-          return true;
+        const IdentifierExpr *lhsId = RhsToLhsMap[root];
+        if (IF.find(lhsId->getName())) {
+          if (IF.getIdIncompatible() || lhsId->permute())
+            return true;
+        }
       }
       return false;
     };

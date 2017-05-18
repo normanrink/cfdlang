@@ -12,9 +12,11 @@
 class IdFinder : public ExprTreeVisitor {
 private:
   const ExprNode *Root;
+  bool Incompatible;
 
   std::string NameToFind;
   bool Found;
+  bool IdIncompatible;
 
 public:
   IdFinder(const ExprNode *root)
@@ -26,34 +28,56 @@ public:
   }
 
   virtual void visitIdentifierExpr(const IdentifierExpr *en) override {
-    if (en->getName() == NameToFind)
+    if (en->getName() == NameToFind) {
       Found = true;
+      // if the identifiers seen so far are still compatible,
+      // set to 'Incompatible':
+      // (make sure that 'IdIncompatible' is never unset once
+      // it has been set to 'true')
+      if (IdIncompatible == false)
+        IdIncompatible = Incompatible;
+    }
   }
 
-  #define DEF_VISIT_EXPR_NODE(Kind)                                \
+  #define DEF_VISIT_COMPATIBLE_EXPR_NODE(Kind)                     \
   virtual void visit##Kind##Expr(const Kind##Expr *en) override {  \
     visitChildren(en);                                             \
   }
 
-  DEF_VISIT_EXPR_NODE(Add)
-  DEF_VISIT_EXPR_NODE(Sub)
-  DEF_VISIT_EXPR_NODE(Mul)
-  DEF_VISIT_EXPR_NODE(ScalarMul)
-  DEF_VISIT_EXPR_NODE(Div)
-  DEF_VISIT_EXPR_NODE(ScalarDiv)
-  DEF_VISIT_EXPR_NODE(Product)
-  DEF_VISIT_EXPR_NODE(Stack)
-  DEF_VISIT_EXPR_NODE(Transposition)
-  DEF_VISIT_EXPR_NODE(Contraction)
+  DEF_VISIT_COMPATIBLE_EXPR_NODE(Add)
+  DEF_VISIT_COMPATIBLE_EXPR_NODE(Sub)
+  DEF_VISIT_COMPATIBLE_EXPR_NODE(Mul)
+  DEF_VISIT_COMPATIBLE_EXPR_NODE(ScalarMul)
+  DEF_VISIT_COMPATIBLE_EXPR_NODE(Div)
+  DEF_VISIT_COMPATIBLE_EXPR_NODE(ScalarDiv)
 
-  #undef DECL_VISIT_EXPR_NODE
+  #undef DEF_VISIT_COMPATIBLE_EXPR_NODE
+
+  #define DEF_VISIT_INCOMPATIBLE_EXPR_NODE(Kind)                   \
+  virtual void visit##Kind##Expr(const Kind##Expr *en) override {  \
+    bool savedIncompatible = Incompatible;                         \
+    Incompatible = true;                                           \
+    visitChildren(en);                                             \
+    Incompatible = savedIncompatible;                              \
+  }
+
+  DEF_VISIT_INCOMPATIBLE_EXPR_NODE(Product)
+  DEF_VISIT_INCOMPATIBLE_EXPR_NODE(Stack)
+  DEF_VISIT_INCOMPATIBLE_EXPR_NODE(Transposition)
+  DEF_VISIT_INCOMPATIBLE_EXPR_NODE(Contraction)
+
+  #undef DEF_VISIT_INCOMPATIBLE_EXPR_NODE
 
   virtual bool find(const std::string nameToFind) {
     NameToFind = nameToFind;
     Found = false;
+    IdIncompatible = false;
+    Incompatible = false;
     Root->visit(this);
     return Found;
   }
+
+  bool getIdIncompatible() const { return IdIncompatible; }
 };
 
 #endif /* ____ID_FINDER_H__ */
