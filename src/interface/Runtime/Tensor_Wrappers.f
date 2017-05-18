@@ -20,13 +20,16 @@ module Tensor_Wrappers
                                     source,          &
                                     rowMajor,        &
                                     fuseElementLoop, &
+                                    restrictPointer, &
                                     graphCodeGen)    &
                bind(C, name="TensorInitCodeGen")
       use iso_c_binding
       integer(c_long),    intent(inout) :: h_ctx, h_cg
       character(c_char), intent(in)    :: source(*)
-      integer(c_int),    intent(in)    :: rowMajor, graphCodeGen, &
-                                          fuseElementLoop
+      integer(c_int),    intent(in)    :: rowMajor,        &
+                                          fuseElementLoop, &
+                                          restrictPointer, &
+                                          graphCodeGen
     end subroutine Tensor_Init_Code_Gen
       
     subroutine Tensor_Generate_C_Code(h_ctx, h_cg) &

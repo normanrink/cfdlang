@@ -187,7 +187,7 @@ void CEmitter::codeGen(const Program *p) {
 
     append("\n");
     append("void " + getFunctionName() + "(" +
-           getFPTypeName() + " *args[" + std::to_string(numArgs) + "]){\n");
+           getFPTypeName() + PointerDecl + "args[" + std::to_string(numArgs) + "]){\n");
 
     const std::string &functionCall = getFunctionNameWrapped() + "(";
     // emit the call of 'FunctionName':
@@ -228,7 +228,7 @@ void CEmitter::emitSignature() { // emit function signature
     const std::string &ArgName = sym->getName();
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
-    append(getFPTypeName() + " *" + ArgName);
+    append(getFPTypeName() + PointerDecl + ArgName);
 
     addFunctionArgument(ArgName);
   }
@@ -247,7 +247,7 @@ void CEmitter::emitSignature() { // emit function signature
     const std::string &ArgName = sym->getName();
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
-    append(getFPTypeName() + " *" + ArgName);
+    append(getFPTypeName() + PointerDecl + ArgName);
 
     addFunctionArgument(ArgName);
   }

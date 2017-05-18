@@ -29,6 +29,9 @@ private:
 
   const bool FuseElementLoop;
 
+  const bool RestrictPointer;
+  const std::string PointerDecl;
+
 private:
   // context for the emission of expression trees:
   std::set<std::string> loopedOverIndices;
@@ -39,13 +42,16 @@ private:
 public:
   CEmitter(CodeGen *cg, bool rowMajor = true, bool emitWrapper = false,
            bool fuseElementLoop = false,
+           bool restrictPointer = true,
            const std::string fpTypeName = "double")
   : CG(cg),
     FPTypeName(fpTypeName),
     IndexCounter(0),
     RowMajor(rowMajor),
     EmitWrapper(emitWrapper),
-    FuseElementLoop(fuseElementLoop) {}
+    FuseElementLoop(fuseElementLoop),
+    RestrictPointer(restrictPointer),
+    PointerDecl(RestrictPointer ? " *restrict " : " *") {}
 
   void codeGen(const Program *p);
   const std::string &getCode() const { return CG->getCode(); }
