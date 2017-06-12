@@ -3,21 +3,22 @@
 # generated to the include path:
 include_directories(${CFDLANG_EXTRA_OUTPUT_DIR})
 
-add_executable(lex lex.cpp)
-target_link_libraries(lex Parser)
+add_executable(lex lex.cpp
+                   $<TARGET_OBJECTS:obj.AST>
+                   $<TARGET_OBJECTS:obj.Parser>)
 
-add_executable(parse parse.cpp)
-target_link_libraries(parse AST
-                            Parser)
+add_executable(parse parse.cpp
+                     $<TARGET_OBJECTS:obj.AST>
+                     $<TARGET_OBJECTS:obj.Parser>)
 
-add_executable(check check.cpp)
-target_link_libraries(check AST
-                            Parser
-                            Sema)
+add_executable(check check.cpp
+                     $<TARGET_OBJECTS:obj.AST>
+                     $<TARGET_OBJECTS:obj.Parser>
+                     $<TARGET_OBJECTS:obj.Sema>)
 
-add_executable(compile compile.cpp)
-target_link_libraries(compile AST
-                              CodeGen
-                              Parser
-                              Sema)
+add_executable(compile compile.cpp
+                       $<TARGET_OBJECTS:obj.AST>
+                       $<TARGET_OBJECTS:obj.CodeGen>
+                       $<TARGET_OBJECTS:obj.Parser>
+                       $<TARGET_OBJECTS:obj.Sema>)
 

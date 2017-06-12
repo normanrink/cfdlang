@@ -3,14 +3,6 @@
 # generated to the include path:
 include_directories(${CFDLANG_EXTRA_OUTPUT_DIR})
 
-add_library(Runtime STATIC
-                    TensorCodeGen.cpp
-                    TensorContext.cpp
-                    TensorExecution.cpp
-                    TensorKernel.cpp
-                    TensorWrappers.cpp)
-target_link_libraries(Runtime dl)
-
 add_library(obj.Runtime OBJECT
                         TensorCodeGen.cpp
                         TensorContext.cpp
