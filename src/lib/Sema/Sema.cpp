@@ -211,7 +211,8 @@ void Sema::visitBinaryExpr(const BinaryExpr *be) {
             assert(0 && "semantic error: incompatible indices in contraction");
           }
           if (index_set_to_erase.count(i)) {
-            assert(0 && ("semantic error: index \'" + std::to_string(i)
+            assert(0 && ("semantic error: index \'"
+                         + std::to_string((long long)i)
                          + "\' appears multiple times").c_str());
           }
           index_set_to_erase.insert(i);

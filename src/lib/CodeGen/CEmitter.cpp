@@ -64,7 +64,8 @@ void CEmitter::codeGen(const Program *p) {
 
     // (3) lift contractions to the top level:
     const auto &nodeLiftPredicate = [&RhsToLhsMap](const ExprNode *en,
-                                                   const ExprNode *root) {
+                                                   const ExprNode *root)
+                                    -> bool {
       if (en->isStackExpr()) {
         assert(0 &&
                "internal error: stack expressions should not occur any more");
@@ -141,7 +142,7 @@ void CEmitter::codeGen(const Program *p) {
     // emit defintion of 'result' if necessary:
     if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
         && !emittedNames.count(resultName)) {
-      auto elements = [](const std::vector<int> &ds) {
+      auto elements = [](const std::vector<int> &ds) -> unsigned long long {
         unsigned long long es = 1;
         for (int i = 0; i < ds.size(); i++)
           es *= ds[i];
@@ -150,7 +151,7 @@ void CEmitter::codeGen(const Program *p) {
 
       EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
       append(getFPTypeName() + " " + resultName +
-             "[" + std::to_string(elements(sizeDims)) + "];\n");
+             "[" + std::to_string((long long)elements(sizeDims)) + "];\n");
 
       emittedNames.insert(resultName);
     }
@@ -208,8 +209,9 @@ void CEmitter::codeGen(const Program *p) {
     const int numArgs = getNumFunctionArguments();
 
     append("\n");
-    append("void " + getFunctionName() + "(" +
-           getFPTypeName() + PointerDecl + "args[" + std::to_string(numArgs) + "]){\n");
+    append("void " + getFunctionName() + "(" + getFPTypeName()
+           + PointerDecl + "args[" + std::to_string((long long)numArgs)
+           + "]){\n");
 
     const std::string &functionCall = getFunctionNameWrapped() + "(";
     // emit the call of 'FunctionName':
@@ -222,7 +224,7 @@ void CEmitter::codeGen(const Program *p) {
         EMIT_INDENT(INDENT_PER_LEVEL + functionCall.length())
       }
 
-      append("args[" + std::to_string(i) + "]");
+      append("args[" + std::to_string((long long)i) + "]");
     }
     append(");\n");
 
@@ -231,7 +233,7 @@ void CEmitter::codeGen(const Program *p) {
 }
 
 std::string CEmitter::getIndex() {
-  return "i" + std::to_string(IndexCounter++);
+  return "i" + std::to_string((long long)IndexCounter++);
 }
 
 void CEmitter::emitSignature() { // emit function signature
@@ -290,7 +292,7 @@ void CEmitter::emitForLoopHeader(unsigned indent,
 void CEmitter::emitForLoopHeader(unsigned indent,
                                  const std::string &indexVar,
                                  int intBound) {
-  emitForLoopHeader(indent, indexVar, std::to_string(intBound));
+  emitForLoopHeader(indent, indexVar, std::to_string((long long)intBound));
 }
 
 void CEmitter::emitForLoopFooter(unsigned indent) {
@@ -318,13 +320,13 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
     for (int i = (rank-1); i >= 0; i--) {
       result += indices[i];
       if (i != 0)
-        result += " + " + std::to_string(dims[i]) + "*(";
+        result += " + " + std::to_string((long long)dims[i]) + "*(";
     }
   } else {
     for (int i = 0; i < rank; i++) {
       result += indices[i];
       if (i != (rank-1))
-        result += " + " + std::to_string(dims[i]) + "*(";
+        result += " + " + std::to_string((long long)dims[i]) + "*(";
     }
   }
 
@@ -673,7 +675,7 @@ void CEmitter::visitStackExpr(const StackExpr *en) {
                                                result->getDims());
     for (unsigned i = 0; i < result->getNumIndices(); i++)
       id->addIndex(result->getIndex(i));
-    id->addIndex(std::to_string(e));
+    id->addIndex(std::to_string((long long)e));
 
     const ExprNode *child = en->getChild(e);
     const std::vector<int> childDims = getDims(child);

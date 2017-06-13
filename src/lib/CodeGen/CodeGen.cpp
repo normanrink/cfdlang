@@ -20,7 +20,7 @@ CodeGen::~CodeGen() {
 }
 
 std::string CodeGen::getTemp() {
-  return "t" + std::to_string(TempCounter++);
+  return "t" + std::to_string((long long)TempCounter++);
 }
 
 void CodeGen::addFunctionArgument(const std::string &name) {
@@ -74,7 +74,7 @@ CodeGen::getFunctionArgument(unsigned i) const {
 };
 
 bool CodeGen::allCompare(const List &list, Comparison cmp, int pivot) {
-  std::function<bool(int)> compare = [cmp, pivot](int i) {
+  std::function<bool(int)> compare = [cmp, pivot](int i) -> bool {
     switch (cmp) {
     case CMP_Less:         return i <  pivot;
     case CMP_LessEqual:    return i <= pivot;
@@ -175,7 +175,7 @@ void CodeGen::adjustForContractions(List &indices,
 const std::string CodeGen::getListString(const List &list) {
   std::string result = "[";
   for (int l = 0; l < list.size(); l++) {
-    result += std::to_string(list[l]);
+    result += std::to_string((long long)list[l]);
     if (l != (list.size()-1)) result += ", ";
   }
   result += "]";

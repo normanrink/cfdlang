@@ -225,7 +225,7 @@ class ExprList : public ASTNodeList<const Expr,
                                     ASTNode::NT_ExprList,
                                     ExprList> {
 public:
-  ExprList() : ASTNodeList() {}
+  ExprList() : ASTNodeList<const Expr, ASTNode::NT_ExprList, ExprList>() {}
   ExprList(const Expr *e) : ASTNodeList(e) {}
 
   virtual void visit(ASTVisitor *v) const override;
@@ -309,7 +309,7 @@ class StmtList : public ASTNodeList<const Stmt,
                                     ASTNode::NT_StmtList,
                                     StmtList> {
 public:
-  StmtList() : ASTNodeList() {}
+  StmtList() : ASTNodeList<const Stmt, ASTNode::NT_StmtList, StmtList>() {}
   StmtList(const Stmt *s) : ASTNodeList(s) {}
 
   virtual void visit(ASTVisitor *v) const override;
@@ -363,7 +363,7 @@ class DeclList : public ASTNodeList<const Decl,
                                     ASTNode::NT_DeclList,
                                     DeclList> {
 public:
-  DeclList() : ASTNodeList() {}
+  DeclList() : ASTNodeList<const Decl, ASTNode::NT_DeclList, DeclList>() {}
   DeclList(const Decl *d) : ASTNodeList(d) {}
 
   virtual void visit(ASTVisitor *v) const override;

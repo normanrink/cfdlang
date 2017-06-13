@@ -61,10 +61,10 @@ public:
       ID(rhs.str()) {}
 
   virtual const std::string str() const final { return ID; }
-  bool operator==(const StringID &id) const final {
+  virtual bool operator==(const StringID &id) const final {
     return ID == id.str();
   }
-  bool operator<(const StringID &id) const final {
+  virtual bool operator<(const StringID &id) const final {
     return ID < id.str();
   }
 };
@@ -91,8 +91,12 @@ public:
     return ss.str();
   }
 
-  bool operator==(const AddressID &id) const final { return ID == id.get(); }
-  bool operator<(const AddressID &id) const final { return ID < id.get(); }
+  virtual bool operator==(const AddressID &id) const final {
+    return ID == id.get();
+  }
+  virtual bool operator<(const AddressID &id) const final {
+    return ID < id.get();
+  }
 };
 
 

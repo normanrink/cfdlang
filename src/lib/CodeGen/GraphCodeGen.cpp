@@ -424,7 +424,7 @@ void GraphCodeGen::replaceEdgesAtNode(GCG_Graph &graph,
                                       const GCG_Node &newNode,
                                       int shift, const EdgeSet &toContract) {
   std::function<int(int)>
-  adjustForContractions = [oldNode, toContract](int index) {
+  adjustForContractions = [oldNode, toContract](int index) -> int {
     int adjustment = 0;
     for (const auto *e : toContract) {
       int oldNodeIndex = (oldNode == *e->getSrcNode()) ? e->getSrcIndex()

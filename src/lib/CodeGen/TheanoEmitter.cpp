@@ -35,7 +35,7 @@ void TheanoEmitter::codeGen(const Program *p) {
 
       append(typeName + " = " + getModulePrefix()
              + ".TensorType('float64', (False,)*"
-             + std::to_string(type->getRank()) + ")\n");
+             + std::to_string((long long)type->getRank()) + ")\n");
       EmittedTypes[type] = typeName;
     }
 

@@ -82,7 +82,7 @@ void StackExprRemover::transformAssignments() {
       for (unsigned j = 0; j < lhs->getNumIndices(); j++) {
         id->addIndex(lhs->getIndex(j));
       }
-      id->addIndex(std::to_string(i));
+      id->addIndex(std::to_string((long long)i));
       if (lhs->permute()) {
         id->setPermute(true);
         id->setIndexPairs(lhs->getIndexPairs());
