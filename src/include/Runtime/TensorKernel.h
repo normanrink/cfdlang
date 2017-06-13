@@ -36,7 +36,7 @@ protected:
   TensorContext *getContext() { return Context; }
 
 public:
-  const TensorContext::CodeGenHandle getCodeGenHandle() const {
+  TensorContext::CodeGenHandle getCodeGenHandle() const {
     return TheCodeGen;
   }
 
@@ -61,7 +61,7 @@ public:
 
   const TensorContext *getContext() const { return Context; }
   //const std::string &getSource() const { return Source; }
-  const CodePtr getCode() const { return Code; }
+  CodePtr getCode() const { return Code; }
   bool isCodeValid() const;
 
   unsigned getNumFormalArguments() const { return NumFormalArguments; }

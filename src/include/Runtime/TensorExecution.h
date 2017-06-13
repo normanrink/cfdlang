@@ -31,7 +31,7 @@ public:
   ~TensorExecution();
 
   const TensorContext *getContext() const { return Context; }
-  const TensorContext::KernelHandle getKernelHandle() const {
+  TensorContext::KernelHandle getKernelHandle() const {
     return TheKernel;
   }
 

@@ -344,7 +344,7 @@ public:
 
   const Identifier *getIdentifier() const { return Id; }
   const Expr *getTypeExpr() const { return TypeExpr; }
-  const IOSpecifier getIOSpecifier() const { return IOSpec; }
+  IOSpecifier getIOSpecifier() const { return IOSpec; }
 
   virtual void deepDelete() const final;
 
