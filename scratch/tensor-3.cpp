@@ -3,7 +3,7 @@
  * intended as a (partial and incomplete) study into how template meta-
  * programming can be used to express and set up tensor operations.
  *
- * This is work in progress.
+ * This is work in progress.                                                  */
 /* ---------------------------------------------------------------------------*/
 
 #include <iostream>
@@ -264,7 +264,10 @@ public:
 };
 
 
-// 'MultiIndexFlattener'access of tensor elements using 'MultiIndex':
+/* 'MultiIndexFlattener':
+ * turns a 'MultiIndex' into a flat index to access elements of a tensor
+ * of type 'TType'.
+ */
 template<int N, typename I, typename TType>
 struct MultiIndexFlattener
 : MultiIndexFlattener<N-1, I, typename TType::TTailType> {
@@ -274,6 +277,7 @@ private:
   using Base = MultiIndexFlattener<N-1, I, typename TType::TTailType>;
 
   const Base *base() const { return static_cast<const Base*>(this); }
+
 public:
   MultiIndexFlattener(const MultiIndex<N, I> &mi)
   : Base(mi.template back<N-1>())
@@ -301,6 +305,57 @@ public:
 /* ---------------------------------------------------------------------------*
  *
  * ---------------------------------------------------------------------------*/
+/* 'TTensor' is the fundamental object that represents a tensor. The elements
+ * of the tensor are stored inside a 'TTensor' object in the member 'data',
+ * which is a flat array (with elements of type 'ET').
+ */
+template<int N, typename ET, int d, int... ds>
+class TTensor {
+public:
+  using type = typename TTypeBuilder<N, ET, d, ds...>::type;
+
+  static constexpr int rank() { return type::rank; }
+  static constexpr int dim(int i) { return type::size(i); }
+  static constexpr int elements() { return type::num; }
+
+private:
+  ET data[elements()];
+
+public:
+  TTensor() {}
+
+  /* Elements of this tensor are accessed using a 'MultiIndex': */
+  ET &operator[](const MultiIndex<N, int> &mi);
+  const ET &operator[](const MultiIndex<N, int> &mi) const;
+};
+
+template<int N, typename ET, int d, int... ds>
+ET &
+TTensor<N, ET, d, ds...>::operator[](const MultiIndex<N, int> &mi) {
+  MultiIndexFlattener<N, int, type> MIF(mi);
+  return data[MIF()];
+}
+
+template<int N, typename ET, int d, int... ds>
+const ET &
+TTensor<N, ET, d, ds...>::operator[](const MultiIndex<N, int> &mi) const {
+  MultiIndexFlattener<N, int, type> MIF(mi);
+  return data[MIF()];
+}
+/* ---------------------------------------------------------------------------*
+ *
+ * ---------------------------------------------------------------------------*/
+/* Types prefixed with 'TExpr...' represent expressions involving tensors.
+ * Currently, the following expressions are supported:
+ *  (1) 'TExptTensor' which is intended to wrap a 'TTensor' object,
+ *  (2) 'TExprContraction' which represents the contraction of two 'TExpr...'
+ *      objects along a (single) pair of dimensions ('d0' and 'd1').
+ *
+ * Each of the 'TExpr...' classes defines a method 'contract' that returns
+ * an object of type 'TExprContraction'. The intended meaning of this is that
+ * 'contract' produces a contraction expression whose arguments are the
+ * expressions'this' and 'rhs' (supplied as a function argument to 'contract').
+ */
 template<typename T0, int d0, typename T1, int d1>
 class TExprContraction {
 private:
@@ -326,6 +381,7 @@ private:
 public:
   TExprContraction(const T0 &t0, const T1 &t1) : t0__(t0), t1__(t1) {
     static_assert(std::is_same<T0_Type_ET, T1_Type_ET>::value, "");
+    static_assert(T0::dim(d0) == T1::dim(d1), "");
   }
 
   ET operator[](const MultiIndex<type::rank, int> &mi) const;
@@ -336,28 +392,11 @@ public:
   }
 };
 
-// forward declaration:
-template<typename T> class TExprTensor;
 
-template<int N, typename ET, int d, int... ds>
-class TTensor {
-public:
-  using type = typename TTypeBuilder<N, ET, d, ds...>::type;
-
-  static constexpr int rank() { return type::rank; }
-  static constexpr int dim(int i) { return type::size(i); }
-  static constexpr int elements() { return type::num; }
-
-private:
-  ET data[elements()];
-
-public:
-  TTensor() {}
-
-  ET &operator[](const MultiIndex<N, int> &mi);
-  const ET &operator[](const MultiIndex<N, int> &mi) const;
-};
-
+/* 'TExprTensor':
+ * represents an expression that conists only of a tensor object, i.e.
+ * an object is intended to simply wrap a 'TTensor'.
+ */
 template<typename T>
 class TExprTensor {
 public:
@@ -387,41 +426,36 @@ public:
 };
 
 
-
-
-
-template<int N, typename ET, int d, int... ds>
-ET &
-TTensor<N, ET, d, ds...>::operator[](const MultiIndex<N, int> &mi) {
-  MultiIndexFlattener<N, int, type> MIF(mi);
-  //std::cout << MIF() << " ";
-  return data[MIF()];
-}
-
-template<int N, typename ET, int d, int... ds>
-const ET &
-TTensor<N, ET, d, ds...>::operator[](const MultiIndex<N, int> &mi) const {
-  MultiIndexFlattener<N, int, type> MIF(mi);
-  return data[MIF()];
-}
-
+/* Accessing elements of a contraction expression is not trivial: */
 template<typename T0, int d0, typename T1, int d1>
 typename T0::type::ElementType
 TExprContraction<T0, d0, T1, d1>::
 operator[](const MultiIndex<type::rank, int> &mi) const {
+  static_assert(type::rank == T0::rank() + T1::rank() - 2, "");
   const auto fst = mi.template front<(T0::rank()-1)>();
   const auto snd = mi.template back<(T1::rank()-1)>();
 
   constexpr int const past_d0 = T0::rank() - 1 - d0;
   constexpr int const past_d1 = T1::rank() - 1 - d1;
 
+  /* The index 'i' will be used for the dimensions that are contracted ... */
   int i;
+  /* ... and it is packed up into a 'MultiIndex': */
   MultiIndex<1, int> index({&i});
 
+  /* The appropriate 'MultiIndices' for the first and second argument of the
+   * contraction (i.e. for 't0__' and 't1__') can now be built up easily
+   * using operation defined by the 'MultiIndex' class:
+   */
   const auto blowUpFst =
     fst.template front<d0>() + index + fst.template back<past_d0>();
   const auto blowUpSnd =
     snd.template front<d1>() + index + snd.template back<past_d1>();
+
+  /* Note that this is (and should) be checked already by
+   * the constructor 'TExprContraction':
+   */
+  static_assert(T0::dim(d0) == T1::dim(d1), "");
 
   ET result = 0;
   for (i = 0; i < T0::dim(d0); i++) {
@@ -429,7 +463,7 @@ operator[](const MultiIndex<type::rank, int> &mi) const {
   }
   return result;
 }
-
+/* ---------------------------------------------------------------------------*/
 
 int main() {
   TTensor<2, double, 200, 200> M;
