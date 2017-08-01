@@ -6,12 +6,35 @@
  * This is work in progress.                                                  */
 /* ---------------------------------------------------------------------------*/
 
+#include <cmath>
 #include <iostream>
 
 #include <type_traits>
 
 
 /* ---------------------------------------------------------------------------*/
+/* 'select_type_if' is a helper struct that accesses its argument's 'type'
+ * field only if the flag 'b' is true.
+ *
+ * 'select_type_if' is needed in the 'TContractionTypeBuilder' below to avoid
+ * a failing type instantiation if 'b == false'. (The failing instantiation
+ * in the 'TContractionTypeBuilder' is, in fact, not needed when 'b == false'.)
+ */
+template<bool b, typename TTy>
+struct select_type_if;
+
+template<typename TTy>
+struct select_type_if<true, TTy> {
+  using type = typename TTy::type;
+};
+
+template<typename TTy>
+struct select_type_if<false, TTy> {
+  using type = void;
+};
+/* ---------------------------------------------------------------------------*
+ *
+ * ---------------------------------------------------------------------------*/
 /* 'TType' describes the type of a tensor, which is determined by
  *    (1) the tensor's rank (template parameter 'N'),
  *    (2) the type of elements in the tensor (template parameter 'ET'),
@@ -76,14 +99,15 @@ struct TType<1, ET, d, T> {
 template<typename T0, typename T1>
 struct TProductTypeBuilder {
 private:
-  using tail = TProductTypeBuilder<typename T0::TTailType, T1>;
+  using T0_ET = typename T0::ElementType;
+  using T1_ET = typename T1::ElementType;
+
+  using tail = typename TProductTypeBuilder<typename T0::TTailType, T1>::type;
 
 public:
-  using type = TType<(T0::rank + T1::rank), typename T0::ET, T0::dim, tail>;
+  using type = TType<(T0::rank + T1::rank), T0_ET, T0::dim, tail>;
 
   TProductTypeBuilder() {
-    using T0_ET = typename T0::ElementType;
-    using T1_ET = typename T1::ElementType;
     static_assert(std::is_same<T0_ET, T1_ET>::value, "");
   }
 };
@@ -99,87 +123,238 @@ struct TProductTypeBuilder<TType<1, ET, d, ET>, T1> {
 };
 
 
-/* forward declaration of the general 'TContractionTypeBuilder':              
- */
+/* 'TContractionTypeBuilder': forward declaration of the general template. */
 template<typename T0, int d0, typename T1, int d1>
 struct TContractionTypeBuilder;
 
-/* 'TContractionTypeBuilder':
- * specialization to the case where the 0-th dimension of 'T0'
- * is contracted with a 1-dimensional tensor (i.e. a vector).
- */
-template<typename T0, int d>
+/* 'TContractionTypeBuilder': contraction of two 1-dimensional tensors. */
+template<typename ET, int d>
 struct TContractionTypeBuilder
-<T0, 0, TType<1, typename T0::ElementType, d, typename T0::ElementType>, 0> {
+<TType<1, ET, d, ET>, 0, TType<1, ET, d, ET>, 0> {
+public:
+  using type = ET;
+};
+
+/* 'TContractionTypeBuilder':
+ * contraction with a 1-dim. tensor on the RHS, base case ('d0 == 0').
+ */
+template<typename T0, typename ET, int d>
+struct TContractionTypeBuilder
+<T0, 0, TType<1, ET, d, ET>, 0> {
 public:
   using type = typename T0::TTailType;
 
-  /* Note that this spezialization of 'TContractionTypeBuilder' also
-   * covers the case 'T0::dim == 1', when 'T0::Tail == ET' must hold. */
   TContractionTypeBuilder() {
-    static_assert(T0::dim != 1 ||
-                  std::is_same<typename T0::TTailType,
-                               typename T0::ElementType>::value, "");
+    static_assert(std::is_same<typename T0::ElementType, ET>::value, "");
+    static_assert(T0::dim == d, "");
   }
 };
 
 /* 'TContractionTypeBuilder':
- * specialization to the case where any dimension of 'T0' is
- * contracted with a 1-dimensional tensor (i.e. a vector).
+ * contraction with a 1-dim. tensor on the RHS, general case ('d0 > 0').
  */
-template<typename T0, int d0, int d>
+template<typename T0, int d0, typename ET, int d>
 struct TContractionTypeBuilder
-<T0, d0, TType<1, typename T0::ElementType, d, typename T0::ElementType>, 0> {
+<T0, d0, TType<1, ET, d, ET>, 0> {
 private:
-  using ET = typename T0::ElementType;
+  using T0_Head = TType<1, ET, T0::dim, ET>;
   using T0_Tail = typename T0::TTailType;
 
-  /* The case 'd0 == 0' is handled by the previous template specialization,
-   * hence we can assume that 'd0 > 0'. Therefore, first contract the
-   * "tail" of 'T0' with 1-dimensional tensor: */
   using tail = typename
     TContractionTypeBuilder<T0_Tail, (d0-1), TType<1, ET, d, ET>, 0>::type;
 
   static constexpr bool tailIsET = std::is_same<tail, ET>::value;
 
 public:
-  /* Form the outer product of the 0-th dimension of 'T0' with 'tail': */
-  using type = typename
-    std::conditional<tailIsET,
-                     TType<1, ET, d, ET>,
-                     TProductTypeBuilder<TType<1, ET, d, ET>, tail>>::type;
+  using type = typename std::conditional<
+    tailIsET,
+    T0_Head,
+    typename select_type_if<!tailIsET,
+                            TProductTypeBuilder<T0_Head, tail>>::type
+  >::type;
 
   TContractionTypeBuilder() {
-    /* Since 'd0 > 0' must hold, must also have 'T0::dim > 0'. Note again that
-     * the case 'd0 == 0' is handled by the previous template specialization, */
-    static_assert(T0::dim > 0, "");
+    /* The special case 'd0 == 0' has been handled above: */
+    static_assert(d0 > 0, "");
+    static_assert(std::is_same<typename T0::ElementType, ET>::value, "");
   }
 };
 
-/* 'TContractionTypeBuilder': general case
+/* 'TContractionTypeBuilder':
+ * contraction with a 1-dim. tensor on the LHS, base case ('d1 == 0').
+ */
+template<typename ET, int d, typename T1>
+struct TContractionTypeBuilder
+<TType<1, ET, d, ET>, 0, T1, 0> {
+public:
+  using type = typename T1::TTailType;
+
+  TContractionTypeBuilder() {
+    static_assert(std::is_same<ET, typename T1::ElementType>::value, "");
+    static_assert(T1::dim == d, "");
+  }
+};
+
+/* 'TContractionTypeBuilder':
+ * contraction with a 1-dim. tensor on the LHS, general case ('d1 > 0').
+ */
+template<typename ET, int d, typename T1, int d1>
+struct TContractionTypeBuilder
+<TType<1, ET, d, ET>, 0, T1, d1> {
+private:
+  using T1_Head = TType<1, ET, T1::dim, ET>;
+  using T1_Tail = typename T1::TTailType;
+
+  using tail = typename
+    TContractionTypeBuilder<TType<1, ET, d, ET>, 0, T1_Tail, (d1-1)>::type;
+
+  static constexpr bool tailIsET = std::is_same<tail, ET>::value;
+
+public:
+  using type = typename std::conditional<
+    tailIsET,
+    T1_Head,
+    typename select_type_if<!tailIsET,
+                            TProductTypeBuilder<T1_Head, tail>>::type
+  >::type;
+
+  TContractionTypeBuilder() {
+    /* The special case 'd1 == 0' has been handled above: */
+    static_assert(d1 > 0, "");
+    static_assert(std::is_same<ET, typename T1::ElementType>::value, "");
+  }
+};
+
+/* 'TContractionTypeBuilder':
+ * general tensor types as arguments, contraction of the 0-th indices.
+ */
+template<typename T0, typename T1>
+struct TContractionTypeBuilder
+<T0, 0, T1, 0> {
+private:
+  using T0_Tail = typename T0::TTailType;
+  using T1_Tail = typename T1::TTailType;
+
+public:
+  using type = typename TProductTypeBuilder<T0_Tail, T1_Tail>::type;
+
+  TContractionTypeBuilder() {
+    /* The special cases of 1-dim. tensors (i.e. vectors)
+     * have already been handled:
+     */
+    static_assert(T0::rank > 1 && T1::rank > 1, "");
+    /* This asertion should be redundant: */
+    static_assert(T0_Tail::rank > 0 && T1_Tail::rank > 0, "");
+
+    static_assert(std::is_same<typename T0::ElementType,
+                               typename T1::ElementType>::value, "");
+
+    static_assert(T0::dim == T1::dim, "");
+  }
+};
+
+/* 'TContractionTypeBuilder':
+ * general tensor types as arguments, general 'd0' (i.e. 'd0 > 0').
+ */
+template<typename T0, int d0, typename T1>
+struct TContractionTypeBuilder
+<T0, d0, T1, 0> {
+private:
+  using ET = typename T0::ElementType;
+  using T0_Head = TType<1, ET, T0::dim, ET>;
+  using T0_Tail = typename T0::TTailType;
+
+  using tail = typename TContractionTypeBuilder<T0_Tail, (d0-1), T1, 0>::type;
+
+public:
+  using type = typename TProductTypeBuilder<T0_Head, tail>::type;
+
+  TContractionTypeBuilder() {
+    /* The special case 'd0 == 0' has been handled above: */
+    static_assert(d0 > 0, "");
+
+    /* The special cases of 1-dim. tensors (i.e. vectors)
+     * have already been handled:
+     */
+    static_assert(T0::rank > 1 && T1::rank > 1, "");
+    /* This asertion should be redundant: */
+    static_assert(T0_Tail::rank > 0 && T1::TTailType::rank > 0, "");
+
+    static_assert(std::is_same<ET, typename T1::ElementType>::value, "");
+  }
+};
+
+/* 'TContractionTypeBuilder':
+ * general tensor types as arguments, general 'd1' (i.e. 'd1 > 0').
+ */
+template<typename T0, typename T1, int d1>
+struct TContractionTypeBuilder
+<T0, 0, T1, d1> {
+private:
+  using ET = typename T0::ElementType;
+  using T0_Head = TType<1, ET, T0::dim, ET>;
+  using T0_Tail = typename T0::TTailType;
+  using T1_Head = TType<1, ET, T1::dim, ET>;
+  using T1_Tail = typename T1::TTailType;
+
+  using tail1 = typename
+    TContractionTypeBuilder<T0_Head, 0, T1_Tail, (d1-1)>::type;
+
+  using tail2 = typename
+  TProductTypeBuilder<T1_Head, tail1>::type;
+
+public:
+  using type = typename TProductTypeBuilder<T0_Tail, tail2>::type;
+
+  TContractionTypeBuilder() {
+    /* The special case 'd0 == 0' has been handled above: */
+    static_assert(d1 > 0, "");
+
+    /* The special cases of 1-dim. tensors (i.e. vectors)
+     * have already been handled:
+     */
+    static_assert(T0::rank > 1 && T1::rank > 1, "");
+    /* This asertion should be redundant: */
+    static_assert(T0_Tail::rank > 0 && T1_Tail::rank > 0, "");
+
+    static_assert(std::is_same<ET, typename T1::ElementType>::value, "");
+  }
+};
+
+/* 'TContractionTypeBuilder':
+ * general tensor types as arguments, general 'd0' and 'd1' (i.e. both > 0).
  */
 template<typename T0, int d0, typename T1, int d1>
 struct TContractionTypeBuilder {
 private:
   using ET = typename T0::ElementType;
-  using T1_Tail = typename T1::TTailType;
+  using T0_Head = TType<1, ET, T1::dim, ET>;
+  using T0_Tail = typename T0::TTailType;
 
-  using front = typename
-    TProductTypeBuilder<T0, TType<1, ET, T1::dim, ET>>::type;
+  using tail = typename
+    TContractionTypeBuilder<T0_Tail, (d0-1), T1, d1>::type;
+
+  static constexpr bool tailIsET = std::is_same<tail, ET>::value;
 
 public:
-  // CHECK: The case 'd1 == 0' does not seem to be handled by the
-  // previous specializations for general 'T0'.
-  using type = typename
-    TContractionTypeBuilder<front, d0, T1_Tail, (d1-1)>::type;
+  using type = typename std::conditional<tailIsET,
+    T0_Head,
+    typename select_type_if<!tailIsET,
+                            TProductTypeBuilder<T0_Head, tail>>::type
+  >::type;
 
   TContractionTypeBuilder() {
-    using T0_ET = typename T0::ElementType;
-    using T1_ET = typename T1::ElementType;
-    static_assert(std::is_same<T0_ET, T1_ET>::value, "");
+    /* The special cases 'd0 == 0' and 'd1 == 0' have already been handled: */
+    static_assert(d0 > 0 && d1 > 0, "");
 
-    /* The case 'T1::dim == 0' is handled by the two specializations above. */
-    static_assert(T1::dim > 0, "");
+    /* The special cases of 1-dim. tensors (i.e. vectors)
+     * have already been handled:
+     */
+    static_assert(T0::rank > 1 && T1::rank > 1, "");
+    /* This asertion should be redundant: */
+    static_assert(T0_Tail::rank > 0 && T1::TTailType::rank > 0, "");
+
+    static_assert(std::is_same<ET, typename T1::ElementType>::value, "");
   }
 };
 
@@ -347,7 +522,7 @@ TTensor<N, ET, d, ds...>::operator[](const MultiIndex<N, int> &mi) const {
  * ---------------------------------------------------------------------------*/
 /* Types prefixed with 'TExpr...' represent expressions involving tensors.
  * Currently, the following expressions are supported:
- *  (1) 'TExptTensor' which is intended to wrap a 'TTensor' object,
+ *  (1) 'TExprTensor' which is intended to wrap a 'TTensor' object,
  *  (2) 'TExprContraction' which represents the contraction of two 'TExpr...'
  *      objects along a (single) pair of dimensions ('d0' and 'd1').
  *
@@ -387,15 +562,16 @@ public:
   ET operator[](const MultiIndex<type::rank, int> &mi) const;
 
   template<int d0_, int d1_, typename T1_>
-  TExprContraction<type, d0_, T1_, d1_> contract(const T1_ &rhs) const {
-    return TExprContraction<type, d0_, T1_, d1_>(*this, rhs);
+  TExprContraction<TExprContraction, d0_, T1_, d1_>
+  contract(const T1_ &rhs) const {
+    return TExprContraction<TExprContraction, d0_, T1_, d1_>(*this, rhs);
   }
 };
 
 
 /* 'TExprTensor':
- * represents an expression that conists only of a tensor object, i.e.
- * an object is intended to simply wrap a 'TTensor'.
+ * represents an expression that conists only of a tensor object,
+ * i.e. a 'TExprTensor' object is intended to simply wrap a 'TTensor'.
  */
 template<typename T>
 class TExprTensor {
@@ -466,40 +642,154 @@ operator[](const MultiIndex<type::rank, int> &mi) const {
 /* ---------------------------------------------------------------------------*/
 
 int main() {
-  TTensor<2, double, 200, 200> M;
-  TTensor<1, double, 200> v;
+  const int M = 20;
+  const int N = 20;
 
-  auto Mv = TExprTensor<decltype(M)>(M)
-              .contract<1, 0>(TExprTensor<decltype(v)>(v));
+  /* The maximum allowed relative error has been adjusted so that at least
+   * a few lines are pronted out for each contraction expression below: */
+  const double max_rel_error = 7.0e-15;
+  auto rel_error = [](double a, double b) -> double {
+    return std::fabs(a-b)/std::fabs(a);
+  };
 
-  int i, j;
-  MultiIndex<1, int> mi({&i});
-  MultiIndex<2, int> mij({&i, &j});
+#if 0
+  {
+    TTensor<2, double, M, N> M;
+    TTensor<1, double, N> v;
 
-  for(i = 0; i < M.dim(0); i++) {
-    for(j = 0; j < M.dim(1); j++) {
-      M[mij] = (i == j) ? 2.0 : 0.0;
+    auto Mv = TExprTensor<decltype(M)>(M)
+                .contract<1, 0>(TExprTensor<decltype(v)>(v));
+
+    int i, j;
+    MultiIndex<1, int> mi({&i});
+    MultiIndex<2, int> mij({&i, &j});
+
+    for(i = 0; i < M.dim(0); i++) {
+      for(j = 0; j < M.dim(1); j++) {
+        M[mij] = (i == j) ? 2.0 : 0.0;
+      }
     }
-  }
 
-  for(i = 0; i < v.dim(0); i++) {
-    v[mi] = i;
-  }
-  for(i = 0; i < v.dim(0); i++) {
-    std::cout << v[mi] << ", ";
-  }
-
-  for (int t = 0; t < 1; t++) {
-    for(i = 0; i < Mv.dim(0); i++) {
-      v[mi] = Mv[mi];
+    for(i = 0; i < v.dim(0); i++) {
+      v[mi] = i;
     }
-  }
+    for(i = 0; i < v.dim(0); i++) {
+      std::cout << v[mi] << ", ";
+    }
 
-  std::cout << "\n";
-  for(i = 0; i < v.dim(0); i++) {
-    std::cout << v[mi] << ", ";
+    for (int t = 0; t < 1; t++) {
+      for(i = 0; i < Mv.dim(0); i++) {
+        v[mi] = Mv[mi];
+      }
+    }
+
+    std::cout << "\n";
+    for(i = 0; i < v.dim(0); i++) {
+      std::cout << v[mi] << ", ";
+    }
+    std::cout << "\n";
   }
-  std::cout << "\n";
+#endif
+
+  {
+    TTensor<2, double, N, M> A;
+    TTensor<3, double, M, M, M> u;
+
+    /* Initialization: */
+    {
+      int i, j, k;
+      MultiIndex<2, int> m_ij({&i, &j});
+      MultiIndex<3, int> m_ijk({&i, &j, &k});
+
+      for (i = 0; i < u.dim(0); i++) {
+        for (j = 0; j < u.dim(1); j++) {
+          for (k = 0; k < u.dim(2); k++) {
+            u[m_ijk] = (double)rand() / (double)RAND_MAX;
+          }
+        }
+      }
+      for (i = 0; i < A.dim(0); i++) {
+        for (j = 0; j < A.dim(1); j++) {
+            A[m_ij] = (double)rand() / (double)RAND_MAX;
+        }
+      }
+    }
+
+    auto TA = TExprTensor<decltype(A)>(A);
+    auto Tu = TExprTensor<decltype(u)>(u);
+
+    int i0, i1, j0, j1, k0, k1;
+    MultiIndex<3, int> m_i1j1k1({&i1, &j1, &k1}),
+                       m_i0j0k0({&i0, &j0, &k0}),
+                       m_k0j0i0({&k0, &j0, &i0});
+    MultiIndex<2, int> m_i1i0({&i1, &i0}),
+                       m_j1j0({&j1, &j0}),
+                       m_k1k0({&k1, &k0});
+
+
+    /* contraction expression no. 1: */
+    {
+      auto Tv = TA.contract<1, 2>(TA.contract<1, 2>(TA.contract<1, 2>(Tu)));
+
+      std::cout << "\ncontraction expression no. 1:\n";
+
+      for (i1 = 0; i1 < Tv.dim(0); i1++) {
+        for (j1 = 0; j1 < Tv.dim(1); j1++) {
+          for (k1 = 0; k1 < Tv.dim(2); k1++) {
+            double t = 0.0;
+            for (i0 = 0; i0 < Tu.dim(0); i0++) {
+              for (j0 = 0; j0 < Tu.dim(1); j0++) {
+                for (k0 = 0; k0 < Tu.dim(2); k0++) {
+                  t += TA[m_i1i0] * TA[m_j1j0] * TA[m_k1k0] * Tu[m_i0j0k0];
+                }
+              }
+            }
+            const auto v = Tv[m_i1j1k1];
+
+            if (rel_error(t, v) > max_rel_error) {
+              std::cout << "no. 1: ";
+              std::cout << "(" << i1 << "," << j1 << "," << k1 << "): ";
+              std::cout << t << " -- " << v;
+              std::cout << " rel. error: " << rel_error(t, v) << "\n";
+            }
+          }
+        }
+      }
+
+      std::cout << "-----------------------------\n\n";
+    }
+    /* contraction expression no. 2: */
+    {
+      auto Tv = TA.contract<1, 2>(TA.contract<1, 1>(TA.contract<1, 0>(Tu)));
+
+      std::cout << "contraction expression no. 2:\n";
+
+      for (i1 = 0; i1 < Tv.dim(0); i1++) {
+        for (j1 = 0; j1 < Tv.dim(1); j1++) {
+          for (k1 = 0; k1 < Tv.dim(2); k1++) {
+            double t = 0.0;
+            for (i0 = 0; i0 < Tu.dim(0); i0++) {
+              for (j0 = 0; j0 < Tu.dim(1); j0++) {
+                for (k0 = 0; k0 < Tu.dim(2); k0++) {
+                  t += TA[m_i1i0] * TA[m_j1j0] * TA[m_k1k0] * Tu[m_k0j0i0];
+                }
+              }
+            }
+            const auto v = Tv[m_i1j1k1];
+
+            if (rel_error(t, v) > max_rel_error) {
+              std::cout << "no. 2: ";
+              std::cout << "(" << i1 << "," << j1 << "," << k1 << "): ";
+              std::cout << t << " -- " << v;
+              std::cout << " rel. error: " << rel_error(t, v) << "\n";
+            }
+          }
+        }
+      }
+    }
+
+    std::cout << "-----------------------------\n\n";
+  }
 
   return 0;
 }
