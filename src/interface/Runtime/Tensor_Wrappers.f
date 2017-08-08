@@ -2,6 +2,13 @@ module Tensor_Wrappers
   use iso_c_binding
   implicit none
   
+  type Tensor_Handle
+    integer(c_long) :: ctx
+    integer(c_long) :: cg
+    integer(c_long) :: k
+    integer(c_long) :: ex
+  end type Tensor_Handle
+
   interface
     subroutine Tensor_Init_Context(h_ctx) &
                bind(C, name="TensorInitContext")
