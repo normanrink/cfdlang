@@ -27,8 +27,6 @@ private:
 
   const bool EmitWrapper;
 
-  const bool FuseElementLoop;
-
   const bool RestrictPointer;
   const std::string PointerDecl;
 
@@ -39,9 +37,10 @@ private:
            initialNestingLevel;
   std::vector<std::string> exprIndices, resultIndices;
 
+  std::string ElementIndex;
+
 public:
   CEmitter(CodeGen *cg, bool rowMajor = true, bool emitWrapper = false,
-           bool fuseElementLoop = false,
            bool restrictPointer = true,
            const std::string fpTypeName = "double")
   : CG(cg),
@@ -49,7 +48,6 @@ public:
     IndexCounter(0),
     RowMajor(rowMajor),
     EmitWrapper(emitWrapper),
-    FuseElementLoop(fuseElementLoop),
     RestrictPointer(restrictPointer),
     PointerDecl(RestrictPointer ? " *restrict " : " *") {}
 
@@ -80,6 +78,9 @@ protected:
 
   std::string subscriptString(const std::vector<std::string> &indices,
                               const std::vector<int> &dims) const;
+  void updateWithElemInfo(std::vector<std::string> &indices,
+                          std::vector<int> &dims,
+                          const IdentifierExpr *id) const;
   std::string
   subscriptedIdentifier(const ExprNode *en,
                         const std::vector<std::string> &indices = {}) const;

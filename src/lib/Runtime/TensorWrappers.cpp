@@ -43,7 +43,6 @@ extern "C" void TensorFinalContext(handle *h_ctx) {
 extern "C" void TensorInitCodeGen(handle *h_ctx, handle *h_cg,
                                   const char *source,
                                   const Flag *rowMajor,
-                                  const Flag *fuseElementLoop,
                                   const Flag *restrictPointer,
                                   const Flag *graphCodeGen) {
   TensorContext *ctx = castToTensorContext(h_ctx);
@@ -51,7 +50,6 @@ extern "C" void TensorInitCodeGen(handle *h_ctx, handle *h_cg,
 
   ctx->initCodeGen(&cgh, source,
                    *rowMajor,
-                   *fuseElementLoop,
                    *restrictPointer,
                    *graphCodeGen);
   *h_cg = (handle) cgh;

@@ -19,7 +19,6 @@ module Tensor_Wrappers
     subroutine Tensor_Init_Code_Gen(h_ctx, h_cg,     &
                                     source,          &
                                     rowMajor,        &
-                                    fuseElementLoop, &
                                     restrictPointer, &
                                     graphCodeGen)    &
                bind(C, name="TensorInitCodeGen")
@@ -27,7 +26,6 @@ module Tensor_Wrappers
       integer(c_long),    intent(inout) :: h_ctx, h_cg
       character(c_char), intent(in)    :: source(*)
       integer(c_int),    intent(in)    :: rowMajor,        &
-                                          fuseElementLoop, &
                                           restrictPointer, &
                                           graphCodeGen
     end subroutine Tensor_Init_Code_Gen

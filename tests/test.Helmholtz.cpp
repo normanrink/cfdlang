@@ -44,7 +44,6 @@ int main(int argc, char** argv) {
     "v = A # B # C # t . [[1 6] [3 7] [5 8]]       \n");
 
   TC.initCodeGen(&cgh, Source.c_str(), /* rowMajor */true,
-                                       /* fuseElementLoop */false,
                                        /* restrictPointer */true,
                                        /* graphCodeGen */true);
   TC.generateCCode(&cgh);

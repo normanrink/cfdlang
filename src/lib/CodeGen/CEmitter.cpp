@@ -2,7 +2,6 @@
 #include "AST/AST.h"
 #include "CodeGen/CEmitter.h"
 #include "CodeGen/ContractionExprCounter.h"
-#include "CodeGen/ElementLoopFuser.h"
 #include "CodeGen/ExprTreeLifter.h"
 #include "CodeGen/IdCopier.h"
 #include "CodeGen/IdFinder.h"
@@ -35,8 +34,6 @@ void CEmitter::codeGen(const Program *p) {
   // construct the expression trees, one for each statement in the program:
   CG->visitProgram(p);
 
-  int elementLoopDim = 0;
-  const std::string elementLoopIndex = getIndex();
   // various transformations:
   {
     // (1) move transpositions over to the 'lhs':
@@ -99,27 +96,22 @@ void CEmitter::codeGen(const Program *p) {
     // in incompatible ways:
     IdCopier IDC(CG);
     IDC.transformAssignments();
-
-    if (FuseElementLoop) {
-      // (5) try to fuse outermost loop (i.e. the "element loop"):
-      ElementLoopFuser fuser(CG, RowMajor);
-      elementLoopDim = fuser.transformAssignments();
-    }
   }
   // end of transformations
 
-  std::set<std::string> emittedNames;
+  const Sema &sema = *getSema();
 
-  if (elementLoopDim) {
+  const bool hasElementLoop = sema.getElemInfo().present;
+  if (hasElementLoop) {
+    ElementIndex = getIndex();
     emitForLoopHeader(initialNestingLevel*INDENT_PER_LEVEL,
-                      elementLoopIndex,
-                      elementLoopDim);
+                      ElementIndex,
+                      sema.getElemInfo().dim);
     ++initialNestingLevel;
   }
 
+  std::set<std::string> emittedNames;
   for (const auto &a: CG->getAssignments()) {
-    const Sema &sema = *getSema();
-
     nestingLevel = initialNestingLevel;
 
     assert(a.lhs->isIdentifier() &&
@@ -127,22 +119,12 @@ void CEmitter::codeGen(const Program *p) {
 
     const IdentifierExpr *result = static_cast<const IdentifierExpr *>(a.lhs);
     const std::string &resultName = result->getName();
-    std::vector<int> sizeDims = getDims(result);
-
-    if (result->isElementIndexPositionSet()) {
-      assert(elementLoopDim
-             && "internal error: element loop should have been detected");
-
-      const int elementIndexPos = result->getElementIndexPosition();
-      // note that neither 'sizeDims' or 'elementIndexPos' are permuted,
-      // both refer to the 'IdentifierExpr' without permuted indices:
-      sizeDims.erase(sizeDims.begin() + elementIndexPos);
-    }
 
     // emit defintion of 'result' if necessary:
     if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
         && !emittedNames.count(resultName)) {
-      auto elements = [](const std::vector<int> &ds) -> unsigned long long {
+      auto elements = [this, result]() -> unsigned long long {
+        const std::vector<int> &ds = getDims(result);
         unsigned long long es = 1;
         for (int i = 0; i < ds.size(); i++)
           es *= ds[i];
@@ -151,7 +133,7 @@ void CEmitter::codeGen(const Program *p) {
 
       EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
       append(getFPTypeName() + " " + resultName +
-             "[" + std::to_string((long long)elements(sizeDims)) + "];\n");
+             "[" + std::to_string((long long)elements()) + "];\n");
 
       emittedNames.insert(resultName);
     }
@@ -164,16 +146,9 @@ void CEmitter::codeGen(const Program *p) {
     resultIndices.clear();
     loopedOverIndices.clear();
     for (int i = 0; i < dims.size(); i++) {
-      if (elementLoopDim &&
-          ((RowMajor && (i == 0)) || (!RowMajor && (i == dims.size() - 1)))) {
-        exprIndices.push_back(elementLoopIndex);
-        resultIndices.push_back(elementLoopIndex);
-        loopedOverIndices.insert(elementLoopIndex);
-      } else {
-        const std::string index = getIndex();
-        exprIndices.push_back(index);
-        resultIndices.push_back(index);
-      }
+      const std::string index = getIndex();
+      exprIndices.push_back(index);
+      resultIndices.push_back(index);
     }
 
     setResultTemp(a.lhs);
@@ -188,16 +163,13 @@ void CEmitter::codeGen(const Program *p) {
       en->visit(this);
     }
 
-    if (elementLoopDim)
-      assert((nestingLevel-initialNestingLevel+1) == loopedOverIndices.size());
-    else
-      assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
+    assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
 
     // close all for-loops:
     emitLoopFooterNest();
   }
 
-  if (elementLoopDim) {
+  if (hasElementLoop) {
     --initialNestingLevel;
     emitForLoopFooter(initialNestingLevel*INDENT_PER_LEVEL);
   }
@@ -337,6 +309,36 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
   return "[" + result + "]";
 }
 
+void CEmitter::updateWithElemInfo(std::vector<std::string> &indices,
+                                  std::vector<int> &dims,
+                                  const IdentifierExpr *id) const {
+  const Sema &sema = *getSema();
+  const Sema::ElemInfo &info = sema.getElemInfo();
+
+  if (!info.present)
+    return;
+
+  const Symbol *s = sema.getSymbol(id->getName());
+  if (info.syms.find(s) == info.syms.end())
+    return;
+
+  if (info.pos == ElemDirect::POS_Last) {
+    dims.push_back(info.dim);
+    indices.push_back(ElementIndex);
+  } else if (info.pos == ElemDirect::POS_First) {
+#define PREPEND(vec, element, default)            \
+  (vec).push_back((default));                     \
+  for (unsigned i = ((vec).size()-1); i > 0; i--) \
+    (vec)[i] = (vec)[i-1];                        \
+  (vec)[0] = (element);
+
+    PREPEND(indices, ElementIndex, "")
+    PREPEND(dims, info.dim, 0)
+  } else {
+    assert(0 && "internal error: invalid position specifier");
+  }
+}
+
 std::string
 CEmitter::subscriptedIdentifier(const ExprNode *en,
                                 const std::vector<std::string> &indices) const {
@@ -349,9 +351,6 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
     allIndices.push_back(indices.at(i));
 
   const IdentifierExpr *id = static_cast<const IdentifierExpr *>(en);
-  std::vector<int> dims = en->getDims();
-  int elementIndex = id->isElementIndexPositionSet()
-                     ? id->getElementIndexPosition() : (-1);
   if (id->permute()) {
     // the indices must be permuted going through the transpositions forwards:
     // (when 'TranspositionExpr' is emitted (on the 'rhs' of assignments), the
@@ -365,20 +364,11 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
       const std::string index0 = allIndices[p[0]];
       allIndices[p[0]] = allIndices[p[1]];
       allIndices[p[1]] = index0;
-
-      if (p[0] == elementIndex) elementIndex = p[1];
-      else if (p[1] == elementIndex) elementIndex = p[0];
     }
   }
 
-  if (id->isElementIndexPositionSet()) {
-    assert(elementIndex != -1);
-    // note that 'elementIndex' has been permuted (better: transposed)
-    // as necessary:
-    allIndices.erase(allIndices.begin() + elementIndex);
-    dims.erase(dims.begin() + elementIndex);
-  }
-
+  std::vector<int> dims = en->getDims();
+  updateWithElemInfo(allIndices, dims, id);
   return (en->getName() + subscriptString(allIndices, dims));
 }
 

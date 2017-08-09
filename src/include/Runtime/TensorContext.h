@@ -69,7 +69,6 @@ public:
   // interface for code generation:
   void initCodeGen(CodeGenHandle *h, const char *source,
                    bool rowMajor,
-                   bool fuseElementLoop,
                    bool restrictPointer,
                    bool graphCodeGen);
   void finalCodeGen(const CodeGenHandle *h);

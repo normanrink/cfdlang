@@ -51,6 +51,8 @@ public:
 public:
   virtual void visitStmt(const Stmt *) override;
 
+  virtual void visitElemDirect(const ElemDirect *ed) override {}
+  
   virtual void visitBinaryExpr(const BinaryExpr *) override;
   virtual void visitIdentifier(const Identifier *) override;
   virtual void visitInteger(const Integer *) override;

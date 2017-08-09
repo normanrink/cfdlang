@@ -23,6 +23,8 @@ std::map<ASTNode::NodeType, std::string> ASTNode::NodeLabel = {
   { NT_VarDecl, "VarDecl" },
   { NT_TypeDecl, "TypeDecl" },
 
+  { NT_ElemDirect, "ElemDirect" },
+
   { NT_Stmt, "Stmt" },
 
   { NT_TranspositionExpr, "TranspositionExpr" },
@@ -195,6 +197,46 @@ void Decl::visit(ASTVisitor *v) const {
 }
 
 
+void ElemDirect::print(unsigned indent) const {
+  std::string str = NodeLabel[getNodeType()];
+
+  std::stringstream ss;
+  ss << " <" << std::hex << this << ">";
+
+  EMIT_INDENT(indent)
+  std::cout << "(" << str << ss.str();
+
+  switch (getPOSSpecifier()) {
+  case POS_First:
+    std::cout << " first";
+    break;
+  case POS_Last:
+    std::cout << " last";
+    break;
+  default:
+    assert(0 && "internal error: invalid position specifier");
+  }
+  std::cout << "\n";
+
+  I->print(indent + str.length() + 1);
+  Identifiers->print(indent + str.length() + 1);
+  EMIT_INDENT(indent + 1);
+  std::cout << ")\n";
+}
+
+void ElemDirect::deepDelete() const {
+  I->deepDelete();
+  delete I;
+
+  Identifiers->deepDelete();
+  delete Identifiers;
+}
+
+void ElemDirect::visit(ASTVisitor *v) const {
+  v->visitElemDirect(this);
+}
+
+
 void Program::print(unsigned indent) const {
   std::string str = NodeLabel[getNodeType()];
 
@@ -204,6 +246,7 @@ void Program::print(unsigned indent) const {
   EMIT_INDENT(indent)
   std::cout << "(" << str << ss.str() << "\n";
   Decls->print(indent + str.length() + 1);
+  Elem->print(indent + str.length() + 1);
   Stmts->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)
   std::cout << ")\n";
@@ -215,6 +258,11 @@ void Program::deepDelete() const {
 
   Stmts->deepDelete();
   delete Stmts;
+
+  if (Elem) {
+    Elem->deepDelete();
+    delete Elem;
+  }
 }
 
 void Program::visit(ASTVisitor *v) const {
@@ -312,6 +360,13 @@ DEF_VISIT_LIST(ExprList)
 
 void ASTVisitor::visitProgram(const Program *p) {
   p->getDecls()->visit(this);
+
+  // Note that the element directive may not be present in a program,
+  // i.e. 'ed == nullptr' is possible:
+  const ElemDirect *ed = p->getElem();
+  if (ed)
+    ed->visit(this);
+
   p->getStmts()->visit(this);
 }
 

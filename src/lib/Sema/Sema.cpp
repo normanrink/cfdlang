@@ -18,6 +18,8 @@
 Sema::Sema() { 
   scalar = new TensorType(std::vector<int>());
   Types.push_back(scalar);
+
+  elemInfo.present = false;
 }
   
 Sema::~Sema() {
@@ -430,4 +432,37 @@ const Symbol *Sema::getTypeSymbol(const TensorType *type) const {
 
   return NamedTypes.at(type);
 }
-  
+
+void Sema::visitElemDirect(const ElemDirect *ed) {
+  if (elemInfo.present) {
+    // This is an 'internal error' (and not a 'semantic error') since the
+    // grammar allows only a single 'ElemDirect'. Hence, if there are more
+    // than one 'ElemDirect', the parser should have exited due to a syntax
+    // error, and we should not get to the semantic analysis.
+    assert(0 && "internal error: only a single element directive is allowed");
+  }
+
+  elemInfo.present = true;
+  elemInfo.pos = ed->getPOSSpecifier();
+  elemInfo.dim = ed->getInteger()->getValue();
+
+  const BrackExpr *be = dynamic_cast<const BrackExpr *>(ed->getIdentifiers());
+  if (!be)
+    assert(0 && "semantic error: expected list of expressions in brackets");
+
+  const ExprList &elist = *be->getExprs();
+  for (unsigned i = 0; i < elist.size(); i++) {
+    const Identifier *id = dynamic_cast<const Identifier *>(elist[i]);
+    if (!id)
+      assert(0 && "semantic error: expected identifier in element directive");
+
+    const Symbol *s = getSymbol(id->getName());
+    if (!s)
+      assert(0 && "semantic error: undefined symbol");
+    if (s->getKind() != Symbol::SK_Variable)
+      assert(0 && "semantic error: expected variable name");
+
+    elemInfo.syms.insert(s);
+  }
+}
+

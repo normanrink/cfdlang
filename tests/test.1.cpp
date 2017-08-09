@@ -40,7 +40,6 @@ int main(int argc, char** argv) {
                 "v = (A + s # t) / U   \n");
 
   TC.initCodeGen(&cgh, Source.c_str(), /* rowMajor */true,
-                                       /* fuseElementLoop */false,
                                        /* restrictPointer */true,
                                        /* graphCodeGen */false);
   TC.generateCCode(&cgh);

@@ -25,6 +25,9 @@ KW_VAR    "var"
 KW_INPUT  "input"
 KW_OUTPUT "output"
 KW_TYPE   "type"
+KW_ELEM   "elem"
+KW_FIRST  "first"
+KW_LAST   "last"
 COLON     ":"
 LPAREN    "("
 RPAREN    ")"
@@ -51,6 +54,9 @@ ID        [_a-zA-Z][_a-zA-Z0-9]*
 {KW_INPUT}  { return KW_INPUT; }
 {KW_OUTPUT} { return KW_OUTPUT; }
 {KW_TYPE}   { return KW_TYPE; }
+{KW_ELEM}   { return KW_ELEM; }
+{KW_FIRST}  { return KW_FIRST; }
+{KW_LAST}   { return KW_LAST; }
 {COLON}     { return COLON; }
 {LPAREN}    { return LPAREN; }
 {RPAREN}    { return RPAREN; }

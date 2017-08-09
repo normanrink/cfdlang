@@ -17,6 +17,8 @@ public:
 
   virtual void visitStmt(const Stmt *s) override;
 
+  virtual void visitElemDirect(const ElemDirect *ed) override {}
+
   virtual void visitBinaryExpr(const BinaryExpr *be) override;
   virtual void visitIdentifier(const Identifier *id) override;
   virtual void visitInteger(const Integer *i) override {}

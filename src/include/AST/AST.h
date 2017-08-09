@@ -25,6 +25,9 @@ public:
     NT_VarDecl,
     NT_TypeDecl,
 
+    /* directives: */
+    NT_ElemDirect,
+
     /* statement: */
     NT_Stmt,
 
@@ -371,6 +374,47 @@ public:
 
 
 
+/***********************/
+/* elements directive: */
+/***********************/
+
+class ElemDirect : public ASTNode {
+public:
+  enum POSSpecifier {
+    POS_First,
+    POS_Last,
+  };
+
+private:
+  const POSSpecifier POSSpec;
+  const Integer *I;
+  const Expr *Identifiers;
+
+public:
+  ElemDirect(NodeType nt, POSSpecifier posspec,
+             const Integer *i, const Expr *identifiers)
+  : ASTNode(nt), POSSpec(posspec), I(i), Identifiers(identifiers) {
+    assert(nt == NT_ElemDirect);
+  }
+
+  POSSpecifier getPOSSpecifier() const { return POSSpec; }
+  const Integer *getInteger() const { return I; }
+  const Expr *getIdentifiers() const { return Identifiers; }
+
+  virtual void deepDelete() const final;
+
+  virtual void print(unsigned int indent = 0) const final;
+
+  static const ElemDirect *create(NodeType nt, POSSpecifier posspec,
+                                  const Integer *i, const Expr *identifiers) {
+    return new ElemDirect(nt, posspec, i, identifiers);
+  }
+
+  virtual void visit(ASTVisitor *v) const override;
+};
+
+
+
 /*************/
 /* program:: */
 /*************/
@@ -379,20 +423,24 @@ class Program : public ASTNode {
 private:
   const DeclList *Decls;
   const StmtList *Stmts;
+  const ElemDirect *Elem;
 
 public:
-  Program(const DeclList *decls, const StmtList *stmts)
-    : ASTNode(NT_Program), Decls(decls), Stmts(stmts) {}
+  Program(const DeclList *decls, const StmtList *stmts,
+          const ElemDirect *elem = nullptr)
+    : ASTNode(NT_Program), Decls(decls), Stmts(stmts), Elem(elem) {}
   
-  const DeclList *getDecls()  const { return Decls; }
-  const StmtList *getStmts()  const { return Stmts; }
+  const DeclList *getDecls() const { return Decls; }
+  const StmtList *getStmts() const { return Stmts; }
+  const ElemDirect *getElem() const { return Elem; }
 
   virtual void print(unsigned indent = 0) const final;
 
   virtual void deepDelete() const final;
 
-  static const Program *create(const DeclList *decls, const StmtList *stmts) {
-    return new Program(decls, stmts);
+  static const Program *create(const DeclList *decls, const StmtList *stmts,
+                               const ElemDirect *elem = nullptr) {
+    return new Program(decls, stmts, elem);
   }
 
   static void destroy(const Program *p) {
@@ -424,6 +472,8 @@ public:
   DECL_VISIT_LIST(ExprList)
 
   virtual void visitDecl(const Decl *) = 0;
+
+  virtual void visitElemDirect(const ElemDirect *) = 0;
 
   virtual void visitStmt(const Stmt *) = 0;
 

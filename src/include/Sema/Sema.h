@@ -32,6 +32,24 @@ private:
   std::map<const TensorType *, const Symbol *> NamedTypes;
 
 public:
+  struct ElemInfo {
+    // Is directive for element loop present:
+    bool present;
+
+    // Position of element index (first/last):
+    ElemDirect::POSSpecifier pos;
+
+    // Dimension, i.e. number of elements:
+    unsigned dim;
+
+    // Symbols (i.e. Identifiers) that take an element index:
+    std::set<const Symbol *> syms;
+  };
+
+private:
+  ElemInfo elemInfo;
+
+public:
   Sema();
   ~Sema();
 
@@ -56,6 +74,8 @@ public:
 
   virtual void visitDecl(const Decl *d) override;
   virtual void visitStmt(const Stmt *s) override;
+
+  virtual void visitElemDirect(const ElemDirect *ed) override;
 
   virtual void visitBinaryExpr(const BinaryExpr *be) override;
   virtual void visitIdentifier(const Identifier *id) override;
@@ -94,6 +114,8 @@ public:
 
   bool isNamedType(const TensorType *type) const;
   const Symbol *getTypeSymbol(const TensorType *type) const;
+
+  const ElemInfo &getElemInfo() const { return elemInfo; }
 };
 
 #endif /* !__SEMA_H__ */

@@ -6,7 +6,6 @@ add_library(obj.CodeGen OBJECT
 
             ExprTree.cpp
             ExprTreeLifter.cpp
-            ElementLoopFuser.cpp
             IdCopier.cpp
             StackExprRemover.cpp
 

@@ -44,6 +44,8 @@
  
   const Decl *decl;
 
+  const ElemDirect *elem;
+
   const Stmt *stmt;
 
   const Expr *expr;
@@ -57,12 +59,16 @@
   int integer_literal;
 
   int iospec;
+  int posspec;
 }
 
 %token KW_VAR
 %token KW_INPUT
 %token KW_OUTPUT
 %token KW_TYPE
+%token KW_ELEM
+%token KW_FIRST
+%token KW_LAST
 %token COLON
 %token LPAREN
 %token RPAREN
@@ -84,6 +90,7 @@
 %type <program> program
 %type <decls> decl_list
 %type <decl> decl var_decl type_decl
+%type <elem> elem_direct
 %type <stmts> stmt_list
 %type <stmt> stmt
 %type <expr> type_expr expr term factor atom
@@ -93,6 +100,7 @@
 %type <paren> paren_expr
 %type <exprs> expr_list
 %type <iospec> iospec
+%type <posspec> posspec
 
 %%
 
@@ -100,7 +108,9 @@
   /* GRAMMAR RULES: */
   /******************/
 
-program : decl_list stmt_list { root = Program::create($1, $2); }
+program : decl_list elem_direct stmt_list {
+            root = Program::create($1, $3, $2);
+          }
 
 decl_list : decl_list decl { $$ = DeclList::append($1, $2); }
           | decl  { $$ = DeclList::create($1); }
@@ -170,6 +180,15 @@ expr_list : /* empty */ { $$ = ExprList::create(); }
           | expr_list expr {
               $$ = ExprList::append($1, $2);
             }
+
+posspec : KW_FIRST { $$ = ElemDirect::POS_First; }
+        | KW_LAST { $$ = ElemDirect::POS_Last; }
+
+elem_direct : /* empty */ { $$ = nullptr; }
+            | KW_ELEM brack_expr integer posspec {
+                $$ = ElemDirect::create(ASTNode::NT_ElemDirect,
+                                        (ElemDirect::POSSpecifier)$4, $3, $2);
+              }
 
 %%
 

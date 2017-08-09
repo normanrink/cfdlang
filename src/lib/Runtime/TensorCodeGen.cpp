@@ -13,12 +13,10 @@
 
 TensorCodeGen::TensorCodeGen(const char *source,
                              bool rowMajor,
-                             bool fuseElementLoop,
                              bool restrictPointer,
                              bool graphCodeGen)
   : Source(source),
     RowMajor(rowMajor),
-    FuseElementLoop(fuseElementLoop),
     RestrictPointer(restrictPointer),
     GraphCodeGen(graphCodeGen),
     CG(nullptr),
@@ -60,7 +58,6 @@ void TensorCodeGen::generate(const std::string &resultName) {
   CEmitter emitter(CG,
                    /* rowMajor */ RowMajor,
                    /* emitWrapper */ true,
-                   /* fuseElementLoop */ FuseElementLoop,
                    /* restrictPointer */ RestrictPointer);
   emitter.codeGen(P.getAST());
   CCode = emitter.getCode();

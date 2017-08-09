@@ -17,7 +17,6 @@ private:
   const std::string Source;
 
   const bool RowMajor;
-  const bool FuseElementLoop;
   const bool RestrictPointer;
   const bool GraphCodeGen;
 
@@ -33,7 +32,6 @@ private:
 public:
   TensorCodeGen(const char *source,
                 bool rowMajor,
-                bool fuseElementLoop = true,
                 bool restrictPointer = true,
                 bool graphCodeGen = true);
   ~TensorCodeGen();
