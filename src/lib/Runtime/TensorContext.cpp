@@ -169,7 +169,7 @@ void TensorContext::generateLibSOFile(const CodeGenHandle *h,
     // in the child process:
     execlp(CCompileCommand.c_str(),
            CCompileCommand.c_str(),
-           "-std=c11", "-pedantic",
+           "-std=c99", "-pedantic",
            "-Wall", "-Werror",
            "-fpic", "-shared",
 #ifdef NDEBUG

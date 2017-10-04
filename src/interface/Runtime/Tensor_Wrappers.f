@@ -93,9 +93,9 @@ module Tensor_Wrappers
                bind(C, name="TensorAddArguments")
       use iso_c_binding
       integer(c_long),    intent(inout)      :: h_ctx, h_ex
-      type(c_ptr), intent(in)                :: names
-      type(c_ptr), intent(in)                :: args
       integer(c_int), intent(in)             :: num_args
+      type(c_ptr), intent(in)                :: names(num_args)
+      type(c_ptr), intent(in)                :: args(num_args)
     end subroutine Tensor_Add_Arguments
                          
     subroutine Tensor_Clear_Arguments(h_ctx, h_ex) &
@@ -117,9 +117,9 @@ module Tensor_Wrappers
                bind(C, name="TensorExecuteWithArguments")
       use iso_c_binding
       integer(c_long),    intent(inout)      :: h_ctx, h_ex
-      type(c_ptr), intent(in)                :: names
-      type(c_ptr), intent(in)                :: args
       integer(c_int), intent(in)             :: num_args
+      type(c_ptr), intent(in)                :: names(num_args)
+      type(c_ptr), intent(in)                :: args(num_args)
     end subroutine Tensor_Execute_With_Arguments
 
     subroutine Tensor_Execute_With_Positional_Args(h_ctx, h_ex, &
