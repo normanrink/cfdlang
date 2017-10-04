@@ -553,6 +553,7 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
 
   const ExprNode *result = getResultTemp();
   std::string lhsTemp, rhsTemp;
+  const std::string temp = getTemp();
 
   const ExprNode *lhsExpr = en->getChild(0);
   const ExprNode *rhsExpr = en->getChild(1);
@@ -603,7 +604,7 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   // emit for-loop nest for the result:
   emitLoopHeaderNest(exprDims);
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(subscriptedIdentifier(result, resultIndices) + " = 0.0;\n");
+  append(getFPTypeName() + " " + temp + " = 0.0;\n");
 
   const std::vector<std::string> savedExprIndices = exprIndices;
 
@@ -620,14 +621,17 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   emitLoopHeaderNest(rhsDims);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-  append(subscriptedIdentifier(result, resultIndices)
-         + " += " + lhsTemp + " * " + rhsTemp + ";\n");
+  append(temp + " += " + lhsTemp + " * " + rhsTemp + ";\n");
 
   // close the for-loops that iterate over the contracted indices ...
   for (int i = 0; i < contrIndices.size(); i++) {
     --nestingLevel;
     emitForLoopFooter(nestingLevel*INDENT_PER_LEVEL);
   }
+
+  EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
+  append(subscriptedIdentifier(result, resultIndices) + " = " + temp + ";\n");
+
   // ... and remove the contracted indices from 'loopedOverIndices':
   for (int i = 0; i < contrIndices.size(); i++)
     loopedOverIndices.erase(contrIndices[i]);
