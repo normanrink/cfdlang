@@ -194,7 +194,8 @@ void CEmitter::codeGen(const Program *p) {
       if (dims.size() > 0) {
         dims = RowMajor ? std::vector<int>(dims.begin() + 1, dims.end())
                         : std::vector<int>(dims.begin(), dims.end() - 1);
-        append("(" + getFPTypeName() + "(*)" + dimsString(dims) + ")");
+        if (dims.size() > 0)
+          append("(" + getFPTypeName() + "(*)" + dimsString(dims) + ")");
       }
       append("args[" + std::to_string((long long)i) + "]");
     }
