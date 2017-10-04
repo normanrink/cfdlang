@@ -1,0 +1,492 @@
+module TExpr (
+  TExpr(), makeTTensor,
+  (.+), (.-), (.*), (./), (#), contr, trans,
+  getTType, getTLbl,
+  printTExpr,
+  getMaxDepthMap, getContractions, getContrWithDepths,
+  replaceContractions,
+  hasIncompatible, replaceIncompatible,
+  uniquify,
+  hashTExpr, hashTExprPath,
+  getIndexMap
+  -- checkTExprType, compareTExprTypes, getTExprType,
+  -- contractionsWithDepths, replaceContraction,
+  -- makeReplaceInfo, replaceAllContractions, replaceAllButOneContractions
+  ) where
+
+import Control.Monad.State
+--import Data.Monoid
+import qualified Data.Map as Map
+import Data.List
+import qualified Data.List.Extras as Extras
+import Text.PrettyPrint
+
+import TType
+
+
+-- Tensor expressions are expression trees.
+-- Nodes in the expression tree shall have unique IDs of type 'a'.
+data TExpr a = TTensor { getLbl :: String
+                       , getTy :: TType
+                       , getID :: a }
+             | TAdd { getFst :: TExpr a, getSnd :: TExpr a
+                    , getTy :: TType
+                    , getID :: a }
+             | TSub { getFst :: TExpr a, getSnd :: TExpr a
+                    , getTy :: TType
+                    , getID :: a }
+             | TMul { getFst :: TExpr a, getSnd :: TExpr a
+                    , getTy :: TType
+                    , getID :: a }
+             | TDiv { getFst :: TExpr a, getSnd :: TExpr a
+                    , getTy :: TType
+                    , getID :: a }
+             | TProduct { getFst :: TExpr a, getSnd :: TExpr a
+                        , getTy :: TType
+                        , getID :: a }
+             | TTranspose { getFst :: TExpr a
+                          , getIdx0 :: TIdx, getIdx1 :: TIdx
+                          , getTy :: TType
+                          , getID :: a }
+             | TContract { getFst :: TExpr a, getIdx0 :: TIdx
+                         , getSnd :: TExpr a, getIdx1 :: TIdx
+                         , getTy :: TType
+                         , getID :: a }
+             deriving (Eq, Ord, Show)
+
+   
+getBinopKind :: TExpr a -> String
+getBinopKind (TAdd _ _ _ _) = "TAdd"
+getBinopKind (TSub _ _ _ _) = "TSub"
+getBinopKind (TMul _ _ _ _) = "TMul"
+getBinopKind (TDiv _ _ _ _) = "TDiv"
+getBinopKind (TProduct _ _ _ _) = "TProduct"
+
+
+type BinopMakerT b = TExpr b -> TExpr b -> Maybe (TExpr b)
+
+getBinopMaker :: TExpr a -> BinopMakerT b
+getBinopMaker (TAdd _ _ _ _) = makeTAdd
+getBinopMaker (TSub _ _ _ _) = makeTSub
+getBinopMaker (TMul _ _ _ _) = makeTMul
+getBinopMaker (TDiv _ _ _ _) = makeTDiv
+getBinopMaker (TProduct _ _ _ _) = makeTProduct
+
+
+instance Functor TExpr where
+  return a = TTensor "" makeScalarTType a
+  
+  fmap f (TTensor lbl ty a) = TTensor lbl ty (f a)
+  fmap f (TTranspose t i0 i1 ty a) = TTranspose (fmap f t) i0 i1 ty (f a)
+  fmap f (TContract t0 i0 t1 i1 ty a) =
+    TContract (fmap f t0) i0 (fmap f t1) i1 ty (f a)
+  fmap f t =
+    let t0 = getFst t
+        t1 = getSnd t
+        mk = getBinopMaker t
+        Just t' = mk (fmap f t0) (fmap f t1) (f a)
+    in t'
+    
+instance Applicative TExpr where
+  pure = return
+  
+  
+  
+makeTTensor :: String -> TType -> Maybe (TExpr a)
+makeTTensor lbl ty = Just (TTensor lbl ty)
+
+makeTAdd :: TExpr a -> TExpr a -> Maybe (TExpr a)
+makeTAdd t0 t1 = 
+  let ty0 = getTy t0
+      ty1 = getTy t1
+  in if ty0 == ty1 then Just (TAdd t0 t1 ty0)
+                    else Nothing
+
+makeTSub :: TExpr a -> TExpr a -> Maybe (TExpr a)
+makeTSub t0 t1 = 
+  let ty0 = getTy t0
+      ty1 = getTy t1
+  in if ty0 == ty1 then Just (TSub t0 t1 ty0)
+                   else Nothing
+
+makeTMul :: TExpr a -> TExpr a -> Maybe (TExpr a)
+makeTMul t0 t1 = 
+  let ty0 = getTy t0
+      ty1 = getTy t1
+  in if isScalarTType ty0 then Just (TMul t0 t1 ty1)
+                          else if ty0 == ty1 then Just (TMul t0 t1 ty0)
+                                          else Nothing
+
+makeTDiv :: TExpr a -> TExpr a -> Maybe (TExpr a)
+makeTDiv t0 t1 =  
+  let ty0 = getTy t0
+      ty1 = getTy t1
+  in if isScalarTType ty1 then Just (TMul t0 t1 ty0)
+                          else if ty0 == ty1 then Just (TMul t0 t1 ty0)
+                                          else Nothing
+
+makeTProduct :: TExpr a -> TExpr a -> Maybe (TExpr a)
+makeTProduct t0 t1 = 
+  let ty0 = getTy t0
+      ty1 = getTy t1
+      tyP = makeProductTType ty0 ty1
+  in Just (TProduct t0 t1 tyP)
+
+makeTTranspose :: TExpr a -> TIdx -> TIdx -> Maybe (TExpr a)
+makeTTranspose t i0 i1 = 
+  let ty = getTy t
+  in if (i0 < rank ty) && (i1 < rank ty)
+        then Just (TTranspose t i0 i1 (makeTransposedTType ty i0 i1))
+        else Nothing
+
+makeTContract :: TExpr a -> TIdx -> TExpr a -> TIdx -> Maybe (TExpr a)
+makeTContract t0 i0 t1 i1 = 
+  let ty0 = getTy t0
+      ty1 = getTy t1
+  in if (i0 < rank ty0) && (i1 < rank ty1) && (dim ty0 i0 == dim ty1 i1)
+        then Just (TContract t0 i0 t1 i1 (makeContractionTType ty0 i0 ty1 i1))
+        else Nothing
+
+
+infixl 6 .+
+(.+) :: Maybe (TExpr a) -> Maybe (TExpr a) -> Maybe (TExpr a)
+(.+) t0 t1 = do
+  t0' <- t0
+  t1' <- t1
+  makeTAdd t0' t1'
+
+infixl 6 .-
+(.-) :: Maybe (TExpr a) -> Maybe (TExpr a) -> Maybe (TExpr a)
+(.-) t0 t1 = do
+  t0' <- t0
+  t1' <- t1
+  makeTSub t0' t1'
+
+infixl 7 .*
+(.*) :: Maybe (TExpr a) -> Maybe (TExpr a) -> Maybe (TExpr a)
+(.*) t0 t1 = do
+  t0' <- t0
+  t1' <- t1
+  makeTMul t0' t1'
+
+infixl 7 ./
+(./) :: Maybe (TExpr a) -> Maybe (TExpr a) -> Maybe (TExpr a)
+(./) t0 t1 = do
+  t0' <- t0
+  t1' <- t1
+  do makeTDiv t0' t1'
+
+infixl 8 #
+(#) :: Maybe (TExpr a) -> Maybe (TExpr a) -> Maybe (TExpr a)
+(#) t0 t1 = do
+  t0' <- t0
+  t1' <- t1
+  do makeTProduct t0' t1'
+
+contr :: Maybe (TExpr a) -> TIdx -> Maybe (TExpr a) -> TIdx -> Maybe (TExpr a)
+contr t0 i0 t1 i1  = do
+  t0' <- t0
+  t1' <- t1
+  makeTContract t0' i0 t1' i1
+
+trans :: Maybe (TExpr a) -> TIdx -> TIdx -> Maybe (TExpr a)
+trans t i0 i1 = do
+  t' <- t
+  makeTTranspose t' i0 i1
+
+getTLbl t = getLbl t
+
+getTType :: Maybe (TExpr a) -> TType
+getTType t = case t of Nothing -> undefined
+                       Just t' -> getTy t'
+
+printTExpr :: (Show a) => TExpr a -> String
+printTExpr = show . (prettyPrint 0)
+
+prettyPrint :: (Show a) => Int -> TExpr a -> Doc
+prettyPrint indent (TTensor lbl ty) =
+  let kind = "TTensor"
+      doc = (text kind) <> space <>
+            (text $ show lbl) <> space <>
+            (text $ show ty)
+  in nest indent $ parens doc
+prettyPrint indent (TTranspose t i0 i1 ty) =
+  let kind = "TTranspose"
+      indent' = (length kind) + 1
+      doc = (text "TTranspose") <> space <>
+            (text $ show (i0,i1)) <> space <>
+            (text $ show ty) $$
+            (prettyPrint indent' t)
+  in nest indent $ parens doc
+prettyPrint indent (TContract t0 i0 t1 i1 ty) =
+  let kind = "TContract"
+      indent' = (length kind) + 1
+      doc = (text kind) <> space <>
+            (text $ show (i0,i1)) <> space <>
+            (text $ show ty) $$
+            prettyPrint indent' t0 $$
+            prettyPrint indent' t1
+  in nest indent $ parens doc
+prettyPrint indent t =
+  let kind = getBinopKind t
+      indent' = (length kind)
+      t0 = getFst t
+      t1 = getSnd t
+      ty = getTy t
+      doc = (text kind) <> space <> (text $ show ty)
+            $$ (prettyPrint indent' t0)
+            $$ (prettyPrint indent' t1)
+  in nest indent $ parens doc
+
+
+type DepthMap a = Map.Map (TExpr a) Int
+
+updateDepthMap :: (Ord a) => TExpr a -> Int -> DepthMap a -> DepthMap a
+updateDepthMap t d map = Map.insertWith max t d map
+
+getMaxDepthMap :: (Ord a) => TExpr a -> DepthMap a
+getMaxDepthMap = getMaxDepthMap' 0
+
+getMaxDepthMap' :: (Ord a) => Int -> TExpr a -> DepthMap a
+getMaxDepthMap' d t@(TTensor _ _) = Map.fromList [(t, d)]
+getMaxDepthMap' d t@(TTranspose t' _ _ _) =
+  let map = getMaxDepthMap' (d+1) t'
+  in updateDepthMap t d map
+getMaxDepthMap' d t =
+  let map1 = getMaxDepthMap' (d+1) $ getFst t
+      map2 = getMaxDepthMap' (d+1) $ getSnd t
+      map3 = Map.unionWith max map1 map2
+  in updateDepthMap t d map3
+
+
+getContractions :: (Eq a) => TExpr a -> [TExpr a]
+getContractions (TTensor _ _) = []
+getContractions (TTranspose t' _ _ _) = getContractions t'
+getContractions t@(TContract t0 _ t1 _ _) =
+  let cs1 = getContractions t0
+      cs2 = getContractions t1
+      cs3 = cs1 `union` cs2
+  in if t `notElem` cs3
+        then t:cs3
+        else cs3
+getContractions t =
+  let cs1 = getContractions $ getFst t
+      cs2 = getContractions $ getSnd t
+  in cs1 `union` cs2
+
+getContrWithDepths :: (Eq a, Ord a) => TExpr a -> [(TExpr a, Int)]
+getContrWithDepths t =
+  let cs = getContractions t
+      map = getMaxDepthMap t
+  in Prelude.map (\c -> let (Just d) = (Map.lookup c map) in (c,d)) cs
+
+
+type TAssignment = (String, TExpr String)
+type TProgram = [TAssignment]
+
+getLHS :: TAssignment -> String
+getLHS = fst
+
+getRHS :: TAssignment -> TExpr String
+getRHS = snd
+
+makeTTemp :: TType -> Int -> (TExpr String, Int)
+makeTTemp ty = \i ->
+  let (str, i') = makeLbl i
+      Just tmp = makeTTensor str ty
+  in (tmp, i')
+  
+makeLbl :: Int -> (String, Int)
+makeLbl = \i -> ("tmp" ++ show i, i+1)
+
+replaceContractions :: TExpr String -> (TProgram, TExpr String)
+replaceContractions t =
+  let (p, state) = runState replaceContractions' (0, t)
+      (_, t') = state
+  in (p, t')
+
+type ReplacementState = State (Int, TExpr String) TProgram
+
+replaceContractions' :: ReplacementState
+replaceContractions' = do
+  as <- findAndReplaceC
+  case as of
+    [] -> return []
+    _  -> do p <- replaceContractions'
+             return (as ++ p)
+                
+findAndReplaceC :: ReplacementState
+findAndReplaceC = do
+  (i, t) <- get
+  let cs = getContrWithDepths t
+      (maxc, maxd) = Extras.argmax snd cs
+  if length cs <= 1
+     then return []
+     else let (r, i') = makeTTemp (getTy maxc) i
+              t' = replaceC maxc r t
+              as = (getLbl r, maxc)
+          in do put (i', t')
+                return [as]
+                
+replaceC :: (Eq a) => TExpr a -> TExpr a -> TExpr a -> TExpr a
+replaceC contr replc t@(TTensor _ _) = t
+replaceC contr replc t@(TTranspose t0 i0 i1 _) = 
+  let t0' = replaceC contr replc t0
+      Just t' = makeTTranspose t0' i0 i1
+  in t'
+replaceC contr replc t@(TContract t0 i0 t1 i1 _) =
+  if contr == t then replc
+                else let t0' = replaceC contr replc t0
+                         t1' = replaceC contr replc t1
+                         Just t'= makeTContract t0' i0 t1' i1
+                     in t'
+replaceC contr replc t =
+  let t0' = replaceC contr replc $ getFst t
+      t1' = replaceC contr replc $ getSnd t
+      Just t' = (getBinopMaker t) t0' t1'
+  in t'
+
+
+
+
+hasIncompatible :: (Eq a) => a -> TExpr a -> Bool
+hasIncompatible = hasIncompatible' False
+      
+hasIncompatible' :: (Eq a) => Bool -> a -> TExpr a -> Bool
+hasIncompatible' flag lbl (TTensor lbl' _) = flag && lbl == lbl'
+hasIncompatible' flag lbl (TTranspose t' _ _ _) = hasIncompatible' True lbl t'
+hasIncompatible' flag lbl (TContract t0 _ t1 _ _) =
+  let lhs = hasIncompatible' True lbl t0
+      rhs = hasIncompatible' True lbl t1
+  in lhs || rhs
+hasIncompatible' flag lbl (TProduct t0 t1 _) =
+  let lhs = hasIncompatible' True lbl t0
+      rhs = hasIncompatible' True lbl t1
+  in lhs || rhs
+hasIncompatible' flag lbl t =
+  let lhs = hasIncompatible' flag lbl $ getFst t
+      rhs = hasIncompatible' flag lbl $ getSnd t
+  in lhs || rhs
+
+
+type IncompState = State Int TProgram
+
+replaceIncompatible :: TAssignment -> TProgram
+replaceIncompatible a = fst $ replaceIncompatible' a 0
+
+replaceIncompatible' :: TAssignment -> Int -> (TProgram, Int)
+replaceIncompatible' a = \i ->
+  let (lbl, t) = a
+      ty = getTy t
+  in if hasIncompatible lbl t
+        then let (tmp, i') = makeTTemp ty i
+                 tmp_lbl = getLbl tmp
+                 t' = replaceT lbl tmp t
+                 Just tensor = makeTTensor lbl ty
+             in ([(tmp_lbl, tensor), (lbl, t')], i')
+        else ([a], i)
+      
+replaceT :: (Eq a) => a -> TExpr a -> TExpr a -> TExpr a
+replaceT label replc t@(TTensor lbl ty) =
+  if label == lbl then replc else t
+replaceT label replc t@(TTranspose t0 i0 i1 _) = 
+  let t0' = replaceT label replc t0
+      Just t' = makeTTranspose t0' i0 i1
+  in t'
+replaceT label replc t@(TContract t0 i0 t1 i1 _) =
+  let t0' = replaceT label replc t0
+      t1' = replaceT label replc t1
+      Just t' = makeTContract t0' i0 t1' i1
+  in t'
+replaceT label replc t =
+  let t0' = replaceT label replc $ getFst t
+      t1' = replaceT label replc $ getSnd t
+      Just t' = (getBinopMaker t) t0' t1'
+  in t'
+  
+
+-- TExpr paired with path from root makes it unique:
+type TExprPath a = [TExpr a]
+type UniqueTExpr a b = TExpr (a, b)
+
+uniquify' :: (TExpr a -> TExprPath a -> b) -> TExprPath a -> TExpr a -> TExpr b
+uniquify' f p t@(TTensor lbl ty) = 
+  let Just t' = makeTTensor (f t p) ty
+  in t'
+uniquify' f p t@(TTranspose t0 i0 i1 ty) =
+  let p' = t:p
+      ut = uniquify' f p' t0
+      Just t' = makeTTranspose ut i0 i1
+  in t'
+uniquify' f p t@(TContract t0 i0 t1 i1 ty) =
+  let p' = t:p
+      ut0 = uniquify' f p' t0
+      ut1 = uniquify' f p' t1
+      Just t' = makeTContract ut0 i0 ut1 i1
+  in t'
+uniquify' f p t =
+  let p' = t:p
+      ut0 = uniquify' f p' $ getFst t
+      ut1 = uniquify' f p' $ getSnd t
+      Just t' = (getBinopMaker t) ut0 ut1
+  in t'
+
+uniquify :: TExpr a -> TExpr (TExprPath a)
+uniquify t = uniquify' (\t -> \p -> t:p) [] t
+
+hashTExprPath :: TExprPath a -> [Int]
+hashTExprPath p = map hashTExpr p
+
+hashTExpr :: TExpr a -> Int
+hashTExpr (TTensor _ _) = 0
+hashTExpr (TAdd _ _ _) = 1
+hashTExpr (TSub _ _ _) = 2
+hashTExpr (TMul _ _ _) = 3
+hashTExpr (TDiv _ _ _) = 4
+hashTExpr (TProduct _ _ _) = 5
+hashTExpr (TTranspose _ _ _ _) = 6
+hashTExpr (TContract _ _ _ _ _) = 7
+
+
+type IndexMap a = Map.Map (TExpr (TExprPath a)) [String]
+
+getIndexMap :: (Ord a) => [String] -> TExpr (TExprPath a) -> IndexMap a
+getIndexMap indices t = fst $ getIndexMap' indices t (Map.empty, 0)
+
+getIndexMap' :: (Ord a) => [String] -> TExpr (TExprPath a) ->
+                           (IndexMap a, Int) -> (IndexMap a, Int)
+getIndexMap' indices t@(TTensor _ _) = \(map, i) ->
+  (Map.insert t indices map, i)
+getIndexMap' indices t@(TTranspose t0 i0 i1 _) = \(map, i) ->
+  let indices' = if i0 == i1
+                    then indices
+                    else let i0' = min i0 i1
+                             i1' = max i0 i1
+                             ind0 = indices !! i0'
+                             ind1 = indices !! i1'
+                             head = take i0' indices
+                             tail = drop (i0'+1) indices
+                             middle = take (i1'-i0'-1) tail
+                             end = drop (i1'-i0') tail
+                         in head ++ [ind1] ++ middle ++ [ind0] ++ end
+  in getIndexMap' indices' t0 (map, i)
+getIndexMap' indices t@(TContract t0 i0 t1 i1 _) = \(map, i) ->
+  let ind' = "i_contr_" ++ show i
+      i' = i + 1
+      rank0 = rank (getTy t0)
+      indices0 = take (rank0-1) indices
+      indices1 = drop (rank0-1) indices
+      indices0' = (take i0 indices0) ++ [ind'] ++ (drop i0 indices0)
+      indices1' = (take i1 indices1) ++ [ind'] ++ (drop i1 indices1)
+      (map', i'') = getIndexMap' indices0' t0 (map, i')
+  in getIndexMap' indices1' t1 (map', i'')
+getIndexMap' indices t@(TProduct t0 t1 _) = \(map, i) ->
+  let rank0 = rank . getTy $ getFst t
+      indices0 = take rank0 indices
+      indices1 = drop rank0 indices
+      (map', i') = getIndexMap' indices0 t0 (map, i)
+  in getIndexMap' indices1 t1 (map', i')
+getIndexMap' indices t = \(map, i) ->
+  let (map', i') = getIndexMap' indices (getFst t) (map, i)
+  in getIndexMap' indices (getSnd t) (map', i')
+  

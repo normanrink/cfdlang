@@ -128,8 +128,8 @@ module Tensor_Wrappers
                bind(C, name="TensorExecuteWithPositionalArgs")
       use iso_c_binding
       integer(c_long),    intent(inout)      :: h_ctx, h_ex
-      type(c_ptr), intent(in)                :: args
       integer(c_int), intent(in)             :: num_args
+      type(c_ptr), intent(in)                :: args(num_args)
     end subroutine Tensor_Execute_With_Positional_Args
     
     subroutine Tensor_Final_Execution(h_ctx, h_ex) &

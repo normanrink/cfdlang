@@ -9,6 +9,10 @@ add_custom_command(TARGET ExtraOutputDirectory
                    COMMAND mkdir
                    ARGS -p ${CFDLANG_EXTRA_OUTPUT_DIR})
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "RELEASE" CACHE STRING "" FORCE)
+endif()
+
 add_subdirectory(src)
 
 include_directories(src/include)
