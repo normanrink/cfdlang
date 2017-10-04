@@ -82,7 +82,7 @@ protected:
 
   void updateWithElemInfo(std::vector<std::string> &indices,
                           std::vector<int> &dims,
-                          const IdentifierExpr *id) const;
+                          const std::string &name) const;
   std::string
   subscriptedIdentifier(const ExprNode *en,
                         const std::vector<std::string> &indices = {}) const;

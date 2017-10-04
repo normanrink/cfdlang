@@ -134,7 +134,7 @@ void CEmitter::codeGen(const Program *p) {
 
       EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
       append(getFPTypeName() + " " + resultName
-             + dimsString(getDims(result)) + "];\n");
+             + dimsString(getDims(result)) + ";\n");
 
       emittedNames.insert(resultName);
     }
@@ -198,9 +198,10 @@ void CEmitter::codeGen(const Program *p) {
         EMIT_INDENT(INDENT_PER_LEVEL + functionCall.length())
       }
 
-      auto dims = std::vector<int>(ArgumentsDimensions[i].begin() + 1,
-                                   ArgumentsDimensions[i].end());
+      std::vector<int> dims = ArgumentsDimensions[i];
       if (dims.size() > 0) {
+        dims = RowMajor ? std::vector<int>(dims.begin() + 1, dims.end())
+                        : std::vector<int>(dims.begin(), dims.end() - 1);
         append("(" + getFPTypeName() + "(*)" + dimsString(dims) + ")");
       }
       append("args[" + std::to_string((long long)i) + "]");
@@ -223,6 +224,9 @@ void CEmitter::emitSignature(std::vector<std::vector<int>> &argumentsDims) {
   bool isFirstArgument = true;
   append("void " + getFunctionNameWrapped() + "(\n");
 
+  // dummy argument for 'updateWithElemInfo' method:
+  std::vector<std::string> dummy;
+
   // emit inputs as function arguments:
   for (auto in = sema.inputs_begin(); in != sema.inputs_end(); in++) {
     const Symbol *sym = *in;
@@ -231,7 +235,8 @@ void CEmitter::emitSignature(std::vector<std::vector<int>> &argumentsDims) {
     else append(",\n");
 
     const std::string &ArgName = sym->getName();
-    const std::vector<int> &ArgDims = sym->getType().getDims();
+    std::vector<int> ArgDims = sym->getType().getDims();
+    updateWithElemInfo(dummy, ArgDims, ArgName);
 
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
@@ -255,7 +260,8 @@ void CEmitter::emitSignature(std::vector<std::vector<int>> &argumentsDims) {
     else append(",\n");
 
     const std::string &ArgName = sym->getName();
-    const std::vector<int> &ArgDims = sym->getType().getDims();
+    std::vector<int> ArgDims = sym->getType().getDims();
+    updateWithElemInfo(dummy, ArgDims, ArgName);
 
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
@@ -308,11 +314,11 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
   std::string result = "";
 
   if (RowMajor) {
-    for (int i = (rank-1); i >= 0; i--) {
+    for (int i = 0; i < rank; i++) {
       result += "[" + indices[i] + "]";
     }
   } else {
-    for (int i = 0; i < rank; i++) {
+    for (int i = (rank-1); i >= 0; i--) {
       result += "[" + indices[i] + "]";
     }
   }
@@ -328,11 +334,11 @@ std::string CEmitter::dimsString(const std::vector<int> &dims) const {
   std::string result = "";
 
   if (RowMajor) {
-    for (int i = (rank-1); i >= 0; i--) {
+    for (int i = 0; i < rank; i++) {
       result += "[" + std::to_string(dims[i]) + "]";
     }
   } else {
-    for (int i = 0; i < rank; i++) {
+    for (int i = (rank-1); i >= 0; i--) {
       result += "[" + std::to_string(dims[i]) + "]";
     }
   }
@@ -342,14 +348,14 @@ std::string CEmitter::dimsString(const std::vector<int> &dims) const {
 
 void CEmitter::updateWithElemInfo(std::vector<std::string> &indices,
                                   std::vector<int> &dims,
-                                  const IdentifierExpr *id) const {
+                                  const std::string &name) const {
   const Sema &sema = *getSema();
   const Sema::ElemInfo &info = sema.getElemInfo();
 
   if (!info.present)
     return;
 
-  const Symbol *s = sema.getSymbol(id->getName());
+  const Symbol *s = sema.getSymbol(name);
   if (info.syms.find(s) == info.syms.end())
     return;
 
@@ -399,7 +405,7 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
   }
 
   std::vector<int> dims = en->getDims();
-  updateWithElemInfo(allIndices, dims, id);
+  updateWithElemInfo(allIndices, dims, id->getName());
   return (en->getName() + subscriptString(allIndices, dims));
 }
 
