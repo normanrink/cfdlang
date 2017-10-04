@@ -124,14 +124,6 @@ void CEmitter::codeGen(const Program *p) {
     // emit defintion of 'result' if necessary:
     if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
         && !emittedNames.count(resultName)) {
-      auto elements = [this, result]() -> unsigned long long {
-        const std::vector<int> &ds = getDims(result);
-        unsigned long long es = 1;
-        for (int i = 0; i < ds.size(); i++)
-          es *= ds[i];
-        return es;
-      };
-
       EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
       append(getFPTypeName() + " " + resultName
              + dimsString(getDims(result)) + ";\n");
