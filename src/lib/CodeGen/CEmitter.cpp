@@ -23,7 +23,8 @@ void CEmitter::codeGen(const Program *p) {
     append("static inline\n");
   }
   //emit function signature:
-  emitSignature();
+  std::vector<std::vector<int>> ArgumentsDimensions;
+  emitSignature(ArgumentsDimensions);
 
   // open block for function body:
   append ("{\n");
@@ -132,8 +133,8 @@ void CEmitter::codeGen(const Program *p) {
       };
 
       EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-      append(getFPTypeName() + " " + resultName +
-             "[" + std::to_string((long long)elements()) + "];\n");
+      append(getFPTypeName() + " " + resultName
+             + dimsString(getDims(result)) + "];\n");
 
       emittedNames.insert(resultName);
     }
@@ -179,6 +180,7 @@ void CEmitter::codeGen(const Program *p) {
 
   if (EmitWrapper) {
     const int numArgs = getNumFunctionArguments();
+    assert(numArgs == ArgumentsDimensions.size());
 
     append("\n");
     append("void " + getFunctionName() + "(" + getFPTypeName()
@@ -196,6 +198,11 @@ void CEmitter::codeGen(const Program *p) {
         EMIT_INDENT(INDENT_PER_LEVEL + functionCall.length())
       }
 
+      auto dims = std::vector<int>(ArgumentsDimensions[i].begin() + 1,
+                                   ArgumentsDimensions[i].end());
+      if (dims.size() > 0) {
+        append("(" + getFPTypeName() + "(*)" + dimsString(dims) + ")");
+      }
       append("args[" + std::to_string((long long)i) + "]");
     }
     append(");\n");
@@ -208,7 +215,9 @@ std::string CEmitter::getIndex() {
   return "i" + std::to_string((long long)IndexCounter++);
 }
 
-void CEmitter::emitSignature() { // emit function signature
+void CEmitter::emitSignature(std::vector<std::vector<int>> &argumentsDims) {
+  // emit function signature, and
+  // populate argument with the dimensions of the function arguments
   const Sema &sema = *getSema();
 
   bool isFirstArgument = true;
@@ -222,11 +231,16 @@ void CEmitter::emitSignature() { // emit function signature
     else append(",\n");
 
     const std::string &ArgName = sym->getName();
+    const std::vector<int> &ArgDims = sym->getType().getDims();
+
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
-    append(getFPTypeName() + PointerDecl + ArgName);
+    append(getFPTypeName() + " " + ArgName
+           + dimsString(ArgDims));
 
     addFunctionArgument(ArgName);
+
+    argumentsDims.push_back(ArgDims);
   }
 
   // emit outputs as function arguments:
@@ -241,11 +255,16 @@ void CEmitter::emitSignature() { // emit function signature
     else append(",\n");
 
     const std::string &ArgName = sym->getName();
+    const std::vector<int> &ArgDims = sym->getType().getDims();
+
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
-    append(getFPTypeName() + PointerDecl + ArgName);
+    append(getFPTypeName() + " " + ArgName
+           + dimsString(ArgDims));
 
     addFunctionArgument(ArgName);
+
+    argumentsDims.push_back(ArgDims);
   }
 
   // finish function signature:
@@ -286,27 +305,39 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
   if(rank == 0)
     return "[0]";
 
-  std::string result = "(";
+  std::string result = "";
 
   if (RowMajor) {
     for (int i = (rank-1); i >= 0; i--) {
-      result += indices[i];
-      if (i != 0)
-        result += " + " + std::to_string((long long)dims[i]) + "*(";
+      result += "[" + indices[i] + "]";
     }
   } else {
     for (int i = 0; i < rank; i++) {
-      result += indices[i];
-      if (i != (rank-1))
-        result += " + " + std::to_string((long long)dims[i]) + "*(";
+      result += "[" + indices[i] + "]";
     }
   }
 
-  for (int i = 0; i < rank; i++) {
-    result += ")";
+  return result;
+}
+
+std::string CEmitter::dimsString(const std::vector<int> &dims) const {
+  const int rank = dims.size();
+  if(rank == 0)
+    return "[1]";
+
+  std::string result = "";
+
+  if (RowMajor) {
+    for (int i = (rank-1); i >= 0; i--) {
+      result += "[" + std::to_string(dims[i]) + "]";
+    }
+  } else {
+    for (int i = 0; i < rank; i++) {
+      result += "[" + std::to_string(dims[i]) + "]";
+    }
   }
 
-  return "[" + result + "]";
+  return result;
 }
 
 void CEmitter::updateWithElemInfo(std::vector<std::string> &indices,

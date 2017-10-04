@@ -65,7 +65,7 @@ protected:
 
   std::string getIndex();
 
-  void emitSignature();
+  void emitSignature(std::vector<std::vector<int>> &argumentsDims);
 
   void emitForLoopHeader(unsigned indent,
                          const std::string &indexVar, const std::string &bound);
@@ -78,6 +78,8 @@ protected:
 
   std::string subscriptString(const std::vector<std::string> &indices,
                               const std::vector<int> &dims) const;
+  std::string dimsString(const std::vector<int> &dims) const;
+
   void updateWithElemInfo(std::vector<std::string> &indices,
                           std::vector<int> &dims,
                           const IdentifierExpr *id) const;
