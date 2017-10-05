@@ -218,7 +218,12 @@ void CEmitter::codeGen(const Program *p) {
                         : std::vector<int>(dims.begin(), dims.end() - 1);
         if (dims.size() > 0)
           append("(" + getFPTypeName() + "(*)" + dimsString(dims) + ")");
+      } else {
+        assert(dims.size() == 0);
+        // dereference pointer:
+        append("*");
       }
+      
       append("args[" + std::to_string((long long)i) + "]");
     }
     append(");\n");
@@ -315,7 +320,7 @@ void CEmitter::emitForLoopFooter(unsigned indent) {
 void CEmitter::emitTempDefinition(unsigned indent,
                                   const std::string &temp) {
   EMIT_INDENT(indent)
-  append(getFPTypeName() + " " + temp + "[1];\n");
+  append(getFPTypeName() + " " + temp + ";\n");
 }
 
 std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
@@ -324,7 +329,7 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
 
   const int rank = dims.size();
   if(rank == 0)
-    return "[0]";
+    return "";
 
   std::string result = "";
 
@@ -344,7 +349,7 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
 std::string CEmitter::dimsString(const std::vector<int> &dims) const {
   const int rank = dims.size();
   if(rank == 0)
-    return "[1]";
+    return "";
 
   std::string result = "";
 
