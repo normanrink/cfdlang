@@ -197,9 +197,12 @@ void CEmitter::codeGen(const Program *p) {
     assert(numArgs == ArgumentsDimensions.size());
 
     append("\n");
+    const std::string restrictQual = RestrictPointer ? "restrict " : ""; 
     append("void " + getFunctionName() + "(" + getFPTypeName()
-           + PointerDecl + "args[" + std::to_string((long long)numArgs)
-           + "]){\n");
+           + "* "  + restrictQual
+           + "args[" + restrictQual
+                     + std::to_string((long long)numArgs)
+                     + "]){\n");
 
     const std::string &functionCall = getFunctionNameWrapped() + "(";
     // emit the call of 'FunctionName':
@@ -261,7 +264,7 @@ void CEmitter::emitSignature(std::vector<std::vector<int>> &argumentsDims) {
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
     append(getFPTypeName() + " " + ArgName
-           + dimsString(ArgDims));
+           + dimsString(ArgDims, RestrictPointer));
 
     addFunctionArgument(ArgName);
 
@@ -286,7 +289,7 @@ void CEmitter::emitSignature(std::vector<std::vector<int>> &argumentsDims) {
     // indent each argument:
     EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL)
     append(getFPTypeName() + " " + ArgName
-           + dimsString(ArgDims));
+           + dimsString(ArgDims, RestrictPointer));
 
     addFunctionArgument(ArgName);
 
@@ -346,7 +349,8 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
   return result;
 }
 
-std::string CEmitter::dimsString(const std::vector<int> &dims) const {
+std::string CEmitter::dimsString(const std::vector<int> &dims,
+                                 bool emitRestrict) const {
   const int rank = dims.size();
   if(rank == 0)
     return "";
@@ -355,11 +359,17 @@ std::string CEmitter::dimsString(const std::vector<int> &dims) const {
 
   if (RowMajor) {
     for (int i = 0; i < rank; i++) {
-      result += "[" + std::to_string(dims[i]) + "]";
+      const std::string restrictQual = (emitRestrict && (i == 0))
+                                       ? "restrict "
+                                       : "";
+      result += "[" + restrictQual + std::to_string(dims[i]) + "]";
     }
   } else {
     for (int i = (rank-1); i >= 0; i--) {
-      result += "[" + std::to_string(dims[i]) + "]";
+      const std::string restrictQual = (emitRestrict && (i == (rank-1)))
+                                       ? "restrict "
+                                       : "";
+      result += "[" + restrictQual + std::to_string(dims[i]) + "]";
     }
   }
 

@@ -28,7 +28,6 @@ private:
   const bool EmitWrapper;
 
   const bool RestrictPointer;
-  const std::string PointerDecl;
 
 private:
   // context for the emission of expression trees:
@@ -48,8 +47,7 @@ public:
     IndexCounter(0),
     RowMajor(rowMajor),
     EmitWrapper(emitWrapper),
-    RestrictPointer(restrictPointer),
-    PointerDecl(RestrictPointer ? " *restrict " : " *") {}
+    RestrictPointer(restrictPointer) {}
 
   void codeGen(const Program *p);
   const std::string &getCode() const { return CG->getCode(); }
@@ -78,7 +76,8 @@ protected:
 
   std::string subscriptString(const std::vector<std::string> &indices,
                               const std::vector<int> &dims) const;
-  std::string dimsString(const std::vector<int> &dims) const;
+  std::string dimsString(const std::vector<int> &dims,
+                         bool emitRestrict = false) const;
 
   void updateWithElemInfo(std::vector<std::string> &indices,
                           std::vector<int> &dims,
