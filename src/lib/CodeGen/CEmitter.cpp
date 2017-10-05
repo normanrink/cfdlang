@@ -111,14 +111,19 @@ void CEmitter::codeGen(const Program *p) {
     ++initialNestingLevel;
   }
 
+  bool fuse = false;
   std::set<std::string> emittedNames;
-  for (const auto &a: CG->getAssignments()) {
-    nestingLevel = initialNestingLevel;
+  for (auto a = CG->getAssignments().begin(), e = CG->getAssignments().end();
+       a != e; a++) {
+    const auto &na = std::next(a);
 
-    assert(a.lhs->isIdentifier() &&
+    if (!fuse)
+      nestingLevel = initialNestingLevel;
+
+    assert(a->lhs->isIdentifier() &&
            "internal error: left-hand side must be an identifier expression");
 
-    const IdentifierExpr *result = static_cast<const IdentifierExpr *>(a.lhs);
+    const IdentifierExpr *result = static_cast<const IdentifierExpr *>(a->lhs);
     const std::string &resultName = result->getName();
 
     // emit defintion of 'result' if necessary:
@@ -131,20 +136,22 @@ void CEmitter::codeGen(const Program *p) {
       emittedNames.insert(resultName);
     }
 
-    const ExprNode *en = a.rhs;
+    const ExprNode *en = a->rhs;
     const std::vector<int> &dims = getDims(en);
 
-    // generate enough indices for the expression:
-    exprIndices.clear();
-    resultIndices.clear();
-    loopedOverIndices.clear();
-    for (int i = 0; i < dims.size(); i++) {
-      const std::string index = getIndex();
-      exprIndices.push_back(index);
-      resultIndices.push_back(index);
+    if (!fuse) {
+      // generate enough indices for the expression:
+      exprIndices.clear();
+      resultIndices.clear();
+      loopedOverIndices.clear();
+      for (int i = 0; i < dims.size(); i++) {
+        const std::string index = getIndex();
+        exprIndices.push_back(index);
+        resultIndices.push_back(index);
+      }
     }
 
-    setResultTemp(a.lhs);
+    setResultTemp(a->lhs);
     // we need this if-clause since code emission
     // for identifiers has been optimized out ...
     if (en->isIdentifier()) {
@@ -158,8 +165,23 @@ void CEmitter::codeGen(const Program *p) {
 
     assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
 
-    // close all for-loops:
-    emitLoopFooterNest();
+    if (na == CG->getAssignments().end()) {
+      fuse = false;
+    } else {
+      const IdentifierExpr *next_result =
+        static_cast<const IdentifierExpr *>(na->lhs);
+      fuse = (getDims(next_result) == getDims(result));
+    }
+    if (fuse) {
+      ContractionExprCounter CEC(na->rhs);
+      CEC.run();
+      fuse = fuse && (CEC.getCount() == 0);
+    }
+
+    if (!fuse) {
+      // close all for-loops:
+      emitLoopFooterNest();
+    }
   }
 
   if (hasElementLoop) {
