@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <vector>
 
 
 #include "AST/AST.h"
@@ -24,8 +25,8 @@ private:
 
   // record symbols of variables that are
   // declared with IO specifiers:
-  std::set<const Symbol *> Inputs;
-  std::set<const Symbol *> Outputs;
+  std::vector<const Symbol *> Inputs;
+  std::vector<const Symbol *> Outputs;
 
   // map user-defined types (i.e. named types) to the
   // corresponding symbols (which hold the type names):
@@ -91,23 +92,33 @@ public:
   }
 
   bool is_in_inputs(const std::string &name) const {
-    return (Inputs.find(getSymbol(name)) != Inputs.end());
+    const Symbol *sym = getSymbol(name);
+    for (auto s: Inputs) {
+      if (s == sym)
+        return true;
+    }
+    return false;
   }
-  std::set<const Symbol *>::const_iterator inputs_begin() const {
+  std::vector<const Symbol *>::const_iterator inputs_begin() const {
     return Inputs.begin();
   }
-  std::set<const Symbol *>::const_iterator inputs_end() const {
+  std::vector<const Symbol *>::const_iterator inputs_end() const {
     return Inputs.end();
   }
   int inputs_size() const { return Inputs.size(); }
 
   bool is_in_outputs(const std::string &name) const {
-    return (Outputs.find(getSymbol(name)) != Outputs.end());
+    const Symbol *sym = getSymbol(name);
+    for (auto s: Outputs) {
+      if (s == sym)
+        return true;
+    }
+    return false;
   }
-  std::set<const Symbol *>::const_iterator outputs_begin() const {
+  std::vector<const Symbol *>::const_iterator outputs_begin() const {
     return Outputs.begin();
   }
-  std::set<const Symbol *>::const_iterator outputs_end() const {
+  std::vector<const Symbol *>::const_iterator outputs_end() const {
     return Outputs.end();
   }
   int outputs_size() const { return Outputs.size(); }

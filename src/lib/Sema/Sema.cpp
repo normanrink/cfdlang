@@ -144,9 +144,9 @@ void Sema::visitDecl(const Decl *d) {
   const Symbol *sym = createSymbol(k, name, *type, d);
 
   if (d->getIOSpecifier() & Decl::IO_Input)
-    Inputs.insert(sym);
+    Inputs.push_back(sym);
   if (d->getIOSpecifier() & Decl::IO_Output)
-    Outputs.insert(sym);
+    Outputs.push_back(sym);
 
   if (k == Symbol::SK_Type)
     NamedTypes[type] = sym;
