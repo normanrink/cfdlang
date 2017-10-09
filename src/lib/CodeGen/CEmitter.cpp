@@ -300,6 +300,27 @@ void CEmitter::emitSignature(std::vector<std::vector<int>> &argumentsDims) {
   append(")\n");
 }
 
+/* Function to determine the maximum power of 2 for unrolling such that
+ * no more than two loop iterations must be peeled off the end of the loop.
+ */
+/* Function is currently unused!
+ * Generally, unroll factor is currently not used!
+ */
+/*
+static int getUnrollFactor(const int bnd) {
+  if (bnd <= 2)
+    return 0;
+
+  int result = 2;
+  for (int f = result; f <= bnd; f *= 2) {
+    if (bnd % f <= 2)
+      result = f; 
+  }
+  return result;
+
+}
+*/
+
 void CEmitter::emitForLoopHeader(unsigned indent,
                                  const std::string &indexVar,
                                  const std::string &bound) {
@@ -311,7 +332,27 @@ void CEmitter::emitForLoopHeader(unsigned indent,
 
 void CEmitter::emitForLoopHeader(unsigned indent,
                                  const std::string &indexVar,
-                                 int intBound) {
+                                 int intBound,
+                                 bool unroll,
+                                 bool simd) {
+  if (unroll) {
+    // unroll factor is currently not used:
+    /*
+    const int factor = getUnrollFactor(intBound);
+    if (factor > 0) {
+      EMIT_INDENT(indent)
+      append("#pragma unroll (" + std::to_string(factor) + ")\n");
+    }
+    */
+    EMIT_INDENT(indent)
+    append("#pragma unroll\n");
+  }
+  
+  if (simd) {
+    EMIT_INDENT(indent)
+    append("#pragma simd\n");
+  }
+  
   emitForLoopHeader(indent, indexVar, std::to_string((long long)intBound));
 }
 
@@ -439,28 +480,68 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
   return (en->getName() + subscriptString(allIndices, dims));
 }
 
-void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims) {
+void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
+                                  bool unroll, bool simd) {
   const int rank = exprIndices.size();
 
   if (RowMajor) {
+    int ifirst = -1, ilast = -1;
+    {
+      // determine the first and the last value of 'i' at which
+      // a new loop header will actually be emitted:
+      for (int i = 0; i < rank; i++) {
+        const std::string &index = exprIndices[i];
+        if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
+          continue;
+        }
+        if (ifirst == -1) ifirst = i;
+        ilast = i;
+      }
+    }
+
     for (int i = 0; i < rank; i++) {
       const std::string &index = exprIndices[i];
       if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
         // 'index' is already iterated over in a for-loop:
         continue;
       }
-      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i]);
+      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i],
+      // emit 'unroll' pragma only for the first loop header:
+                        unroll && (i == ifirst),
+      // emit 'simd' pragma only for the last loop header, and only
+      // if the first and the last loop header do no coincide:
+      // (This avoids having both pragmas before the same loop header.)
+                        simd && (i == ilast) && (ifirst != ilast));
       loopedOverIndices.insert(index);
       ++nestingLevel;
     }
   } else {
+    int ifirst = -1, ilast = -1;
+    {
+      // determine the first and the last value of 'i' at which
+      // a new loop header will actually be emitted:
+      for (int i = (rank-1); i >= 0; i--) {
+        const std::string &index = exprIndices[i];
+        if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
+          continue;
+        }
+        if (ifirst == -1) ifirst = i;
+        ilast = i;
+      }
+    }
     for (int i = (rank-1); i >= 0; i--) {
       const std::string &index = exprIndices[i];
       if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
         // 'index' is already iterated over in a for-loop:
         continue;
       }
-      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i]);
+      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i],
+      // emit 'unroll' pragma only for the first loop header:
+                        unroll && (i == ifirst),
+      // emit 'simd' pragma only for the last loop header, and only
+      // if the first and the last loop header do no coincide:
+      // (This avoids having both pragmas before the same loop header.)
+                        simd && (i == ilast) && (ifirst != ilast));
       loopedOverIndices.insert(index);
       ++nestingLevel;
     }
@@ -540,7 +621,7 @@ void CEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
 
   // emit for-loop nest as appropriate:
   exprIndices = savedExprIndices;
-  emitLoopHeaderNest(exprDims);
+  emitLoopHeaderNest(exprDims, true, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(subscriptedIdentifier(result, resultIndices)
@@ -669,7 +750,8 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   }
 
   // emit for-loop nest for the result:
-  emitLoopHeaderNest(exprDims);
+  emitLoopHeaderNest(exprDims, true, true);
+
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(getFPTypeName() + " " + temp + " = 0.0;\n");
 
@@ -679,13 +761,13 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   exprIndices = lhsIndices;
   lhsTemp = visitChildExpr(lhsExpr);
   // emit for-loop nest for the 'lhs' early:
-  emitLoopHeaderNest(lhsDims);
+  emitLoopHeaderNest(lhsDims, true, true);
 
   // visit the 'rhs', emit loop headers as necessary:
   exprIndices = rhsIndices;
   rhsTemp = visitChildExpr(rhsExpr);
   // emit for-loop nest for the 'rhs':
-  emitLoopHeaderNest(rhsDims);
+  emitLoopHeaderNest(rhsDims, true, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(temp + " += " + lhsTemp + " * " + rhsTemp + ";\n");
@@ -766,7 +848,7 @@ void CEmitter::visitTranspositionExpr(const TranspositionExpr *en) {
   //const int savedNestingLevel = nestingLevel;
 
   // emit loop header before transposing indices:
-  emitLoopHeaderNest(getDims(en));
+  emitLoopHeaderNest(getDims(en), true, true);
 
   std::vector<std::string> transposedExprIndices = exprIndices;
   const std::vector<std::vector<int>> &indexPairs = en->getIndexPairs();
@@ -810,7 +892,7 @@ void CEmitter::visitTopLevelIdentifier(const ExprNode *en) {
 
   const std::vector<int> &dims = getDims(en);
 
-  emitLoopHeaderNest(dims);
+  emitLoopHeaderNest(dims, true, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(subscriptedIdentifier(result, exprIndices)

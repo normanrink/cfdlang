@@ -68,7 +68,8 @@ protected:
   void emitForLoopHeader(unsigned indent,
                          const std::string &indexVar, const std::string &bound);
   void emitForLoopHeader(unsigned indent,
-                         const std::string &indexVar, int intBound);
+                         const std::string &indexVar, int intBound,
+                         bool unroll = false, bool simd = false);
   void emitForLoopFooter(unsigned indent);
 
   void emitTempDefinition(unsigned indent,
@@ -86,7 +87,8 @@ protected:
   subscriptedIdentifier(const ExprNode *en,
                         const std::vector<std::string> &indices = {}) const;
 
-  void emitLoopHeaderNest(const std::vector<int> &exprDims);
+  void emitLoopHeaderNest(const std::vector<int> &exprDims,
+                          bool unroll = false, bool simd = false);
   void emitLoopFooterNest();
 
   std::string visitChildExpr(const ExprNode *en);
