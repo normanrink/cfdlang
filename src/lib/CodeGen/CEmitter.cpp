@@ -104,6 +104,11 @@ void CEmitter::codeGen(const Program *p) {
 
   const bool hasElementLoop = sema.getElemInfo().present;
   if (hasElementLoop) {
+    if (OMPPragmas) {
+      EMIT_INDENT(initialNestingLevel*INDENT_PER_LEVEL);
+      append("#pragma omp parallel for\n");
+    }
+
     ElementIndex = getIndex();
     emitForLoopHeader(initialNestingLevel*INDENT_PER_LEVEL,
                       ElementIndex,

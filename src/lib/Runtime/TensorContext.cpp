@@ -23,6 +23,8 @@
 #define CFDLANG_DEFAULT_TMP_FOLDER "/tmp"
 #define CFDLANG_ENV_CC             "CFDLANG_CC"
 #define CFDLANG_DEFAULT_CC         "gcc"
+#define CFDLANG_ENV_OMP_FLAG       "CFDLANG_OMP_FLAG"
+#define CFDLANG_DEFAULT_OMP_FLAG   "-fopenmp"
 #define CFDLANG_ENV_PREFIX         "CFDLANG_PREFIX"
 #define CFDLANG_DEFAULT_PREFIX     "cfdlang"
 
@@ -33,6 +35,8 @@ TensorContext::TensorContext()
                                            : (CFDLANG_DEFAULT_TMP_FOLDER)),
   CCompileCommand(getenv(CFDLANG_ENV_CC) ? getenv(CFDLANG_ENV_CC)
                                          : (CFDLANG_DEFAULT_CC)),
+  OpenMPCCFlag(getenv(CFDLANG_ENV_OMP_FLAG) ? getenv(CFDLANG_ENV_OMP_FLAG)
+                                            : (CFDLANG_DEFAULT_OMP_FLAG)),
   Prefix(getenv(CFDLANG_ENV_PREFIX) ? getenv(CFDLANG_ENV_PREFIX)
                                     : (CFDLANG_DEFAULT_PREFIX)),
   ProcessID(getpid()),
@@ -115,12 +119,14 @@ void TensorContext::initCodeGen(CodeGenHandle *h, const char *source,
                                 bool rowMajor,
                                 bool restrictPointer,
                                 bool iccPragmas,
+                                bool ompPragmas,
                                 bool graphCodeGen) {
   *h = getHandle();
   TheCodeGens[*h] = new TensorCodeGen(source,
                                       rowMajor,
                                       restrictPointer,
                                       iccPragmas,
+                                      ompPragmas,
                                       graphCodeGen);
 }
 
@@ -169,18 +175,35 @@ void TensorContext::generateLibSOFile(const CodeGenHandle *h,
   const pid_t pid = fork();
   if (pid == 0) {
     // in the child process:
-    execlp(CCompileCommand.c_str(),
-           CCompileCommand.c_str(),
-           "-std=c99", "-pedantic",
-           "-Wall", "-Werror",
-           "-fpic", "-shared",
+    const TensorCodeGen *cg = getCodeGen(h);
+    if (cg->getOMPPragmas()) {
+      execlp(CCompileCommand.c_str(),
+             CCompileCommand.c_str(),
+             "-std=c99", "-pedantic",
+             "-Wall", "-Werror",
+             "-fpic", "-shared",
+             OpenMPCCFlag.c_str(),
 #ifdef NDEBUG
-           "-O3",
+            "-O3",
 #else
-           "-O0", "-g",
+            "-O0", "-g",
 #endif /* NDEBUG */
-           "-o", LibSOPath.c_str(),
-           CSourcePath.c_str(), nullptr);
+            "-o", LibSOPath.c_str(),
+            CSourcePath.c_str(), nullptr);
+    } else {
+      execlp(CCompileCommand.c_str(),
+             CCompileCommand.c_str(),
+             "-std=c99", "-pedantic",
+             "-Wall", "-Werror",
+             "-fpic", "-shared",
+#ifdef NDEBUG
+            "-O3",
+#else
+            "-O0", "-g",
+#endif /* NDEBUG */
+            "-o", LibSOPath.c_str(),
+            CSourcePath.c_str(), nullptr);
+    }
     // 'execlp' does not return
   } else {
     assert(pid != -1);

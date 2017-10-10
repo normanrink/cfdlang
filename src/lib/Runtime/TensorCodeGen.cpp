@@ -15,11 +15,13 @@ TensorCodeGen::TensorCodeGen(const char *source,
                              bool rowMajor,
                              bool restrictPointer,
                              bool iccPragmas,
+                             bool ompPragmas,
                              bool graphCodeGen)
   : Source(source),
     RowMajor(rowMajor),
     RestrictPointer(restrictPointer),
     IccPragmas(iccPragmas),
+    OMPPragmas(ompPragmas),
     GraphCodeGen(graphCodeGen),
     CG(nullptr),
     CCode("") {}
@@ -61,7 +63,8 @@ void TensorCodeGen::generate(const std::string &resultName) {
                    /* rowMajor */ RowMajor,
                    /* emitWrapper */ true,
                    /* restrictPointer */ RestrictPointer,
-                   /* iccPragmas */ IccPragmas);
+                   /* iccPragmas */ IccPragmas,
+                   /* ompPragmas */ OMPPragmas);
   emitter.codeGen(P.getAST());
   CCode = emitter.getCode();
   FunctionName = CG->getFunctionName();

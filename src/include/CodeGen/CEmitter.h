@@ -31,6 +31,8 @@ private:
 
   const bool IccPragmas;
 
+  const bool OMPPragmas;
+
 private:
   // context for the emission of expression trees:
   std::set<std::string> loopedOverIndices;
@@ -44,6 +46,7 @@ public:
   CEmitter(CodeGen *cg, bool rowMajor = true, bool emitWrapper = false,
            bool restrictPointer = true,
            bool iccPragmas = false,
+           bool ompPragmas = false,
            const std::string fpTypeName = "double")
   : CG(cg),
     FPTypeName(fpTypeName),
@@ -51,7 +54,8 @@ public:
     RowMajor(rowMajor),
     EmitWrapper(emitWrapper),
     RestrictPointer(restrictPointer),
-    IccPragmas(iccPragmas) {}
+    IccPragmas(iccPragmas),
+    OMPPragmas(ompPragmas) {}
 
   void codeGen(const Program *p);
   const std::string &getCode() const { return CG->getCode(); }

@@ -19,6 +19,7 @@ private:
   const bool RowMajor;
   const bool RestrictPointer;
   const bool IccPragmas;
+  const bool OMPPragmas;
   const bool GraphCodeGen;
 
   CodeGen *CG;
@@ -35,6 +36,7 @@ public:
                 bool rowMajor,
                 bool restrictPointer = true,
                 bool iccPragmas = false,
+                bool ompPragmas = false,
                 bool graphCodeGen = true);
   ~TensorCodeGen();
 
@@ -45,6 +47,8 @@ public:
 
   unsigned getNumFunctionArguments() const;
   std::string getFunctionArgumentName(unsigned i) const;
+
+  bool getOMPPragmas() const { return OMPPragmas; }
 };
 
 #endif /* __TENSOR_CODEGEN_H__ */

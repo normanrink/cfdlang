@@ -28,6 +28,7 @@ public:
 private:
   const std::string TmpFolder;
   const std::string CCompileCommand;
+  const std::string OpenMPCCFlag;
   const std::string Prefix;
 
   const pid_t ProcessID;
@@ -61,6 +62,7 @@ public:
 
   const std::string &getTmpFolder() const { return TmpFolder; }
   const std::string &getCCompileCommand() const { return CCompileCommand; }
+  const std::string &getOpenMPCCFlag() const { return OpenMPCCFlag; }
   const std::string &getPrefix() const { return Prefix; }
 
   pid_t getProcessID() const { return ProcessID; }
@@ -71,6 +73,7 @@ public:
                    bool rowMajor,
                    bool restrictPointer,
                    bool iccPragmas,
+                   bool ompPragmas,
                    bool graphCodeGen);
   void finalCodeGen(const CodeGenHandle *h);
 

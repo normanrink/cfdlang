@@ -28,6 +28,7 @@ module Tensor_Wrappers
                                     rowMajor,        &
                                     restrictPointer, &
                                     iccPragmas,      &
+                                    ompPragmas,      &
                                     graphCodeGen)    &
                bind(C, name="TensorInitCodeGen")
       use iso_c_binding
@@ -36,6 +37,7 @@ module Tensor_Wrappers
       integer(c_int),    intent(in)    :: rowMajor,        &
                                           restrictPointer, &
                                           iccPragmas,      &
+                                          ompPragmas,      &
                                           graphCodeGen
     end subroutine Tensor_Init_Code_Gen
       
