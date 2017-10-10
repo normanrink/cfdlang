@@ -14,8 +14,8 @@ void TensorFinalContext(handle *h_ctx);
 void TensorInitCodeGen(handle *h_ctx, handle *h_cg,
                        const char *source,
                        const Flag *rowMajor,
-                       const Flag *fuseElementLoop,
                        const Flag *restrictPointer,
+                       const Flag *iccPragmas,
                        const Flag *graphCodeGen);
 void TensorGenerateCCode(handle *h_ctx, handle *h_cg);
 void TensorFinalCodeGen(handle *h_ctx, handle *h_cg);

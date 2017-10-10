@@ -114,11 +114,13 @@ TensorContext::getExecution(const ExecutionHandle *h) const {
 void TensorContext::initCodeGen(CodeGenHandle *h, const char *source,
                                 bool rowMajor,
                                 bool restrictPointer,
+                                bool iccPragmas,
                                 bool graphCodeGen) {
   *h = getHandle();
   TheCodeGens[*h] = new TensorCodeGen(source,
                                       rowMajor,
                                       restrictPointer,
+                                      iccPragmas,
                                       graphCodeGen);
 }
 

@@ -70,6 +70,7 @@ public:
   void initCodeGen(CodeGenHandle *h, const char *source,
                    bool rowMajor,
                    bool restrictPointer,
+                   bool iccPragmas,
                    bool graphCodeGen);
   void finalCodeGen(const CodeGenHandle *h);
 

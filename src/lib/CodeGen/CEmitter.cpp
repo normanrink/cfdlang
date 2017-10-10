@@ -335,7 +335,7 @@ void CEmitter::emitForLoopHeader(unsigned indent,
                                  int intBound,
                                  bool unroll,
                                  bool simd) {
-  if (unroll) {
+  if (unroll && IccPragmas) {
     // unroll factor is currently not used:
     /*
     const int factor = getUnrollFactor(intBound);
@@ -348,7 +348,7 @@ void CEmitter::emitForLoopHeader(unsigned indent,
     append("#pragma unroll\n");
   }
   
-  if (simd) {
+  if (simd && IccPragmas) {
     EMIT_INDENT(indent)
     append("#pragma simd\n");
   }

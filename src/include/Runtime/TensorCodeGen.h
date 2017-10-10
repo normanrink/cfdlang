@@ -18,6 +18,7 @@ private:
 
   const bool RowMajor;
   const bool RestrictPointer;
+  const bool IccPragmas;
   const bool GraphCodeGen;
 
   CodeGen *CG;
@@ -33,6 +34,7 @@ public:
   TensorCodeGen(const char *source,
                 bool rowMajor,
                 bool restrictPointer = true,
+                bool iccPragmas = false,
                 bool graphCodeGen = true);
   ~TensorCodeGen();
 

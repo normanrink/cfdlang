@@ -44,6 +44,7 @@ extern "C" void TensorInitCodeGen(handle *h_ctx, handle *h_cg,
                                   const char *source,
                                   const Flag *rowMajor,
                                   const Flag *restrictPointer,
+                                  const Flag *iccPragmas,
                                   const Flag *graphCodeGen) {
   TensorContext *ctx = castToTensorContext(h_ctx);
   TensorContext::CodeGenHandle cgh;
@@ -51,6 +52,7 @@ extern "C" void TensorInitCodeGen(handle *h_ctx, handle *h_cg,
   ctx->initCodeGen(&cgh, source,
                    *rowMajor,
                    *restrictPointer,
+                   *iccPragmas,
                    *graphCodeGen);
   *h_cg = (handle) cgh;
 }

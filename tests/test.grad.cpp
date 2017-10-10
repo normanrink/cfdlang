@@ -40,6 +40,7 @@ int main(int argc, char** argv) {
 
   TC.initCodeGen(&cgh, Source.c_str(), /* rowMajor */true,
                                        /* restrictPointer */true,
+                                       /* iccPragmas */false,
                                        /* graphCodeGen */false);
   TC.generateCCode(&cgh);
 
