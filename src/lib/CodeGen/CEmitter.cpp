@@ -106,7 +106,7 @@ void CEmitter::codeGen(const Program *p) {
   if (hasElementLoop) {
     if (OMPPragmas) {
       EMIT_INDENT(initialNestingLevel*INDENT_PER_LEVEL);
-      append("#pragma omp parallel for\n");
+      append("#pragma omp for\n");
     }
 
     ElementIndex = getIndex();
