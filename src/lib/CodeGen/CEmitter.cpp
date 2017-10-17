@@ -5,6 +5,7 @@
 #include "CodeGen/ExprTreeLifter.h"
 #include "CodeGen/IdCopier.h"
 #include "CodeGen/IdFinder.h"
+#include "CodeGen/IndexMapper.h"
 #include "CodeGen/StackExprRemover.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
@@ -97,6 +98,28 @@ void CEmitter::codeGen(const Program *p) {
     // in incompatible ways:
     IdCopier IDC(CG);
     IDC.transformAssignments();
+
+    // (5)
+    /*
+    for (auto &a: CG->getAssignments()) {
+      IndexMapper IdxM(a.rhs);
+      IdxM.run();
+
+      IndexMapper::IndexSetTy is = IdxM.getLhsIndices(a.lhs);
+
+      // 'indices' are in the same order as they will appear
+      // in the loop nest (to be emitted later):
+      const IndexMapper::IndexSetTy indices = IdxM.getIndices();
+
+      for (unsigned i = 0; i < (indices.size()-1); i++) {
+        std::string idx0 = is[i], idx1 = is[i+1];
+
+        IdxM.areIndicesAlwaysAdjacent(idx0, idx1);
+
+        IndexMapper::areIndicesAdjacent(idx0, idx1, is);
+      }
+    }
+    */
   }
   // end of transformations
 
@@ -122,8 +145,11 @@ void CEmitter::codeGen(const Program *p) {
        a != e; a++) {
     const auto &na = std::next(a);
 
-    if (!fuse)
+    if (!fuse) {
       nestingLevel = initialNestingLevel;
+      Collapsed0 = "";
+      Collapsed1 = "";
+    }
 
     assert(a->lhs->isIdentifier() &&
            "internal error: left-hand side must be an identifier expression");
@@ -154,6 +180,25 @@ void CEmitter::codeGen(const Program *p) {
         exprIndices.push_back(index);
         resultIndices.push_back(index);
       }
+
+      // find index for collapsing:
+      {
+        IndexMapper IdxM(a->rhs, exprIndices);
+        IdxM.run();
+
+        IndexMapper::IndexSetTy is = IdxM.getLhsIndices(a->lhs);
+
+        for (unsigned i = 0; i < (exprIndices.size()-1); i++) {
+          std::string idx0 = is[i], idx1 = is[i+1];
+
+          if(IdxM.areIndicesAlwaysAdjacent(idx0, idx1)
+             && IndexMapper::areIndicesAdjacent(idx0, idx1, is)) {
+            Collapsed0 = idx0;
+            Collapsed1 = idx1;
+            break;
+          }
+        }
+      }
     }
 
     setResultTemp(a->lhs);
@@ -181,6 +226,30 @@ void CEmitter::codeGen(const Program *p) {
       ContractionExprCounter CEC(na->rhs);
       CEC.run();
       fuse = fuse && (CEC.getCount() == 0);
+
+      // find index for collapsing in 'na':
+      {
+        std::string n_collapsed0 = "", n_collapsed1 = "";
+
+        IndexMapper IdxM(na->rhs, exprIndices);
+        IdxM.run();
+
+        IndexMapper::IndexSetTy is = IdxM.getLhsIndices(na->lhs);
+
+        for (unsigned i = 0; i < (exprIndices.size()-1); i++) {
+          std::string idx0 = is[i], idx1 = is[i+1];
+
+          if(IdxM.areIndicesAlwaysAdjacent(idx0, idx1)
+             && IndexMapper::areIndicesAdjacent(idx0, idx1, is)) {
+            n_collapsed0 = idx0;
+            n_collapsed1 = idx1;
+            break;
+          }
+        }
+
+        fuse = fuse &&
+               (n_collapsed0 == Collapsed0) && (n_collapsed1 == Collapsed1);
+      }
     }
 
     if (!fuse) {
@@ -384,10 +453,16 @@ std::string CEmitter::subscriptString(const std::vector<std::string> &indices,
 
   if (RowMajor) {
     for (int i = 0; i < rank; i++) {
+      if ((i >= 1) && Collapsed1 == indices[i] && Collapsed0 == indices[i-1])
+        continue;
+
       result += "[" + indices[i] + "]";
     }
   } else {
     for (int i = (rank-1); i >= 0; i--) {
+      if ((i >= 1) && Collapsed1 == indices[i] && Collapsed0 == indices[i-1])
+        continue;
+
       result += "[" + indices[i] + "]";
     }
   }
@@ -416,6 +491,46 @@ std::string CEmitter::dimsString(const std::vector<int> &dims,
                                        ? "restrict "
                                        : "";
       result += "[" + restrictQual + std::to_string(dims[i]) + "]";
+    }
+  }
+
+  return result;
+}
+
+std::string
+CEmitter::dimsStringWithIndices(const std::vector<int> &dims,
+                                const std::vector<std::string> &indices) const {
+  const int rank = dims.size();
+  if(rank == 0)
+    return "";
+
+  std::string result = "";
+
+  if (RowMajor) {
+    for (int i = 0; i < rank; i++) {
+      int d = dims[i];
+
+      if ((i < rank-1)
+          && Collapsed0 == indices[i] && Collapsed1 == indices[i+1])
+        d *= dims[i+1];
+
+      if ((i >= 1) && Collapsed1 == indices[i] && Collapsed0 == indices[i-1])
+        continue;
+
+      result += "[" + std::to_string(d) + "]";
+    }
+  } else {
+    for (int i = (rank-1); i >= 0; i--) {
+      int d = dims[i];
+
+      if ((i < rank-1)
+          && Collapsed0 == indices[i] && Collapsed1 == indices[i+1])
+        d *= dims[i+1];
+
+      if ((i >= 1) && Collapsed1 == indices[i] && Collapsed0 == indices[i-1])
+        continue;
+
+      result += "[" +  std::to_string(d) + "]";
     }
   }
 
@@ -482,7 +597,32 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
 
   std::vector<int> dims = en->getDims();
   updateWithElemInfo(allIndices, dims, id->getName());
-  return (en->getName() + subscriptString(allIndices, dims));
+
+  std::string name = en->getName();
+  // 'name' must be prepended by cast if indices are collapsed:
+  {
+    bool has_c0 = false, has_c1 = false;
+    for (int i = 0; i < indices.size(); i++) {
+      if (Collapsed0 == indices[i]) {
+        has_c0 = true;
+        break;
+      }
+    }
+    for (int i = 0; i < indices.size(); i++) {
+      if (Collapsed1 == indices[i]) {
+        has_c1 = true;
+        break;
+      }
+    }
+
+    // if both indices are present, then they are collapsed:
+    // (otherwise 'Collapsed0' and 'Collapsed1' would be emtpy strings)
+    if (has_c0 && has_c1) {
+      name = "(*(double(* restrict)" + dimsStringWithIndices(dims, indices)
+             + ")" + name + ")";
+    }
+  }
+  return (name + subscriptString(allIndices, dims));
 }
 
 void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
@@ -495,6 +635,10 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
       // determine the first and the last value of 'i' at which
       // a new loop header will actually be emitted:
       for (int i = 0; i < rank; i++) {
+        if ((i >= 1)
+            && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
+          continue;
+
         const std::string &index = exprIndices[i];
         if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
           continue;
@@ -505,12 +649,22 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
     }
 
     for (int i = 0; i < rank; i++) {
+      int d = exprDims[i];
+
+      if ((i < rank-1)
+          && Collapsed0 == exprIndices[i] && Collapsed1 == exprIndices[i+1])
+        d *= exprDims[i+1];
+
+      if ((i >= 1)
+          && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
+        continue;
+
       const std::string &index = exprIndices[i];
       if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
         // 'index' is already iterated over in a for-loop:
         continue;
       }
-      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i],
+      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, d,
       // emit 'unroll' pragma only for the first loop header:
                         unroll && (i == ifirst),
       // emit 'simd' pragma only for the last loop header, and only
@@ -526,6 +680,10 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
       // determine the first and the last value of 'i' at which
       // a new loop header will actually be emitted:
       for (int i = (rank-1); i >= 0; i--) {
+        if ((i >= 1)
+            && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
+          continue;
+
         const std::string &index = exprIndices[i];
         if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
           continue;
@@ -535,12 +693,22 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
       }
     }
     for (int i = (rank-1); i >= 0; i--) {
+      int d = exprDims[i];
+
+      if ((i < rank-1)
+          && Collapsed0 == exprIndices[i] && Collapsed1 == exprIndices[i+1])
+        d *= exprDims[i+1];
+
+      if ((i >= 1)
+          && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
+        continue;
+
       const std::string &index = exprIndices[i];
       if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
         // 'index' is already iterated over in a for-loop:
         continue;
       }
-      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, exprDims[i],
+      emitForLoopHeader(nestingLevel*INDENT_PER_LEVEL, index, d,
       // emit 'unroll' pragma only for the first loop header:
                         unroll && (i == ifirst),
       // emit 'simd' pragma only for the last loop header, and only

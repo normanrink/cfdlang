@@ -38,6 +38,7 @@ int main(int argc, char** argv) {
     "var input u  : tensorIN                 \n"
     "var output v : tensorOUT                \n"
     "                                        \n"
+    //"v = (A # A # A # u . [[5 6] [3 7] [1 8]])^[[0 2]] \n");
     "v = A # A # A # u . [[1 6] [3 7] [5 8]] \n");
 
   TC.initCodeGen(&cgh, Source.c_str(), /* rowMajor */true,

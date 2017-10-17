@@ -11,4 +11,6 @@ add_library(obj.CodeGen OBJECT
 
             TheanoEmitter.cpp
             CEmitter.cpp
+
+            IndexMapper.cpp
             )

@@ -42,6 +42,9 @@ private:
 
   std::string ElementIndex;
 
+  std::string Collapsed0;
+  std::string Collapsed1;
+
 public:
   CEmitter(CodeGen *cg, bool rowMajor = true, bool emitWrapper = false,
            bool restrictPointer = true,
@@ -87,6 +90,9 @@ protected:
                               const std::vector<int> &dims) const;
   std::string dimsString(const std::vector<int> &dims,
                          bool emitRestrict = false) const;
+  std::string
+  dimsStringWithIndices(const std::vector<int> &dims,
+                        const std::vector<std::string> &indices) const;
 
   void updateWithElemInfo(std::vector<std::string> &indices,
                           std::vector<int> &dims,
