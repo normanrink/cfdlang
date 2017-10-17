@@ -523,6 +523,15 @@ CEmitter::dimsStringWithIndices(const std::vector<int> &dims,
     for (int i = (rank-1); i >= 0; i--) {
       int d = dims[i];
 
+/*
+      if ((i >= 1)
+          && Collapsed0 == indices[(rank-1)-i] && Collapsed1 == indices[(rank-1)-i+1])
+        d *= dims[i-1];
+
+      if ((i < rank-1) && Collapsed1 == indices[(rank-1)-i] && Collapsed0 == indices[(rank-1)-i-1])
+        continue;
+*/
+
       if ((i < rank-1)
           && Collapsed0 == indices[i] && Collapsed1 == indices[i+1])
         d *= dims[i+1];
@@ -618,7 +627,7 @@ CEmitter::subscriptedIdentifier(const ExprNode *en,
     // if both indices are present, then they are collapsed:
     // (otherwise 'Collapsed0' and 'Collapsed1' would be emtpy strings)
     if (has_c0 && has_c1) {
-      name = "(*(double(* restrict)" + dimsStringWithIndices(dims, indices)
+      name = "(*(double(* restrict)" + dimsStringWithIndices(dims, allIndices)
              + ")" + name + ")";
     }
   }
@@ -680,8 +689,7 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
       // determine the first and the last value of 'i' at which
       // a new loop header will actually be emitted:
       for (int i = (rank-1); i >= 0; i--) {
-        if ((i >= 1)
-            && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
+        if ((i >= 1) && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
           continue;
 
         const std::string &index = exprIndices[i];
@@ -699,9 +707,9 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
           && Collapsed0 == exprIndices[i] && Collapsed1 == exprIndices[i+1])
         d *= exprDims[i+1];
 
-      if ((i >= 1)
-          && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
+      if ((i >= 1) && Collapsed1 == exprIndices[i] && Collapsed0 == exprIndices[i-1])
         continue;
+
 
       const std::string &index = exprIndices[i];
       if (loopedOverIndices.find(index) != loopedOverIndices.end()) {
