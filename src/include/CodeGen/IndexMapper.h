@@ -72,7 +72,7 @@ public:
   DEF_VISIT_EXPR_NODE(Mul)
   DEF_VISIT_EXPR_NODE(Div)
 
-  #undef DEF_VISIT_INCOMPATIBLE_EXPR_NODE
+  #undef DEF_VISIT_EXPR_NODE
 
   virtual void visitScalarMulExpr(const ScalarMulExpr *en) override {
     en->getChild(1)->visit(this);

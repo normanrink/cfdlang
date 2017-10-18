@@ -48,7 +48,7 @@ public:
   DEF_VISIT_EXPR_NODE(Transposition)
   DEF_VISIT_EXPR_NODE(Identifier)
 
-  #undef DECL_VISIT_EXPR_NODE
+  #undef DEF_VISIT_EXPR_NODE
 
   virtual void run() {
     Counter = 0;

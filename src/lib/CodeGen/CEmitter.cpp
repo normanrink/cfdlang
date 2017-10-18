@@ -6,6 +6,7 @@
 #include "CodeGen/IdCopier.h"
 #include "CodeGen/IdFinder.h"
 #include "CodeGen/IndexMapper.h"
+#include "CodeGen/ParentFinder.h"
 #include "CodeGen/StackExprRemover.h"
 #include "Sema/Sema.h"
 #include "Sema/TensorType.h"
@@ -61,7 +62,7 @@ void CEmitter::codeGen(const Program *p) {
     for (auto &a: CG->getAssignments())
       RhsToLhsMap[a.rhs] = static_cast<const IdentifierExpr *>(a.lhs);
 
-    // (3) lift contractions to the top level:
+    // (3.1) lift contractions to the top level:
     const auto &nodeLiftPredicate = [&RhsToLhsMap](const ExprNode *en,
                                                    const ExprNode *root)
                                     -> bool {
@@ -93,6 +94,22 @@ void CEmitter::codeGen(const Program *p) {
     };
     ExprTreeLifter lifter(CG, nodeLiftPredicate);
     lifter.transformAssignments();
+
+    // (3.1) lift out any expressions below contractions:
+    // (in general, multiplication or division by a scalar
+    // can probably remain under a contraction)
+    const auto &subContrLiftPredicate = [](const ExprNode *en,
+                                           const ExprNode *root)
+                                        -> bool {
+      ParentFinder PF(root);
+      auto *p = PF.find(en);
+      if(p && p->isContractionExpr())
+        return true;
+
+      return false;
+    };
+    ExprTreeLifter lifter2(CG, subContrLiftPredicate);
+    lifter2.transformAssignments();
 
     // (4) copy identifiers if they appear on 'lhs' and 'rhs'
     // in incompatible ways:
@@ -139,17 +156,11 @@ void CEmitter::codeGen(const Program *p) {
     ++initialNestingLevel;
   }
 
-  bool fuse = false;
+  bool fuse = false, fuseNext = false;
   std::set<std::string> emittedNames;
   for (auto a = CG->getAssignments().begin(), e = CG->getAssignments().end();
        a != e; a++) {
     const auto &na = std::next(a);
-
-    if (!fuse) {
-      nestingLevel = initialNestingLevel;
-      Collapsed0 = "";
-      Collapsed1 = "";
-    }
 
     assert(a->lhs->isIdentifier() &&
            "internal error: left-hand side must be an identifier expression");
@@ -157,20 +168,18 @@ void CEmitter::codeGen(const Program *p) {
     const IdentifierExpr *result = static_cast<const IdentifierExpr *>(a->lhs);
     const std::string &resultName = result->getName();
 
-    // emit defintion of 'result' if necessary:
-    if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
-        && !emittedNames.count(resultName)) {
-      EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
-      append(getFPTypeName() + " " + resultName
-             + dimsString(getDims(result)) + ";\n");
-
-      emittedNames.insert(resultName);
-    }
-
     const ExprNode *en = a->rhs;
     const std::vector<int> &dims = getDims(en);
 
+
+    const IdentifierExpr *nextResult = nullptr;
+    std::string nextResultName = "";
+
     if (!fuse) {
+      nestingLevel = initialNestingLevel;
+      Collapsed0 = "";
+      Collapsed1 = "";
+
       // generate enough indices for the expression:
       exprIndices.clear();
       resultIndices.clear();
@@ -201,31 +210,17 @@ void CEmitter::codeGen(const Program *p) {
       }
     }
 
-    setResultTemp(a->lhs);
-    // we need this if-clause since code emission
-    // for identifiers has been optimized out ...
-    if (en->isIdentifier()) {
-      // ... however, as a result of transforming stack expressions,
-      // assignments with nothing but an identifier on the 'rhs' may
-      // appear at the top level:
-      visitTopLevelIdentifier(en);
-    } else {
-      en->visit(this);
-    }
-
-    assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
-
     if (na == CG->getAssignments().end()) {
-      fuse = false;
+      fuseNext = false;
     } else {
-      const IdentifierExpr *next_result =
-        static_cast<const IdentifierExpr *>(na->lhs);
-      fuse = (getDims(next_result) == getDims(result));
+      nextResult = static_cast<const IdentifierExpr *>(na->lhs);
+      nextResultName = nextResult->getName();
+      fuseNext = (getDims(nextResult) == getDims(result));
     }
-    if (fuse) {
+    if (fuseNext) {
       ContractionExprCounter CEC(na->rhs);
       CEC.run();
-      fuse = fuse && (CEC.getCount() == 0);
+      fuseNext = fuseNext && (CEC.getCount() == 0);
 
       // find index for collapsing in 'na':
       {
@@ -247,15 +242,53 @@ void CEmitter::codeGen(const Program *p) {
           }
         }
 
-        fuse = fuse &&
-               (n_collapsed0 == Collapsed0) && (n_collapsed1 == Collapsed1);
+        fuseNext = fuseNext &&
+                   (n_collapsed0 == Collapsed0) && (n_collapsed1 == Collapsed1);
       }
     }
 
-    if (!fuse) {
+    // emit defintion of 'result' if necessary:
+    if (!sema.is_in_inputs(resultName) && !sema.is_in_outputs(resultName)
+        && !emittedNames.count(resultName)) {
+      EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
+      append(getFPTypeName() + " " + resultName
+             + dimsString(getDims(result)) + ";\n");
+
+      emittedNames.insert(resultName);
+    }
+    // emit definition of next result if fused:
+    if (fuseNext && 
+        !sema.is_in_inputs(nextResultName) && !sema.is_in_outputs(nextResultName)
+        && !emittedNames.count(nextResultName)) {
+      EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
+      append(getFPTypeName() + " " + nextResultName
+             + dimsString(getDims(nextResult)) + ";\n");
+
+      emittedNames.insert(nextResultName);
+    }
+
+    setResultTemp(a->lhs);
+    // we need this if-clause since code emission
+    // for identifiers has been optimized out ...
+    if (en->isIdentifier()) {
+      // ... however, as a result of transforming stack expressions,
+      // assignments with nothing but an identifier on the 'rhs' may
+      // appear at the top level:
+      visitTopLevelIdentifier(en);
+    } else {
+      en->visit(this);
+    }
+
+    assert((nestingLevel-initialNestingLevel) == loopedOverIndices.size());
+
+    if (fuseNext) {
+      fuse = true;
+    } else {
       // close all for-loops:
       emitLoopFooterNest();
+      fuse = false;
     }
+    fuseNext = false;
   }
 
   if (hasElementLoop) {
