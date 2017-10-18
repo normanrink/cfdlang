@@ -222,6 +222,13 @@ void CEmitter::codeGen(const Program *p) {
       CEC.run();
       fuseNext = fuseNext && (CEC.getCount() == 0);
 
+      IdFinder IF(na->rhs);
+      bool found = IF.find(resultName);
+      // cannot fuse if the next 'rhs' contains an incompatible
+      // use of the result of the current assignement:
+      if (found && IF.getIdIncompatible())
+        fuseNext = false;
+
       // find index for collapsing in 'na':
       {
         std::string n_collapsed0 = "", n_collapsed1 = "";
