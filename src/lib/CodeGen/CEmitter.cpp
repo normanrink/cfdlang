@@ -939,7 +939,8 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
     for (int i = 0; i < lhsDims.size(); i++) {
       std::string index;
 
-      if (i == en->getLeftIndices()[contrIdxCounter])
+      if (contrIdxCounter < en->getLeftIndices().size()
+          && i == en->getLeftIndices()[contrIdxCounter])
         index = contrIndices[contrIdxCounter++];
       else
         index = exprIndices[exprIdxCounter++];
@@ -954,7 +955,8 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
     for (int i = 0; i < rhsDims.size(); i++) {
       std::string index;
 
-      if (i == en->getRightIndices()[contrIdxCounter])
+      if (contrIdxCounter < en->getRightIndices().size()
+          && i == en->getRightIndices()[contrIdxCounter])
         index = contrIndices[contrIdxCounter++];
       else
         index = exprIndices[exprIdxCounter++];
