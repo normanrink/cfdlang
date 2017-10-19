@@ -166,6 +166,8 @@ void CEmitter::codeGen(const Program *p) {
       // use of the result of the current assignement:
       if (found && IF.getIdIncompatible())
         fuseNext = false;
+      if (result->permute() || nextResult->permute())
+        fuseNext = false;
     }
 
     if (!fuse)
