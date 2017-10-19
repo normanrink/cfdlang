@@ -229,6 +229,9 @@ void CEmitter::codeGen(const Program *p) {
       if (found && IF.getIdIncompatible())
         fuseNext = false;
 
+      if (result->permute() || nextResult->permute())
+        fuseNext = false;
+    
       // find index for collapsing in 'na':
       {
         std::string n_collapsed0 = "", n_collapsed1 = "";

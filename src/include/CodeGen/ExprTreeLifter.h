@@ -71,7 +71,14 @@ public:
 
   // helper methods that implement functionality from the code generator 'cg':
 private:
-  std::string getTemp() { return CG->getTemp(); }
+  std::string getTempWithDims(const std::vector<int> &dims) {
+    return CG->getTempWithDims(dims);
+  }
+  void freeTempWithDims(const std::string &name,
+                        const std::vector<int> &dims) {
+    CG->freeTempWithDims(name, dims);
+  }
+  
   ExprNodeBuilder *getENBuilder() { return CG->getENBuilder(); }
 };
 

@@ -145,6 +145,31 @@ public:
   static const std::string getTupleListString(const TupleList &list);
 
   static const BinaryExpr *extractTensorExprOrNull(const Expr *e);
+
+public:
+  typedef std::vector<int> DimsTy;
+  typedef std::vector<std::string> TempVecTy;
+
+private:
+  std::map<DimsTy, TempVecTy> FreeTemps;
+
+public:
+  std::string getTempWithDims(const DimsTy &dims) {
+    TempVecTy &temps = FreeTemps[dims];
+
+    if (temps.size() == 0) {
+      return getTemp();
+    } else {
+      auto result = temps.back();
+      temps.pop_back();
+      return result;
+    }
+  }
+
+  void freeTempWithDims(const std::string &name, const DimsTy &dims) {
+    TempVecTy &temps = FreeTemps[dims];
+    temps.push_back(name);
+  }
 };
 
 #endif /* __CODEGEN_H__ */

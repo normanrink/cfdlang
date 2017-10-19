@@ -130,6 +130,14 @@ protected:
   // helper methods:
 private:
   std::string getTemp() { return CG->getTemp(); }
+  std::string getTempWithDims(const std::vector<int> &dims) {
+    return CG->getTempWithDims(dims);
+  }
+  void freeTempWithDims(const std::string &name,
+                        const std::vector<int> &dims) {
+    CG->freeTempWithDims(name, dims);
+  }
+
   void append(const std::string &code) { CG->append(code); }
 
   const Sema *getSema() const { return CG->getSema(); }

@@ -227,6 +227,12 @@ void TensorContext::buildKernel(const KernelHandle *h) {
   k->load();
 }
 
+void TensorContext::buildAndReturnKernel(const KernelHandle *h, void **code) {
+  TensorKernel *k = getKernel(h);
+  buildKernel(h);
+  *code = (void*)k->getCode();
+}
+
 void TensorContext::finalKernel(const KernelHandle *h) {
   TensorKernel *k = getKernel(h);
   delete k;

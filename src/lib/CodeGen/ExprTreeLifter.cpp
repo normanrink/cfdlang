@@ -32,7 +32,7 @@ void ExprTreeLifter::liftNode(ExprNode *en) {
     transformChildren(en);
     setParent(nullptr);
   } else {
-    const std::string temp = getTemp();
+    const std::string temp = getTempWithDims(en->getDims());
     ExprNode *newNode = getENBuilder()->createIdentifierExpr(temp,
                                                              en->getDims());
     // replace sub-expression 'en' (which is to be lifted)
@@ -57,6 +57,8 @@ void ExprTreeLifter::liftNode(ExprNode *en) {
     setParent(nullptr);
     setChildIndex(-1);
     transformChildren(root);
+
+    freeTempWithDims(temp, en->getDims());
   }
 
   setChildIndex(childIndex);

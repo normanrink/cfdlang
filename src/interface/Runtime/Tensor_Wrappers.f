@@ -67,6 +67,13 @@ module Tensor_Wrappers
       use iso_c_binding
       integer(c_long), intent(inout) :: h_ctx, h_k 
     end subroutine Tensor_Build_Kernel
+
+    subroutine Tensor_Build_And_Return_Kernel(h_ctx, h_k, code) &
+               bind(C, name="TensorBuildAndReturnKernel")
+      use iso_c_binding
+      integer(c_long), intent(inout) :: h_ctx, h_k 
+      type(c_funptr), intent(inout)  :: code
+    end subroutine Tensor_Build_And_Return_Kernel
     
     subroutine Tensor_Final_Kernel(h_ctx, h_k) &
                bind(C, name="TensorFinalKernel")

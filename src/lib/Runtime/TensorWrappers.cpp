@@ -91,6 +91,14 @@ extern "C" void TensorBuildKernel(handle *h_ctx, handle *h_k) {
   ctx->buildKernel(&kh);
 }
 
+extern "C" void TensorBuildAndReturnKernel(handle *h_ctx, handle *h_k,
+                                           void **code) {
+  TensorContext *ctx = castToTensorContext(h_ctx);
+  TensorContext::KernelHandle kh = castToKernelHandle(h_k);
+
+  ctx->buildAndReturnKernel(&kh, code);
+}
+
 extern "C" void TensorFinalKernel(handle *h_ctx, handle *h_k) {
   TensorContext *ctx = castToTensorContext(h_ctx);
   TensorContext::KernelHandle kh = castToKernelHandle(h_k);
