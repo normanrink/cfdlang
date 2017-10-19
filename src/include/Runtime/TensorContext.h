@@ -95,6 +95,7 @@ public:
                   const CodeGenHandle *cg,
                   bool cleanOnDestruction = false);
   void buildKernel(const KernelHandle *h);
+  void buildAndReturnKernel(const KernelHandle *h, void **code);
   void finalKernel(const KernelHandle *h);
 
   unsigned getNumFormalArguments(const KernelHandle *h) const;

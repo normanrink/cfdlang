@@ -25,6 +25,7 @@ void TensorFinalCodeGen(handle *h_ctx, handle *h_cg);
 void TensorInitKernel(handle *h_ctx, handle *h_cg, handle *h_k,
                       const Flag *cleanOnDestruction);
 void TensorBuildKernel(handle *h_ctx, handle *h_k);
+TensorBuildAndReturnKernel(handle *h_ctx, handle *h_k, void **code);
 void TensorFinalKernel(handle *h_ctx, handle *h_k);
 
 
