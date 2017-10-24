@@ -245,12 +245,16 @@ void CEmitter::codeGen(const Program *p) {
     assert(numArgs == ArgumentsDimensions.size());
 
     append("\n");
-    const std::string restrictQual = RestrictPointer ? "restrict " : ""; 
-    append("void " + getFunctionName() + "(" + getFPTypeName()
-           + "* "  + restrictQual
-           + "args[" + restrictQual
-                     + std::to_string((long long)numArgs)
-                     + "]){\n");
+    const std::string &wrapperDef = "void " + getFunctionName() + "(";
+    append(wrapperDef);
+    for (int i = 0; i < numArgs; i++) {
+      if (i != 0) {
+        append(",\n");
+        EMIT_INDENT(wrapperDef.length())
+      }
+      append(getFPTypeName() + " *arg" + std::to_string((long long)i));
+    }
+    append("){\n");
 
     const std::string &functionCall = getFunctionNameWrapped() + "(";
     // emit the call of 'FunctionName':
@@ -275,7 +279,7 @@ void CEmitter::codeGen(const Program *p) {
         append("*");
       }
       
-      append("args[" + std::to_string((long long)i) + "]");
+      append("arg" + std::to_string((long long)i));
     }
     append(");\n");
 

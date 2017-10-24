@@ -7,6 +7,7 @@ module Tensor_Wrappers
     integer(c_long) :: cg
     integer(c_long) :: k
     integer(c_long) :: ex
+    type(c_funptr)  :: code
   end type Tensor_Handle
 
   interface
@@ -32,7 +33,7 @@ module Tensor_Wrappers
                                     graphCodeGen)    &
                bind(C, name="TensorInitCodeGen")
       use iso_c_binding
-      integer(c_long),    intent(inout) :: h_ctx, h_cg
+      integer(c_long),   intent(inout) :: h_ctx, h_cg
       character(c_char), intent(in)    :: source(*)
       integer(c_int),    intent(in)    :: rowMajor,        &
                                           restrictPointer, &
@@ -59,7 +60,7 @@ module Tensor_Wrappers
                bind(C, name="TensorInitKernel")
       use iso_c_binding
       integer(c_long), intent(inout) :: h_ctx, h_cg, h_k
-      integer(c_int), intent(in)    :: cleanOnDestruction
+      integer(c_int),  intent(in)    :: cleanOnDestruction
     end subroutine Tensor_Init_Kernel
     
     subroutine Tensor_Build_Kernel(h_ctx, h_k) &
@@ -72,7 +73,7 @@ module Tensor_Wrappers
                bind(C, name="TensorBuildAndReturnKernel")
       use iso_c_binding
       integer(c_long), intent(inout) :: h_ctx, h_k 
-      type(c_funptr), intent(inout)  :: code
+      type(c_funptr),  intent(inout) :: code
     end subroutine Tensor_Build_And_Return_Kernel
     
     subroutine Tensor_Final_Kernel(h_ctx, h_k) &
@@ -92,7 +93,7 @@ module Tensor_Wrappers
                                    arg)         &
                bind(C, name="TensorAddArgument")
       use iso_c_binding
-      integer(c_long),    intent(inout)     :: h_ctx, h_ex
+      integer(c_long),   intent(inout)     :: h_ctx, h_ex
       character(c_char), intent(in)        :: name(*)
       type(c_ptr),       intent(in), value :: arg
     end subroutine Tensor_Add_Argument
@@ -103,10 +104,10 @@ module Tensor_Wrappers
                                     num_args)    &
                bind(C, name="TensorAddArguments")
       use iso_c_binding
-      integer(c_long),    intent(inout)      :: h_ctx, h_ex
-      integer(c_int), intent(in)             :: num_args
-      type(c_ptr), intent(in)                :: names(num_args)
-      type(c_ptr), intent(in)                :: args(num_args)
+      integer(c_long), intent(inout) :: h_ctx, h_ex
+      integer(c_int),  intent(in)    :: num_args
+      type(c_ptr),     intent(in)    :: names(num_args)
+      type(c_ptr),     intent(in)    :: args(num_args)
     end subroutine Tensor_Add_Arguments
                          
     subroutine Tensor_Clear_Arguments(h_ctx, h_ex) &
@@ -127,10 +128,10 @@ module Tensor_Wrappers
                                              num_args)    &
                bind(C, name="TensorExecuteWithArguments")
       use iso_c_binding
-      integer(c_long),    intent(inout)      :: h_ctx, h_ex
-      integer(c_int), intent(in)             :: num_args
-      type(c_ptr), intent(in)                :: names(num_args)
-      type(c_ptr), intent(in)                :: args(num_args)
+      integer(c_long), intent(inout) :: h_ctx, h_ex
+      integer(c_int),  intent(in)    :: num_args
+      type(c_ptr),     intent(in)    :: names(num_args)
+      type(c_ptr),     intent(in)    :: args(num_args)
     end subroutine Tensor_Execute_With_Arguments
 
     subroutine Tensor_Execute_With_Positional_Args(h_ctx, h_ex, &
@@ -138,9 +139,9 @@ module Tensor_Wrappers
                                                     num_args)    &
                bind(C, name="TensorExecuteWithPositionalArgs")
       use iso_c_binding
-      integer(c_long),    intent(inout)      :: h_ctx, h_ex
-      integer(c_int), intent(in)             :: num_args
-      type(c_ptr), intent(in)                :: args(num_args)
+      integer(c_long), intent(inout) :: h_ctx, h_ex
+      integer(c_int),  intent(in)    :: num_args
+      type(c_ptr),     intent(in)    :: args(num_args)
     end subroutine Tensor_Execute_With_Positional_Args
     
     subroutine Tensor_Final_Execution(h_ctx, h_ex) &
