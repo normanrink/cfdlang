@@ -25,6 +25,8 @@ int main(int argc, char** argv) {
   TensorContext::CodeGenHandle cgh;
   TensorContext::KernelHandle kh;
   TensorContext::ExecutionHandle eh;
+  // inputs first, then outputs:
+  void (*kernel)(double *u, double *Dx, double *Dy, double *Dz, double *v);
 
   const std::string Source = std::string(
     "type T : [" + m_str + " " + m_str + "]\n"
@@ -46,15 +48,10 @@ int main(int argc, char** argv) {
   TC.generateCCode(&cgh);
 
   TC.initKernel(&kh, &cgh);
-  TC.buildKernel(&kh);
+  TC.buildAndReturnKernel(&kh, (void**)&kernel);
   TC.finalCodeGen(&cgh);
 
   TC.initExecution(&eh, &kh);
-  TC.addArgument(&eh, "Dx", &D[0*m*m]);
-  TC.addArgument(&eh, "Dy", &D[1*m*m]);
-  TC.addArgument(&eh, "Dz", &D[2*m*m]);
-  TC.addArgument(&eh, "u", &u[0]);
-  TC.addArgument(&eh, "v", &v[0]);
 
   // print source code:
   printf("SOURCE CODE:\n");
@@ -93,7 +90,7 @@ int main(int argc, char** argv) {
   }
 
   // execute kernel:
-  TC.execute(&eh);
+  kernel(&u[0], &D[0*m*m], &D[1*m*m], &D[2*m*m], &v[0]);
 
   // print results:
   {
