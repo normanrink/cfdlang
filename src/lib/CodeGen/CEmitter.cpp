@@ -404,6 +404,10 @@ void CEmitter::emitForLoopHeader(unsigned indent,
     EMIT_INDENT(indent)
     append("#pragma simd\n");
   }
+  if (simd && OMPPragmas) {
+    EMIT_INDENT(indent)
+    append("#pragma omp simd\n");
+  }
   
   emitForLoopHeader(indent, indexVar, std::to_string((long long)intBound));
 }
