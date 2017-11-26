@@ -673,7 +673,7 @@ void CEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
 
   // emit for-loop nest as appropriate:
   exprIndices = savedExprIndices;
-  emitLoopHeaderNest(exprDims, true, true);
+  emitLoopHeaderNest(exprDims, false, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(subscriptedIdentifier(result, resultIndices)
@@ -804,7 +804,7 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   }
 
   // emit for-loop nest for the result:
-  emitLoopHeaderNest(exprDims, true, true);
+  emitLoopHeaderNest(exprDims, false, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(getFPTypeName() + " " + temp + " = 0.0;\n");
@@ -815,13 +815,13 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   exprIndices = lhsIndices;
   lhsTemp = visitChildExpr(lhsExpr);
   // emit for-loop nest for the 'lhs' early:
-  emitLoopHeaderNest(lhsDims, true, true);
+  emitLoopHeaderNest(lhsDims, false, true);
 
   // visit the 'rhs', emit loop headers as necessary:
   exprIndices = rhsIndices;
   rhsTemp = visitChildExpr(rhsExpr);
   // emit for-loop nest for the 'rhs':
-  emitLoopHeaderNest(rhsDims, true, true);
+  emitLoopHeaderNest(rhsDims, false, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(temp + " += " + lhsTemp + " * " + rhsTemp + ";\n");
@@ -946,7 +946,7 @@ void CEmitter::visitTopLevelIdentifier(const ExprNode *en) {
 
   const std::vector<int> &dims = getDims(en);
 
-  emitLoopHeaderNest(dims, true, true);
+  emitLoopHeaderNest(dims, false, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(subscriptedIdentifier(result, exprIndices)
