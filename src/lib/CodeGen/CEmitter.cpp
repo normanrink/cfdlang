@@ -597,7 +597,9 @@ void CEmitter::emitLoopHeaderNest(const std::vector<int> &exprDims,
       // emit 'simd' pragma only for the last loop header, and only
       // if the first and the last loop header do no coincide:
       // (This avoids having both pragmas before the same loop header.)
-                        simd && (i == ilast) && (ifirst != ilast));
+                        //(simd && (i == ilast)  && (exprDims[i] % 4 == 0)) ||
+                        //(simd && (i == ifirst) && (exprDims[i] % 4 != 0)));
+                        (simd && (i == ilast)));
       loopedOverIndices.insert(index);
       ++nestingLevel;
     }
@@ -677,7 +679,7 @@ void CEmitter::visitBinOpExpr(const ExprNode *en, const std::string &op) {
 
   // emit for-loop nest as appropriate:
   exprIndices = savedExprIndices;
-  emitLoopHeaderNest(exprDims, true, true);
+  emitLoopHeaderNest(exprDims, false, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(subscriptedIdentifier(result, resultIndices)
@@ -808,7 +810,7 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   }
 
   // emit for-loop nest for the result:
-  emitLoopHeaderNest(exprDims, true, true);
+  emitLoopHeaderNest(exprDims, false, true);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(getFPTypeName() + " " + temp + " = 0.0;\n");
@@ -819,13 +821,13 @@ void CEmitter::visitContractionExpr(const ContractionExpr *en) {
   exprIndices = lhsIndices;
   lhsTemp = visitChildExpr(lhsExpr);
   // emit for-loop nest for the 'lhs' early:
-  emitLoopHeaderNest(lhsDims, true, true);
+  emitLoopHeaderNest(lhsDims, false, false);
 
   // visit the 'rhs', emit loop headers as necessary:
   exprIndices = rhsIndices;
   rhsTemp = visitChildExpr(rhsExpr);
   // emit for-loop nest for the 'rhs':
-  emitLoopHeaderNest(rhsDims, true, true);
+  emitLoopHeaderNest(rhsDims, false, false);
 
   EMIT_INDENT(nestingLevel*INDENT_PER_LEVEL);
   append(temp + " += " + lhsTemp + " * " + rhsTemp + ";\n");
