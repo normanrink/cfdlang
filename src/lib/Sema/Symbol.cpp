@@ -2,6 +2,8 @@
 #include "Sema/Symbol.h"
 
 
+using namespace CFDlang;
+
 bool SymbolTable::addSymbol(Symbol *sym) {
   if (Symbols.count(sym->getName()))
     return false;

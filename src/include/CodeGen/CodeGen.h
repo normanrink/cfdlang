@@ -12,6 +12,8 @@
 #include "Sema/TensorType.h"
 
 
+namespace CFDlang {
+
 class ExprNode;
 class ExprNodeBuilder;
 
@@ -172,5 +174,6 @@ public:
   }
 };
 
-#endif /* __CODEGEN_H__ */
+};
 
+#endif /* __CODEGEN_H__ */

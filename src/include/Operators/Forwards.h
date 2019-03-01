@@ -12,6 +12,8 @@
 #define PER_LEVEL_INDENT (2)
 
 
+namespace Operators {
+
 template<int d, typename DerivedM, typename... DerivedMs> class Operator;
 
 template<typename Derived> class MatrixBase;
@@ -70,5 +72,7 @@ extern std::map<ScalKind, std::string> ScalLabel;
 extern std::map<ExprKind, std::string> ExprLabel;
 
 template<typename Derived> class ExprVisitor;
+
+};
 
 #endif /* __OPERATORS_FORWARDS_HPP__ */

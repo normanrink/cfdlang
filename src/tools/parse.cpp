@@ -6,6 +6,8 @@
 #include "Parse/Parser.h"
 
 
+using namespace CFDlang;
+
 int main(int argc, char* argv[]) {
   std::ifstream ifs;
   std::filebuf *buffer;

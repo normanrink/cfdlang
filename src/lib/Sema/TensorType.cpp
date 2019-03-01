@@ -2,6 +2,8 @@
 #include "Sema/TensorType.h"
 
 
+using namespace CFDlang;
+
 bool TensorType::operator==(const TensorType &rhs) const {
   if (getRank() != rhs.getRank())
     return false;

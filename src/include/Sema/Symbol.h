@@ -10,6 +10,8 @@
 #include "Sema/TensorType.h"
 
 
+namespace CFDlang {
+
 class Symbol {
 public:
   enum SymbolKind {
@@ -62,5 +64,6 @@ public:
   SymbolMap::const_iterator end() const { return Symbols.end(); }
 };
 
-#endif /* !__SYMBOL_H__ */
+};
 
+#endif /* !__SYMBOL_H__ */

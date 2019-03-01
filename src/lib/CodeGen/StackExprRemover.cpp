@@ -6,6 +6,8 @@
 #include "CodeGen/StackExprRemover.h"
 
 
+using namespace CFDlang;
+
 ExprNode *StackExprRemover::buildReplacement(ExprNode *original, bool forLHS) {
   assert(original->isIdentifier());
   const std::string &name = original->getName();

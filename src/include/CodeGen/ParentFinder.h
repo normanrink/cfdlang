@@ -7,6 +7,8 @@
 #include "CodeGen/ExprTree.h"
 
 
+namespace CFDlang {
+
 class ParentFinder : public ExprTreeVisitor {
 private:
   const ExprNode *Root;
@@ -64,6 +66,8 @@ public:
     Root->visit(this);
     return Parent;
   }
+};
+
 };
 
 #endif /* ____PARENT_FINDER_H__ */

@@ -3,6 +3,8 @@
 #define __OPERATORS_OPERATOR_IMPL_HPP__
 
 
+using namespace Operators;
+
 template<typename DerivedM>
 const Operator<2, Matrix, DerivedM>
 Operator<1, DerivedM>::operator*(const Matrix &m) const {

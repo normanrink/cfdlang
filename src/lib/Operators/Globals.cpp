@@ -6,6 +6,8 @@
 #include "Operators/Forwards.h"
 
 
+using namespace Operators;
+
 std::map<ExprKind, std::string> ExprLabel = {
   { EK_Scalar, "Scalar" },
   { EK_Matrix, "Matrix" },

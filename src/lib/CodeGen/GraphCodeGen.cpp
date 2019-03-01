@@ -10,6 +10,8 @@
 #include "CodeGen/GraphCodeGen.h"
 
 
+using namespace CFDlang;
+
 void GraphCodeGen::updateCurEnd(GCG_Node *n) {
   if (curEnd != nullptr) {
     curEnd->setSucc(n);

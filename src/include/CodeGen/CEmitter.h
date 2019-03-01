@@ -12,6 +12,8 @@
 #include "Sema/TensorType.h"
 
 
+namespace CFDlang {
+
 class CEmitter : public ExprTreeVisitor {
 private:
   CodeGen *CG;
@@ -157,5 +159,6 @@ private:
   }
 };
 
-#endif /* __C_EMITTER_H__ */
+};
 
+#endif /* __C_EMITTER_H__ */

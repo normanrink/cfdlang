@@ -15,6 +15,8 @@
 #define INDENT_PER_LEVEL (2)
 
 
+using namespace CFDlang;
+
 void CEmitter::codeGen(const Program *p) {
   nestingLevel = initialNestingLevel = 0;
 

@@ -10,6 +10,8 @@
 #include "Sema/TensorType.h"
 
 
+using namespace CFDlang;
+
 DirectCodeGen::DirectCodeGen(const Sema *sema, const std::string &functionName)
   : CodeGen(sema, functionName) {}
 

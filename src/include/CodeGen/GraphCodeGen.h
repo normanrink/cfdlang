@@ -15,6 +15,8 @@
 #include "CodeGen/TensorGraph.h"
 
 
+namespace CFDlang {
+
 class GraphCodeGen : public CodeGen {
 public:
   typedef AddressID<ExprNode> NodeID;
@@ -74,6 +76,8 @@ private:
                           const EdgeSet &edgesAtOldNode,
                           const GCG_Node &newNode,
                           int shift, const EdgeSet &toContract);
+};
+
 };
 
 #endif /* !__GRAPH_CODEGEN_H__ */

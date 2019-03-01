@@ -11,6 +11,8 @@
 #include "CodeGen/ExprTree.h"
 
 
+namespace CFDlang {
+
 // This class can lift nodes out of expression trees and replace them with
 // temporary variables. This can help generate better C code.
 
@@ -78,8 +80,10 @@ private:
                         const std::vector<int> &dims) {
     CG->freeTempWithDims(name, dims);
   }
-  
+
   ExprNodeBuilder *getENBuilder() { return CG->getENBuilder(); }
+};
+
 };
 
 #endif /* __EXPR_TREE_LIFTER_H__ */

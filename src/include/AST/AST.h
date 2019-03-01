@@ -9,6 +9,8 @@
 #include <map>
 
 
+namespace CFDlang {
+
 class ASTVisitor;
 
 
@@ -486,5 +488,6 @@ public:
   virtual void visitParenExpr(const ParenExpr *);
 };
 
-#endif /* __AST_H__ */
+};
 
+#endif /* __AST_H__ */

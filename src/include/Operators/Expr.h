@@ -9,6 +9,8 @@
 #include "Operators/Forwards.h"
 
 
+namespace Operators {
+
 template<typename S, typename T, typename Derived>
 class Binary {
   const S lhs;
@@ -312,6 +314,8 @@ public:
 
   template<typename DerivedV>
   void visit(ExprVisitor<DerivedV> &v) const;
+};
+
 };
 
 #include "Operators/Expr_impl.hpp"

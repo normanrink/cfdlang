@@ -2,6 +2,8 @@
 #include "CodeGen/ExprTreeLifter.h"
 
 
+using namespace CFDlang;
+
 void ExprTreeLifter::transformAssignments() {
   for (curPos = Assignments.begin(); curPos != Assignments.end(); curPos++) {
     ExprNode *rhs = curPos->rhs;

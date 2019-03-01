@@ -8,6 +8,8 @@
 #include "Sema/TensorType.h"
 
 
+using namespace CFDlang;
+
 void TheanoEmitter::codeGen(const Program *p) {
   append("from theano import function as theano_function\n");
   append("import theano.tensor as " + getModulePrefix() + "\n\n");

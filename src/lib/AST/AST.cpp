@@ -8,6 +8,8 @@
 #include "AST/AST.h"
 
 
+namespace CFDlang {
+
 #define EMIT_INDENT(indent) { std::cout.width((indent)); \
                               std::cout << std::left << ""; \
                               std::cout.unsetf(std::ios::adjustfield); }
@@ -246,7 +248,7 @@ void Program::print(unsigned indent) const {
   EMIT_INDENT(indent)
   std::cout << "(" << str << ss.str() << "\n";
   Decls->print(indent + str.length() + 1);
-  Elem->print(indent + str.length() + 1);
+  if (Elem) { Elem->print(indent + str.length() + 1); }
   Stmts->print(indent + str.length() + 1);
   EMIT_INDENT(indent + 1)
   std::cout << ")\n";
@@ -382,3 +384,4 @@ void ASTVisitor::visitParenExpr(const ParenExpr *pe) {
   pe->getExpr()->visit(this);
 }
 
+};

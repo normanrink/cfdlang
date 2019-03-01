@@ -10,6 +10,8 @@
 #include "Operators/Scalar.h"
 
 
+using namespace Operators;
+
 template<typename S, typename T, typename Derived>
 template<typename DerivedV>
 void Binary<S, T, Derived>::visit(ExprVisitor<DerivedV> &v) const {

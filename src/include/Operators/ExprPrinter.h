@@ -7,6 +7,8 @@
 #include "Operators/ExprVisitor.h"
 
 
+namespace Operators {
+
 class ExprPrinter : public ExprVisitor<ExprPrinter> {
   std::ostream &os;
 
@@ -39,6 +41,8 @@ public:
 
   template<int d, typename... DerivedMs>
   void visitOperator(const Operator<d, DerivedMs...> &expr);
+};
+
 };
 
 #include "Operators/ExprPrinter_impl.hpp"

@@ -8,6 +8,8 @@
 #include "Operators/Forwards.h"
 
 
+namespace Operators {
+
 template<typename Derived>
 class Scalar {
   using This = Scalar<Derived>;
@@ -134,6 +136,8 @@ public:
   void visit(ExprVisitor<DerivedV> &v) const {
     v.visitSVar(*this);
   }
+};
+
 };
 
 #include "Operators/Scalar_impl.hpp"

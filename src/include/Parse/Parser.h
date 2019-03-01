@@ -6,6 +6,8 @@
 #include "Parse/Lexer.h"
 
 
+namespace CFDlang {
+
 class Parser {
 private:
   Lexer lexer;
@@ -23,5 +25,6 @@ public:
   const Program *getAST() const { return ast; }
 };
 
-#endif /* !__PARSER_H__ */
+};
 
+#endif /* !__PARSER_H__ */

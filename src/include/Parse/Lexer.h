@@ -10,6 +10,8 @@
 #include "lang.tab.hh"
 
 
+namespace CFDlang {
+
 class Lexer {
 private:
   const char *Input;
@@ -33,5 +35,6 @@ public:
   }
 };
 
-#endif /* !__LEXER_H__ */
+};
 
+#endif /* !__LEXER_H__ */

@@ -13,6 +13,8 @@
 #include "Sema/Symbol.h"
 
 
+namespace CFDlang {
+
 class ExprTreeVisitor;
 class ExprTreeTransformer;
 
@@ -362,6 +364,8 @@ public:
   createTranspositionExpr(ExprNode *en, const CodeGen::TupleList &indexPairs);
   IdentifierExpr *createIdentifierExpr(const std::string &name,
                                        const ExprNode::ExprDimensions &dims);
+};
+
 };
 
 #endif /* __EXPR_TREE_H__ */

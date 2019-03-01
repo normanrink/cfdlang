@@ -6,13 +6,15 @@
 #include <string>
 
 
+namespace CFDlang {
+
 class TensorType {
 private:
   std::vector<int> Dims;
 
 public:
   TensorType() {}
-  TensorType(const std::vector<int> &dims) 
+  TensorType(const std::vector<int> &dims)
     : Dims(dims) {}
 
   void addDim(int dim) { Dims.push_back(dim); }
@@ -35,5 +37,6 @@ public:
   const std::vector<int> &getDims() const { return Dims; }
 };
 
-#endif /* !__TENSOR_TYPE_H__ */
+};
 
+#endif /* !__TENSOR_TYPE_H__ */

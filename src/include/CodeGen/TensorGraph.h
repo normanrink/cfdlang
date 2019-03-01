@@ -11,6 +11,8 @@
 #include "CodeGen/Comparable.h"
 
 
+namespace CFDlang {
+
 template<typename NodeID, typename EdgeID> class GraphEdge;
 template<typename NodeID, typename EdgeID> class TensorGraph;
 
@@ -176,8 +178,8 @@ public:
   const GraphNode<NodeID, EdgeID> *getStartNode() const;
 };
 
+};
 
 #include "CodeGen/TensorGraph.hpp"
 
 #endif /* __TENSOR_GRAPH_H__ */
-

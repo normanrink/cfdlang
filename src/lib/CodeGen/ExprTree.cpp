@@ -14,6 +14,8 @@
                               std::cout.unsetf(std::ios::adjustfield); }
 
 
+using namespace CFDlang;
+
 std::map<ExprNode::ExprKind, std::string> ExprNode::ExprLabel = {
   { EK_Add, "Add" },
   { EK_Sub, "Sub" },

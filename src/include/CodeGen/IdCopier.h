@@ -11,6 +11,8 @@
 #include "CodeGen/ExprTree.h"
 
 
+namespace CFDlang {
+
 // This class lifts identifiers out of expression trees if they appear on
 // both the 'lhs' and the 'rhs' in conflicting ways (i.e. with different
 // index structures).
@@ -64,6 +66,8 @@ public:
 private:
   std::string getTemp() { return CG->getTemp(); }
   ExprNodeBuilder *getENBuilder() { return CG->getENBuilder(); }
+};
+
 };
 
 #endif /* __ID_COPIER_H__ */

@@ -11,6 +11,8 @@
 #include "CodeGen/ExprTree.h"
 
 
+namespace CFDlang {
+
 // This class removes stack expressions and replaces
 // them with indexed identifiers.
 
@@ -69,6 +71,8 @@ private:
   ExprNodeBuilder *getENBuilder() { return CG->getENBuilder(); }
 
   bool isDeclaredId(const ExprNode *en) const;
+};
+
 };
 
 #endif /* __STACK_EXPR_REMOVER_H__ */

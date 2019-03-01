@@ -11,6 +11,8 @@
 %code requires {
   #include "AST/AST.h"
 
+  using namespace CFDlang;
+
   typedef void* yyscan_t;
 }
 

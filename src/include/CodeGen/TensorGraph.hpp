@@ -6,6 +6,8 @@
 #include <sstream>
 
 
+namespace CFDlang {
+
 template<typename NodeID, typename EdgeID>
 GraphNode<NodeID, EdgeID>::GraphNode(NodeID &&id, int rank)
   : ID(id), Rank(rank) {
@@ -389,5 +391,6 @@ TensorGraph<NodeID, EdgeID>::getStartNode() const {
   return n;
 }
 
-#endif /* __TENSOR_GRAPH_HPP__ */
+};
 
+#endif /* __TENSOR_GRAPH_HPP__ */

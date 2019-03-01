@@ -9,6 +9,8 @@
 #include "CodeGen/ExprTree.h"
 
 
+namespace CFDlang {
+
 class IdFinder : public ExprTreeVisitor {
 private:
   const ExprNode *Root;
@@ -78,6 +80,8 @@ public:
   }
 
   bool getIdIncompatible() const { return IdIncompatible; }
+};
+
 };
 
 #endif /* ____ID_FINDER_H__ */

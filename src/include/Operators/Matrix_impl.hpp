@@ -6,6 +6,8 @@
 #include "Operators/Operator.h"
 
 
+using namespace Operators;
+
 template<typename Derived>
 const Operator<2, Matrix, Derived>
 MatrixBase<Derived>::operator*(const Matrix &m) const {

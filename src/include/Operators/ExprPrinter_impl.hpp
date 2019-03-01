@@ -6,6 +6,8 @@
 #include "Operators/Operators.h"
 
 
+using namespace Operators;
+
 template<typename S, typename T>
 void ExprPrinter::visitAdd(const Add<S, T> &expr) {
   expr.getLHS().visit(*this);

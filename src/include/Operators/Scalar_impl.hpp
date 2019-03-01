@@ -3,6 +3,8 @@
 #define __OPERATORS_SCALAR_IMPL_HPP__
 
 
+using namespace Operators;
+
 template<typename Derived>
 const Expr<Neg<Derived>>
 Scalar<Derived>::operator-() const {

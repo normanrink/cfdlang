@@ -8,6 +8,8 @@
 #include "Operators/Forwards.h"
 
 
+namespace Operators {
+
 template<typename Derived>
 class MatrixBase {
   using This = MatrixBase<Derived>;
@@ -209,6 +211,8 @@ public:
   void visit(ExprVisitor<DerivedV> &v) const {
     v.visitIdentity(*this);
   }
+};
+
 };
 
 #include "Operators/Matrix_impl.hpp"

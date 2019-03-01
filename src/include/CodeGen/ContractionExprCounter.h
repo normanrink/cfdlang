@@ -10,6 +10,8 @@
 #include "CodeGen/ExprTree.h"
 
 
+namespace CFDlang {
+
 class ContractionExprCounter : public ExprTreeVisitor {
 private:
   const ExprNode *Root;
@@ -59,10 +61,12 @@ public:
   unsigned getCount() const {
     return Counter;
   }
-  
+
   const ExprNode* getDeepest() const {
     return Deepest;
   }
+};
+
 };
 
 #endif /* __CONTRACTION_EXPR_COLLECTOR_H__ */

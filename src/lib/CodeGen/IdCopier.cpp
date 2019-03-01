@@ -2,6 +2,8 @@
 #include "CodeGen/IdCopier.h"
 
 
+using namespace CFDlang;
+
 void IdCopier::transformAssignments() {
   for (curPos = Assignments.begin(); curPos != Assignments.end(); curPos++) {
     curLhs = static_cast<const IdentifierExpr *>(curPos->lhs);

@@ -5,6 +5,8 @@
 #include "Operators/Forwards.h"
 
 
+namespace Operators {
+
 template<typename Derived>
 class ExprVisitor {
   Derived &getAsDerived() {
@@ -57,6 +59,8 @@ public:
   void visitOperator(const Operator<d, DerivedMs...> &expr) {
     getAsDerived().visitOperator(expr);
   }
+};
+
 };
 
 #endif /* __OPERATORS_EXPR_VISITOR_H__ */

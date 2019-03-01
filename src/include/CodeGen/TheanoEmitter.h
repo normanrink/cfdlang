@@ -11,6 +11,8 @@
 #include "CodeGen/GraphCodeGen.h"
 
 
+namespace CFDlang {
+
 class TheanoEmitter : public ExprTreeVisitor {
 private:
   CodeGen *CG;
@@ -66,5 +68,6 @@ private:
   }
 };
 
-#endif /* __THEANO_EMITTER_H__ */
+};
 
+#endif /* __THEANO_EMITTER_H__ */

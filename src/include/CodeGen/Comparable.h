@@ -9,6 +9,8 @@
 #include "AST/AST.h"
 
 
+namespace CFDlang {
+
 template<typename Derived>
 class Comparable {
 public:
@@ -99,5 +101,6 @@ public:
   }
 };
 
+};
 
 #endif /* __COMPARABLE_H__ */

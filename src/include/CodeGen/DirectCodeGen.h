@@ -11,6 +11,8 @@
 #include "CodeGen/ExprTree.h"
 
 
+namespace CFDlang {
+
 class DirectCodeGen : public CodeGen {
 public:
   DirectCodeGen(const Sema *sema, const std::string &functionName);
@@ -28,5 +30,6 @@ public:
   void visitContraction(const Expr *e, const TupleList &indices);
 };
 
-#endif /* __DIRECT_CODEGEN_H__ */
+};
 
+#endif /* __DIRECT_CODEGEN_H__ */

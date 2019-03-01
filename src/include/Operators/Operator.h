@@ -9,6 +9,8 @@
 #include "Operators/Forwards.h"
 
 
+namespace Operators {
+
 template<typename DerivedM>
 class Operator<1, DerivedM> {
   using This = Operator<1, DerivedM>;
@@ -220,6 +222,8 @@ public:
 
   template<typename DerivedV>
   void visit(ExprVisitor<DerivedV> &v) const;
+};
+
 };
 
 #include "Operators/Operator_impl.hpp"

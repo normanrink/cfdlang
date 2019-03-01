@@ -10,6 +10,8 @@
 #include "Sema/TensorType.h"
 
 
+using namespace CFDlang;
+
 CodeGen::CodeGen(const Sema *sema, const std::string &functionName)
   : TheSema(sema), TempCounter(0), Code(""), FunctionName(functionName) {
   ENBuilder = new ExprNodeBuilder;

@@ -9,19 +9,21 @@
 #include "Sema/Sema.h"
 
 
+using namespace CFDlang;
+
 #define TYPE_MAP_ASSERT(expr) {                                    \
   if (ExprTypes.find((expr)) == ExprTypes.end())                   \
     assert(0 && "internal error: type of 'Expr' node not in map"); \
   }
 
 
-Sema::Sema() { 
+Sema::Sema() {
   scalar = new TensorType(std::vector<int>());
   Types.push_back(scalar);
 
   elemInfo.present = false;
 }
-  
+
 Sema::~Sema() {
   for (auto it : Types) delete it;
   for (auto it : Symbols) delete it.second;

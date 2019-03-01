@@ -13,6 +13,8 @@
 #include "Sema/TensorType.h"
 
 
+namespace CFDlang {
+
 class Sema : public ASTVisitor {
 private:
   const TensorType *scalar;
@@ -129,5 +131,6 @@ public:
   const ElemInfo &getElemInfo() const { return elemInfo; }
 };
 
-#endif /* !__SEMA_H__ */
+};
 
+#endif /* !__SEMA_H__ */
