@@ -130,6 +130,21 @@ void TensorContext::initCodeGen(CodeGenHandle *h, const char *source,
                                       graphCodeGen);
 }
 
+void TensorContext::initCodeGen(CodeGenHandle *h, const CFDlang::Program *ast,
+                                bool rowMajor,
+                                bool restrictPointer,
+                                bool iccPragmas,
+                                bool ompPragmas,
+                                bool graphCodeGen) {
+  *h = getHandle();
+  TheCodeGens[*h] = new TensorCodeGen(ast,
+                                      rowMajor,
+                                      restrictPointer,
+                                      iccPragmas,
+                                      ompPragmas,
+                                      graphCodeGen);
+}
+
 void TensorContext::finalCodeGen(const CodeGenHandle *h) {
   TensorCodeGen *cg = getCodeGen(h);
   delete cg;

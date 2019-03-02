@@ -12,12 +12,14 @@
 
 
 TensorCodeGen::TensorCodeGen(const char *source,
+                             const CFDlang::Program *ast,
                              bool rowMajor,
                              bool restrictPointer,
                              bool iccPragmas,
                              bool ompPragmas,
                              bool graphCodeGen)
-  : Source(source),
+  : Source((source == nullptr) ? "" : source),
+    AST(ast),
     RowMajor(rowMajor),
     RestrictPointer(restrictPointer),
     IccPragmas(iccPragmas),
@@ -25,6 +27,34 @@ TensorCodeGen::TensorCodeGen(const char *source,
     GraphCodeGen(graphCodeGen),
     CG(nullptr),
     CCode("") {}
+
+TensorCodeGen::TensorCodeGen(const char *source,
+                             bool rowMajor,
+                             bool restrictPointer,
+                             bool iccPragmas,
+                             bool ompPragmas,
+                             bool graphCodeGen)
+   : TensorCodeGen(source,
+                   nullptr,
+                   rowMajor,
+                   restrictPointer,
+                   iccPragmas,
+                   ompPragmas,
+                   graphCodeGen) {}
+
+ TensorCodeGen::TensorCodeGen(const CFDlang::Program *ast,
+                              bool rowMajor,
+                              bool restrictPointer,
+                              bool iccPragmas,
+                              bool ompPragmas,
+                              bool graphCodeGen)
+    : TensorCodeGen(nullptr,
+                    ast,
+                    rowMajor,
+                    restrictPointer,
+                    iccPragmas,
+                    ompPragmas,
+                    graphCodeGen) {}
 
 TensorCodeGen::~TensorCodeGen() {
   resetCodeGen();
@@ -43,14 +73,23 @@ void TensorCodeGen::resetCodeGen() {
 }
 
 void TensorCodeGen::generate(const std::string &resultName) {
-  Parser P(Source.c_str());
-  int parseResult = P.parse();
-  assert(!parseResult
-         && "runtime error: invalid source code");
+  assert(Source.length() || AST);
 
   Sema S;
-  // TODO expose the internal error handling in 'Sema':
-  S.visitProgram(P.getAST());
+
+  if (AST) {
+    // TODO expose the internal error handling in 'Sema':
+    S.visitProgram(AST);
+  } else {
+    Parser P(Source.c_str());
+    int parseResult = P.parse();
+    assert(!parseResult
+           && "runtime error: invalid source code");
+
+    // TODO expose the internal error handling in 'Sema':
+    S.visitProgram(P.getAST());
+    AST = P.getAST();
+  }
 
   resetCodeGen();
 
@@ -65,12 +104,12 @@ void TensorCodeGen::generate(const std::string &resultName) {
                    /* restrictPointer */ RestrictPointer,
                    /* iccPragmas */ IccPragmas,
                    /* ompPragmas */ OMPPragmas);
-  emitter.codeGen(P.getAST());
+  emitter.codeGen(AST);
   CCode = emitter.getCode();
   FunctionName = CG->getFunctionName();
 
   // the AST is no longer needed after code has been generated:
-  Program::destroy(P.getAST());
+  Program::destroy(AST);
 }
 
 std::string TensorCodeGen::getCCode() const {

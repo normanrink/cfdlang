@@ -5,6 +5,7 @@
 #include <string>
 
 
+#include "AST/AST.h"
 #include "CodeGen/CodeGen.h"
 #include "CodeGen/CEmitter.h"
 #include "Parse/Parser.h"
@@ -15,6 +16,7 @@
 class TensorCodeGen {
 private:
   const std::string Source;
+  const CFDlang::Program *AST;
 
   const bool RowMajor;
   const bool RestrictPointer;
@@ -31,6 +33,14 @@ private:
   bool isCodeGenValid() const;
   void resetCodeGen();
 
+  TensorCodeGen(const char *source,
+                const CFDlang::Program *ast,
+                bool rowMajor,
+                bool restrictPointer = true,
+                bool iccPragmas = false,
+                bool ompPragmas = false,
+                bool graphCodeGen = true);
+
 public:
   TensorCodeGen(const char *source,
                 bool rowMajor,
@@ -38,6 +48,14 @@ public:
                 bool iccPragmas = false,
                 bool ompPragmas = false,
                 bool graphCodeGen = true);
+                
+  TensorCodeGen(const CFDlang::Program *ast,
+                bool rowMajor,
+                bool restrictPointer = true,
+                bool iccPragmas = false,
+                bool ompPragmas = false,
+                bool graphCodeGen = true);
+
   ~TensorCodeGen();
 
   void generate(const std::string &resultName);

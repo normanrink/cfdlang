@@ -10,6 +10,9 @@
 #include <string>
 
 
+#include "AST/AST.h"
+
+
 class TensorCodeGen;
 class TensorKernel;
 class TensorExecution;
@@ -75,6 +78,12 @@ public:
                    bool iccPragmas,
                    bool ompPragmas,
                    bool graphCodeGen);
+   void initCodeGen(CodeGenHandle *h, const CFDlang::Program *ast,
+                    bool rowMajor,
+                    bool restrictPointer,
+                    bool iccPragmas,
+                    bool ompPragmas,
+                    bool graphCodeGen);
   void finalCodeGen(const CodeGenHandle *h);
 
   void generateCCode(const CodeGenHandle *h);
