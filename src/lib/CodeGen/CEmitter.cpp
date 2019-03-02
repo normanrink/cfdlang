@@ -150,6 +150,7 @@ void CEmitter::codeGen(const Program *p) {
     const IdentifierExpr *nextResult = nullptr;
     std::string nextResultName = "";
 
+    /*
     if (na == CG->getAssignments().end()) {
       fuseNext = false;
     } else {
@@ -157,6 +158,7 @@ void CEmitter::codeGen(const Program *p) {
       nextResultName = nextResult->getName();
       fuseNext = (getDims(nextResult) == getDims(result));
     }
+    */
     if (fuseNext) {
       ContractionExprCounter CEC(na->rhs);
       CEC.run();
