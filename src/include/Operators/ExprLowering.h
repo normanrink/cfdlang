@@ -46,10 +46,10 @@ class ExprLowering : public ExprVisitor<ExprLowering> {
     return s.str();
   }
 
-  std::string curResult;
+  const CFDlang::Expr *curResult;
 
-  const std::string &getCurResult() const { return curResult; }
-  void setCurResult(const std::string &name) { curResult = name; }
+  const CFDlang::Expr *getCurResult() const { return curResult; }
+  void setCurResult(const CFDlang::Expr *expr) { curResult = expr; }
 
   void emitVarDecl(const std::string &name,
                    const Dimensions &inDims,

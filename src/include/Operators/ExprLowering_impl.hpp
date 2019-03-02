@@ -16,10 +16,36 @@ const CFDlang::Program *Operators::ExprLowering::lowerExpr(
     declaredVars.clear();
     count = 0;
 
-    expr.visit(*this);
-    const auto name = getCurResult();
+    assert(expr.getInDims().size() == expr.getOutDims().size());
 
-    //apply to input and write to output!!
+    expr.visit(*this);
+    const auto *r = getCurResult();
+
+    emitVarDecl(input, {}, expr.getInDims(), CFDlang::Decl::IO_Input);
+    emitVarDecl(output, expr.getOutDims(), {}, CFDlang::Decl::IO_Output);
+
+    const auto *e =
+      CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ProductExpr,
+                                  r,
+                                  CFDlang::Identifier::create(input));
+
+    CFDlang::ExprList *contrPairs = CFDlang::ExprList::create();
+    const int n = expr.getOutDims().size();
+    for (int i = 0; i < n; i++) {
+      CFDlang::ExprList *pair =
+        CFDlang::ExprList::create(CFDlang::Integer::create(n+i));
+      pair->append(CFDlang::Integer::create(2*n+i));
+
+      contrPairs->append(CFDlang::BrackExpr::create(pair));
+    }
+
+    const auto *c =
+      CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ContractionExpr,
+                                  e,
+                                  CFDlang::BrackExpr::create(contrPairs));
+    const auto *s =
+      CFDlang::Stmt::create(CFDlang::Identifier::create(output), c);
+    append(s);
 
     return getCFDlangProgram();
   }
@@ -41,7 +67,7 @@ void Operators::ExprLowering::emitVarDecl(
      assert(!isDeclared(name));
 
      // There should be an equal number of input and output dimensions ...
-     assert(inDims.size() == outDims.size());
+     //assert(inDims.size() == outDims.size());
      /// ... and the output dimensions should come first ...
      CFDlang::ExprList *dims = CFDlang::ExprList::create();
      for (int i = 0; i < outDims.size(); i++) {
@@ -65,27 +91,15 @@ template<typename S, typename T, typename Derived>
 void Operators::ExprLowering::emitBinary(
   const Operators::Binary<S, T, Derived> &expr,
   CFDlang::ASTNode::NodeType nt) {
-    const auto name = getFreshName();
-    emitVarDecl(name,
-                expr.getInDims(),
-                expr.getOutDims(),
-                CFDlang::Decl::IO_Empty);
-
     // Construct the binary expression:
     expr.getLHS().visit(*this);
-    const auto lhs = getCurResult();
+    const auto *lhs = getCurResult();
 
     expr.getRHS().visit(*this);
-    const auto rhs = getCurResult();
+    const auto *rhs = getCurResult();
 
-    const auto *e =
-      CFDlang::BinaryExpr::create(nt,
-                                  CFDlang::Identifier::create(lhs),
-                                  CFDlang::Identifier::create(rhs));
-
-    const auto *s = CFDlang::Stmt::create(CFDlang::Identifier::create(name), e);
-    append(s);
-    setCurResult(name);
+    const auto *e = CFDlang::BinaryExpr::create(nt, lhs, rhs);
+    setCurResult(e);
   }
 
 template<typename S, typename T>
@@ -105,12 +119,6 @@ void Operators::ExprLowering::visitSMul(const Operators::SMul<S, T> &expr) {
 
 template<typename S, typename T>
 void Operators::ExprLowering::visitApply(const Operators::Apply<S, T> &expr) {
-  const auto name = getFreshName();
-  emitVarDecl(name,
-              expr.getInDims(),
-              expr.getOutDims(),
-              CFDlang::Decl::IO_Empty);
-
   const auto &lhsExpr = expr.getLHS();
   const auto &rhsExpr = expr.getRHS();
 
@@ -124,15 +132,13 @@ void Operators::ExprLowering::visitApply(const Operators::Apply<S, T> &expr) {
   assert(rhsExpr.getInDims().size() == rhsExpr.getOutDims().size());
 
   expr.getLHS().visit(*this);
-  const auto lhs = getCurResult();
+  const auto *lhs = getCurResult();
 
   expr.getRHS().visit(*this);
-  const auto rhs = getCurResult();
+  const auto *rhs = getCurResult();
 
   const auto *e =
-    CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ProductExpr,
-                                CFDlang::Identifier::create(lhs),
-                                CFDlang::Identifier::create(rhs));
+    CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ProductExpr, lhs, rhs);
 
   CFDlang::ExprList *contrPairs = CFDlang::ExprList::create();
   const int n = lhsExpr.getInDims().size();
@@ -148,10 +154,7 @@ void Operators::ExprLowering::visitApply(const Operators::Apply<S, T> &expr) {
     CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ContractionExpr,
                                 e,
                                 CFDlang::BrackExpr::create(contrPairs));
-
-  const auto *s = CFDlang::Stmt::create(CFDlang::Identifier::create(name), c);
-  append(s);
-  setCurResult(name);
+  setCurResult(c);
 }
 
 template<typename DerivedS>
@@ -161,11 +164,11 @@ void Operators::ExprLowering::emitScalar(const Operators::Scalar<DerivedS> &s) {
   if (!isDeclared(name)) {
     emitVarDecl(name, s.getInDims(), s.getOutDims(), CFDlang::Decl::IO_Input);
   }
-  setCurResult(name);
+  setCurResult(CFDlang::Identifier::create(name));
 }
 
 void Operators::ExprLowering::visitSConst(const Operators::SConst &expr) {
-  emitScalar(expr);
+  assert(0 && "constant literals not supported by 'CFDlang'");
 }
 
 void Operators::ExprLowering::visitSVar(const Operators::SVar &expr) {
@@ -182,7 +185,7 @@ void Operators::ExprLowering::emitMatrix(
     if (!isDeclared(name)) {
       emitVarDecl(name, m.getInDims(), m.getOutDims(), CFDlang::Decl::IO_Input);
     }
-    setCurResult(name);
+    setCurResult(CFDlang::Identifier::create(name));
   }
 
 void Operators::ExprLowering::visitMatrix(
@@ -226,15 +229,13 @@ void Operators::ExprLowering::visitOperator(
                 CFDlang::Decl::IO_Empty);
 
     expr.getFront().visit(*this);
-    const auto front = getCurResult();
+    const auto *front = getCurResult();
 
     expr.getEnd().visit(*this);
-    const auto end = getCurResult();
+    const auto *end = getCurResult();
 
     const auto *e =
-      CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ProductExpr,
-                                  CFDlang::Identifier::create(front),
-                                  CFDlang::Identifier::create(end));
+      CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ProductExpr, front, end);
 
     // Tranpsose dimensions, so that the output dimensions
     // always come first, followed by the input dimensions:
@@ -251,10 +252,7 @@ void Operators::ExprLowering::visitOperator(
       CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_TranspositionExpr,
                                   e,
                                   CFDlang::BrackExpr::create(transpPairs));
-
-    const auto *s = CFDlang::Stmt::create(CFDlang::Identifier::create(name), t);
-    append(s);
-    setCurResult(name);
+    setCurResult(t);
 }
 
 #endif /* __OPERATORS_EXPR_LOWERING_IMPL_HPP__ */
