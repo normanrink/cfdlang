@@ -221,6 +221,13 @@ Expr<T>::operator()(const Operator<d, DerivedMs...> &op) const {
 }
 
 template<typename T>
+template<int r>
+const Expr<Apply<T, Tensor<r>>>
+Expr<T>::operator()(const Tensor<r> &t) const {
+  return operator()(Expr<Tensor<r>>(t));
+}
+
+template<typename T>
 template<typename S>
 const Expr<SMul<T, S>> Expr<T>::operator*(const Expr<S> &rhs) const {
   assert(this->getInDims().empty());

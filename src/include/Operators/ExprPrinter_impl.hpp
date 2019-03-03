@@ -95,4 +95,9 @@ void ExprPrinter::visitOperator(const Operator<d, DerivedMs...> &expr) {
   expr.getEnd().visit(*this);
 }
 
+template<int r>
+void ExprPrinter::visitTensor(const Tensor<r> &expr) {
+  os << expr.getName();
+}
+
 #endif /* __OPERATORS_EXPR_PRINTER_IMPL_HPP__ */

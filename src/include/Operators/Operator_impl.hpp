@@ -80,7 +80,14 @@ template<typename DerivedM>
 template<typename DerivedOtherM>
 const Expr<Apply<Operator<1, DerivedM>, Operator<1, DerivedOtherM>>>
 Operator<1, DerivedM>::operator()(const Operator<1, DerivedOtherM> &op) const {
-  return this->operator()(Expr<Operator<1, DerivedOtherM>>(op));
+  return operator()(Expr<Operator<1, DerivedOtherM>>(op));
+}
+
+template<typename DerivedM>
+template<int r>
+const Expr<Apply<Operator<1, DerivedM>, Tensor<r>>>
+Operator<1, DerivedM>::operator()(const Tensor<r> &t) const {
+  return operator()(Expr<Tensor<r>>(t));
 }
 
 template<typename DerivedM>
@@ -173,6 +180,14 @@ Operator<d, DerivedM, DerivedMs...>::operator()(
   const Operator<d, DerivedOtherMs...> &op) const {
     return operator()(Expr<Operator<d, DerivedOtherMs...>>(op));
   }
+
+template<int d, typename DerivedM, typename... DerivedMs>
+template<int r>
+const Expr<Apply<Operator<d, DerivedM, DerivedMs...>,
+                 Tensor<r>>>
+Operator<d, DerivedM, DerivedMs...>::operator()(const Tensor<r> &t) const {
+  return operator()(Expr<Tensor<r>>(t));
+}
 
 template<int d, typename DerivedM, typename... DerivedMs>
 template<typename DerivedV>

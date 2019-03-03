@@ -16,6 +16,8 @@ namespace Operators {
 
 template<int d, typename DerivedM, typename... DerivedMs> class Operator;
 
+template<int r> class Tensor;
+
 template<typename Derived> class MatrixBase;
 class Matrix;
 class Symmetric;
@@ -43,6 +45,7 @@ typedef std::vector<int> Dimensions;
 enum ExprKind {
   EK_Scalar,
   EK_Matrix,
+  EK_Tensor,
   EK_Operator,
   EK_Neg,
   EK_Add,

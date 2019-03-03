@@ -284,6 +284,10 @@ public:
   const Expr<Apply<T, Operator<d, DerivedMs...>>>
   operator()(const Operator<d, DerivedMs...> &op) const;
 
+  template<int r>
+  const Expr<Apply<T, Tensor<r>>>
+  operator()(const Tensor<r> &t) const;
+
   template<typename S>
   const Expr<SMul<T, S>> operator*(const Expr<S> &rhs) const;
 

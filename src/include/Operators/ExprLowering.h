@@ -7,6 +7,7 @@
 #include <ostream>
 #include <set>
 #include <sstream>
+#include <vector>
 
 
 #include "AST/AST.h"
@@ -14,6 +15,8 @@
 
 
 namespace Operators {
+
+typedef std::vector<int> Indices;
 
 class ExprLowering : public ExprVisitor<ExprLowering> {
   CFDlang::DeclList *decls;
@@ -47,9 +50,16 @@ class ExprLowering : public ExprVisitor<ExprLowering> {
   }
 
   const CFDlang::Expr *curResult;
+  Indices curInIndices;
+  Indices curOutIndices;
 
   const CFDlang::Expr *getCurResult() const { return curResult; }
+  const Indices &getCurInIndices() const { return curInIndices; }
+  const Indices &getCurOutIndices() const { return curOutIndices; }
+
   void setCurResult(const CFDlang::Expr *expr) { curResult = expr; }
+  void setCurInIndices(const Indices &is) { curInIndices = is; }
+  void setCurOutIndices(const Indices &is) { curOutIndices = is; }
 
   void emitVarDecl(const std::string &name,
                    const Dimensions &inDims,
@@ -79,6 +89,14 @@ public:
                                     std::string input,
                                     std::string output);
 
+  template<typename T>
+  const CFDlang::Program *lowerExpr(const Expr<T> &expr,
+                                    std::string output);
+
+  template<int d, typename... DerivedMs>
+  const CFDlang::Program *lowerExpr(const Operator<d, DerivedMs...> &op,
+                                    std::string output);
+
   template<typename S, typename T>
   void visitAdd(const Add<S, T> &expr);
 
@@ -105,6 +123,9 @@ public:
 
   template<int d, typename... DerivedMs>
   void visitOperator(const Operator<d, DerivedMs...> &expr);
+
+  template<int r>
+  void visitTensor(const Tensor<r> &expr);
 };
 
 };

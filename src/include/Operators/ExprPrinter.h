@@ -41,6 +41,9 @@ public:
 
   template<int d, typename... DerivedMs>
   void visitOperator(const Operator<d, DerivedMs...> &expr);
+
+  template<int r>
+  void visitTensor(const Tensor<r> &expr);
 };
 
 };

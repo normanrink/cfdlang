@@ -1,6 +1,6 @@
 
-#ifndef __OPERATORS_OPERATOR_HPP__
-#define __OPERATORS_OPERATOR_HPP__
+#ifndef __OPERATORS_OPERATOR_H__
+#define __OPERATORS_OPERATOR_H__
 
 #include <assert.h>
 
@@ -102,6 +102,10 @@ public:
   template<typename DerivedOtherM>
   const Expr<Apply<This, Operator<1, DerivedOtherM>>>
   operator()(const Operator<1, DerivedOtherM> &op) const;
+
+  template<int r>
+  const Expr<Apply<This, Tensor<r>>>
+  operator()(const Tensor<r> &t) const;
 
   template<typename DerivedV>
   void visit(ExprVisitor<DerivedV> &v) const;
@@ -220,6 +224,10 @@ public:
   const Expr<Apply<This, Operator<d, DerivedOtherMs...>>>
   operator()(const Operator<d, DerivedOtherMs...> &op) const;
 
+  template<int r>
+  const Expr<Apply<This, Tensor<r>>>
+  operator()(const Tensor<r> &t) const;
+
   template<typename DerivedV>
   void visit(ExprVisitor<DerivedV> &v) const;
 };
@@ -228,4 +236,4 @@ public:
 
 #include "Operators/Operator_impl.hpp"
 
-#endif /* __OPERATORS_OPERATOR_HPP__ */
+#endif /* __OPERATORS_OPERATOR_H__ */

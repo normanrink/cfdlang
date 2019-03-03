@@ -15,13 +15,19 @@ const CFDlang::Program *Operators::ExprLowering::lowerExpr(
     stmts = CFDlang::StmtList::create();
     declaredVars.clear();
     count = 0;
+    setCurResult(nullptr);
+    setCurInIndices({});
+    setCurOutIndices({});
 
     assert(expr.getInDims().size() == expr.getOutDims().size());
 
     expr.visit(*this);
     const auto *r = getCurResult();
+    const auto exprIns = getCurInIndices();
 
     emitVarDecl(input, {}, expr.getInDims(), CFDlang::Decl::IO_Input);
+    const auto inputOuts = getCurOutIndices();
+
     emitVarDecl(output, expr.getOutDims(), {}, CFDlang::Decl::IO_Output);
 
     const auto *e =
@@ -30,10 +36,10 @@ const CFDlang::Program *Operators::ExprLowering::lowerExpr(
                                   CFDlang::Identifier::create(input));
 
     CFDlang::ExprList *contrPairs = CFDlang::ExprList::create();
-    const int n = expr.getOutDims().size();
+    const int n = exprIns.size();
     for (int i = 0; i < n; i++) {
       CFDlang::ExprList *pair =
-        CFDlang::ExprList::create(CFDlang::Integer::create(n+i));
+        CFDlang::ExprList::create(CFDlang::Integer::create(exprIns.at(i)));
       pair->append(CFDlang::Integer::create(2*n+i));
 
       contrPairs->append(CFDlang::BrackExpr::create(pair));
@@ -58,6 +64,38 @@ const CFDlang::Program *Operators::ExprLowering::lowerExpr(
     return lowerExpr(Expr<Operator<d, DerivedMs...>>(op), input, output);
   }
 
+template<typename T>
+const CFDlang::Program *Operators::ExprLowering::lowerExpr(
+  const Operators::Expr<T> &expr,
+  std::string output) {
+    decls = CFDlang::DeclList::create();
+    stmts = CFDlang::StmtList::create();
+    declaredVars.clear();
+    count = 0;
+    setCurResult(nullptr);
+    setCurInIndices({});
+    setCurOutIndices({});
+
+    expr.visit(*this);
+    const auto *r = getCurResult();
+    const auto exprIns = getCurOutIndices();
+
+    emitVarDecl(output, expr.getOutDims(), {}, CFDlang::Decl::IO_Output);
+
+    const auto *s =
+      CFDlang::Stmt::create(CFDlang::Identifier::create(output), r);
+    append(s);
+
+    return getCFDlangProgram();
+  }
+
+template<int d, typename... DerivedMs>
+const CFDlang::Program *Operators::ExprLowering::lowerExpr(
+  const Operator<d, DerivedMs...> &op,
+  std::string output) {
+    return lowerExpr(Expr<Operator<d, DerivedMs...>>(op), output);
+  }
+
 void Operators::ExprLowering::emitVarDecl(
   const std::string &name,
   const Operators::Dimensions &inDims,
@@ -70,13 +108,24 @@ void Operators::ExprLowering::emitVarDecl(
      //assert(inDims.size() == outDims.size());
      /// ... and the output dimensions should come first ...
      CFDlang::ExprList *dims = CFDlang::ExprList::create();
+     Indices outs;
      for (int i = 0; i < outDims.size(); i++) {
        dims->append(CFDlang::Integer::create(outDims.at(i)));
+       outs.push_back(i);
      }
+     setCurOutIndices(outs);
      // ... followed by the input dimensions:
+     Indices ins;
      for (int i = 0; i < inDims.size(); i++) {
        dims->append(CFDlang::Integer::create(inDims.at(i)));
+       ins.push_back(outDims.size()+i);
      }
+     setCurInIndices(ins);
+     // Note that the only variables that are emitted are:
+     //   (a) scalars, with no dimensions;
+     //   (b) matrices, with one input and one output dimension;
+     //   (c) the input tensor, with only output dimensions;
+     //   (d) the output tensor, with only input dimensions.
 
      // Declare the new variable:
      const auto *d = CFDlang::Decl::create(CFDlang::ASTNode::NT_VarDecl,
@@ -97,9 +146,16 @@ void Operators::ExprLowering::emitBinary(
 
     expr.getRHS().visit(*this);
     const auto *rhs = getCurResult();
+    Indices rhsIns  = getCurInIndices();
+    Indices rhsOuts = getCurOutIndices();
+
 
     const auto *e = CFDlang::BinaryExpr::create(nt, lhs, rhs);
     setCurResult(e);
+    // For the binary expressions 'Add', 'Sub', 'SMul', the dimensions
+    // of the rhs expression determine the dimensions of the result:
+    setCurInIndices(rhsIns);
+    setCurOutIndices(rhsOuts);
   }
 
 template<typename S, typename T>
@@ -133,19 +189,23 @@ void Operators::ExprLowering::visitApply(const Operators::Apply<S, T> &expr) {
 
   expr.getLHS().visit(*this);
   const auto *lhs = getCurResult();
+  const Indices lhsIns  = getCurInIndices();
+  const Indices lhsOuts = getCurOutIndices();
 
   expr.getRHS().visit(*this);
   const auto *rhs = getCurResult();
+  const Indices rhsIns  = getCurInIndices();
+  const Indices rhsOuts = getCurOutIndices();
 
   const auto *e =
     CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ProductExpr, lhs, rhs);
 
   CFDlang::ExprList *contrPairs = CFDlang::ExprList::create();
-  const int n = lhsExpr.getInDims().size();
+  const int n = lhsIns.size();
   for (int i = 0; i < n; i++) {
     CFDlang::ExprList *pair =
-      CFDlang::ExprList::create(CFDlang::Integer::create(n+i));
-    pair->append(CFDlang::Integer::create(2*n+i));
+      CFDlang::ExprList::create(CFDlang::Integer::create(lhsIns.at(i)));
+    pair->append(CFDlang::Integer::create(rhsOuts.at(i) + 2*n));
 
     contrPairs->append(CFDlang::BrackExpr::create(pair));
   }
@@ -155,6 +215,8 @@ void Operators::ExprLowering::visitApply(const Operators::Apply<S, T> &expr) {
                                 e,
                                 CFDlang::BrackExpr::create(contrPairs));
   setCurResult(c);
+  setCurInIndices(rhsIns);
+  setCurOutIndices(lhsOuts);
 }
 
 template<typename DerivedS>
@@ -165,6 +227,8 @@ void Operators::ExprLowering::emitScalar(const Operators::Scalar<DerivedS> &s) {
     emitVarDecl(name, s.getInDims(), s.getOutDims(), CFDlang::Decl::IO_Input);
   }
   setCurResult(CFDlang::Identifier::create(name));
+  setCurInIndices({});
+  setCurOutIndices({});
 }
 
 void Operators::ExprLowering::visitSConst(const Operators::SConst &expr) {
@@ -186,6 +250,8 @@ void Operators::ExprLowering::emitMatrix(
       emitVarDecl(name, m.getInDims(), m.getOutDims(), CFDlang::Decl::IO_Input);
     }
     setCurResult(CFDlang::Identifier::create(name));
+    setCurInIndices({1});
+    setCurOutIndices({0});
   }
 
 void Operators::ExprLowering::visitMatrix(
@@ -222,37 +288,42 @@ void Operators::ExprLowering::visitOperator(
 template<int d, typename... DerivedMs>
 void Operators::ExprLowering::visitOperator(
   const Operator<d, DerivedMs...> &expr) {
-    const auto name = getFreshName();
-    emitVarDecl(name,
-                expr.getInDims(),
-                expr.getOutDims(),
-                CFDlang::Decl::IO_Empty);
-
     expr.getFront().visit(*this);
     const auto *front = getCurResult();
+    Indices frontIns  = getCurInIndices();
+    Indices frontOuts = getCurOutIndices();
 
     expr.getEnd().visit(*this);
     const auto *end = getCurResult();
+    Indices endIns  = getCurInIndices();
+    assert(endIns.size() == 1);
+    Indices endOuts = getCurOutIndices();
+    assert(endOuts.size() == 1);
 
     const auto *e =
       CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_ProductExpr, front, end);
 
-    // Tranpsose dimensions, so that the output dimensions
-    // always come first, followed by the input dimensions:
-    CFDlang::ExprList *transpPairs = CFDlang::ExprList::create();
-    for (int i = 0; i < (d-1); i++) {
-      CFDlang::ExprList *pair =
-        CFDlang::ExprList::create(CFDlang::Integer::create(2*(d-1)-i));
-      pair->append(CFDlang::Integer::create(2*(d-1)-i-1));
+    setCurResult(e);
+    frontIns.push_back(2*d-1);
+    setCurInIndices(frontIns);
+    frontOuts.push_back(2*d-2);
+    setCurOutIndices(frontOuts);
 
-      transpPairs->append(CFDlang::BrackExpr::create(pair));
-    }
+}
 
-    const auto *t =
-      CFDlang::BinaryExpr::create(CFDlang::ASTNode::NT_TranspositionExpr,
-                                  e,
-                                  CFDlang::BrackExpr::create(transpPairs));
-    setCurResult(t);
+template<int r>
+void Operators::ExprLowering::visitTensor(const Tensor<r> &expr) {
+  const auto &name = expr.getName();
+
+  if (!isDeclared(name)) {
+    emitVarDecl(name, {}, expr.getDims(), CFDlang::Decl::IO_Input);
+  }
+  setCurResult(CFDlang::Identifier::create(name));
+  setCurInIndices({});
+
+  Indices outs;
+  for (int i = 0; i < expr.getDims().size(); i++) { outs.push_back(i); }
+  setCurOutIndices(outs);
 }
 
 #endif /* __OPERATORS_EXPR_LOWERING_IMPL_HPP__ */

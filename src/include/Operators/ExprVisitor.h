@@ -59,6 +59,11 @@ public:
   void visitOperator(const Operator<d, DerivedMs...> &expr) {
     getAsDerived().visitOperator(expr);
   }
+
+  template<int r>
+  void visitTensor(const Tensor<r> &expr) {
+    getAsDerived().visitTensor(expr);
+  }
 };
 
 };
