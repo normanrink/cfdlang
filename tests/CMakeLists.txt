@@ -15,3 +15,12 @@ target_link_libraries(test.Helmholtz CFDlang)
 
 add_executable(test.Operators.Print test.Operators.Print.cpp)
 target_link_libraries(test.Operators.Print CFDlang)
+
+add_executable(test.Operators.Op_2D test.Operators.Op_2D.cpp)
+target_link_libraries(test.Operators.Op_2D CFDlang)
+
+add_executable(test.Operators.Op_3D test.Operators.Op_3D.cpp)
+target_link_libraries(test.Operators.Op_3D CFDlang)
+
+add_executable(test.Operators.AxAxA test.Operators.AxAxA.cpp)
+target_link_libraries(test.Operators.AxAxA CFDlang)
