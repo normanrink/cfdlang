@@ -194,7 +194,7 @@ void Operators::ExprLowering::visitApply(const Operators::Apply<S, T> &expr) {
 
   expr.getRHS().visit(*this);
   const auto *rhs = getCurResult();
-  const Indices rhsIns  = getCurInIndices();
+  Indices rhsIns  = getCurInIndices();
   const Indices rhsOuts = getCurOutIndices();
 
   const auto *e =
@@ -215,8 +215,18 @@ void Operators::ExprLowering::visitApply(const Operators::Apply<S, T> &expr) {
                                 e,
                                 CFDlang::BrackExpr::create(contrPairs));
   setCurResult(c);
+
+  for (int i = 0; i < rhsIns.size(); i++) {
+    rhsIns[i] -= (i+1);
+    rhsIns[i] += n;
+  }
   setCurInIndices(rhsIns);
-  setCurOutIndices(lhsOuts);
+
+  Indices outs;
+  for (int i = 0; i < lhsOuts.size(); i++) {
+    outs.push_back(i);
+  }
+  setCurOutIndices(outs);
 }
 
 template<typename DerivedS>
