@@ -159,13 +159,13 @@ public:
   std::string getTempWithDims(const DimsTy &dims) {
     TempVecTy &temps = FreeTemps[dims];
 
-    if (temps.size() == 0) {
+    //if (temps.size() == 0) {
       return getTemp();
-    } else {
-      auto result = temps.back();
-      temps.pop_back();
-      return result;
-    }
+    //} else {
+    //  auto result = temps.back();
+    //  temps.pop_back();
+    //  return result;
+    //}
   }
 
   void freeTempWithDims(const std::string &name, const DimsTy &dims) {
