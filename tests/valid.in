@@ -1,6 +1,0 @@
-var foo : [2 2 4]
-type bar : [2 2 4]
-var fubar : bar
-
-fubar = foo
-
