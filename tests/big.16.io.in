@@ -1,8 +1,0 @@
-var input a : [3 3]
-var input b : [3 3]
-var input c : [3 3]
-var input output u : [3 2]
-var output v : [3 3 2]
-
-v = ([a b c] # u) . [[1 3]]
-
