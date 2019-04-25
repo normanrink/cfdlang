@@ -1,0 +1,5 @@
+var input A  : [50 60]
+var input u  : [60 60 60]
+var output v : [50 50 50]
+
+v = (A # A # A # u) . [[1 6] [3 7] [5 8]]
