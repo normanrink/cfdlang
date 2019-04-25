@@ -71,10 +71,10 @@ public:
   // interface for code generation:
   void initCodeGen(CodeGenHandle *h, const char *source,
                    bool rowMajor,
-                   bool restrictPointer,
-                   bool iccPragmas,
-                   bool ompPragmas,
-                   bool graphCodeGen);
+                   bool restrictPointer = false,
+                   bool iccPragmas = false,
+                   bool ompPragmas = false,
+                   bool graphCodeGen = false);
   void finalCodeGen(const CodeGenHandle *h);
 
   void generateCCode(const CodeGenHandle *h);
