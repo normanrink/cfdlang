@@ -46,41 +46,15 @@ int main(int argc, char* argv[]) {
   sema.visitProgram(parser.getAST());
 
   {
-    DirectCodeGen CG(&sema, "direct_theano_function");
-    TheanoEmitter emitter(&CG);
-    emitter.codeGen(parser.getAST());
-
-    std::cout << "DIRECT 'Theano' code generation:\n";
-    std::cout << emitter.getCode();
-    std::cout << "\n";
-  }
-
-  {
-    GraphCodeGen CG(&sema, "graph_Theano_function");
-    TheanoEmitter emitter(&CG);
-    emitter.codeGen(parser.getAST());
-
-    std::cout << "GRAPH 'Theano' code generation:\n";
-    std::cout << emitter.getCode();
-    std::cout << "\n";
-  }
-
-  {
-    DirectCodeGen CG(&sema, "direct_C_function");
-    CEmitter emitter(&CG, /* rowMajor= */true);
+    DirectCodeGen CG(&sema, "kernel");
+    CEmitter emitter(&CG, /* rowMajor= */true,
+		          /* emitWrapper */false,
+		          /* restrictPointer */false,
+		          /* iccPragmas */false,
+		          /* ompPragmas */false);
     emitter.codeGen(parser.getAST());
 
     std::cout << "DIRECT 'C' code generation:\n";
-    std::cout << emitter.getCode();
-    std::cout << "\n";
-  }
-
-  {
-    GraphCodeGen CG(&sema, "graph_C_function");
-    CEmitter emitter(&CG, /* rowMajor= */true, /* emitWrapper= */true);
-    emitter.codeGen(parser.getAST());
-
-    std::cout << "GRAPH 'C' code generation:\n";
     std::cout << emitter.getCode();
     std::cout << "\n";
   }
