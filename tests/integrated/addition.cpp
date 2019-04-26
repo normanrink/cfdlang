@@ -23,7 +23,6 @@ int main(int argc, char** argv) {
   const int m3 = atoi(argv[4]); const std::string m3_str(argv[4]);
 
   // Input tensors:
-  // (i.e. memory is allocated on the stack of 'main')
   double *A = (double*)malloc(sizeof(double)*(m0*m1*m2*m3));
   double *B = (double*)malloc(sizeof(double)*(m0*m1*m2*m3));
   double *C = (double*)malloc(sizeof(double)*(m0*m1*m2*m3));
@@ -34,9 +33,9 @@ int main(int argc, char** argv) {
       for (int i1 = 0; i1 < m1; i1++) {
         for (int i2 = 0; i2 < m2; i2++) {
           for (int i3 = 0; i3 < m3; i3++) {
-            A[i3 + m2*(i2 + m1*(i1 + m0*(i0)))] = 1.0;
-            B[i3 + m2*(i2 + m1*(i1 + m0*(i0)))] = 1.0;
-            C[i3 + m2*(i2 + m1*(i1 + m0*(i0)))] = 0.0;
+            A[i3 + m3*(i2 + m2*(i1 + m1*(i0)))] = 1.0;
+            B[i3 + m3*(i2 + m2*(i1 + m1*(i0)))] = 1.0;
+            C[i3 + m3*(i2 + m2*(i1 + m1*(i0)))] = 0.0;
           }
         }
       }
@@ -52,7 +51,7 @@ int main(int argc, char** argv) {
   // (code generation and kernel execution)
   {
     TensorContext::CodeGenHandle cgh;
-    void (*kernel)(double *A, double *u, double *v);
+    void (*kernel)(double*, double*, double*);
 
     const std::string Dimensions =
       "[" + m0_str + " " + m1_str + " " + m2_str + " " + m3_str + "]";
@@ -71,7 +70,7 @@ int main(int argc, char** argv) {
 
     // Configuration of CFDlang's code generation:
     // (aka "compiler flags")
-    TC.initCodeGen(&cgh, Source.c_str(), /* rowMajor */true, /* restricted */true);
+    TC.initCodeGen(&cgh, Source.c_str(), /* rowMajor */true);
 
     TC.generateCCode(&cgh);
 
@@ -81,12 +80,18 @@ int main(int argc, char** argv) {
 
     TC.initExecution(&eh, &kh);
 
-    const clock_t start_t = clock();
+    struct timespec start, stop;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+    
     // Execute the kernel:
     kernel(&A[0], &B[0], &C[0]);
-    const clock_t end_t = clock();
-    printf("Kernel execution time: %f ms\n\n",
-           (double)(end_t - start_t)/CLOCKS_PER_SEC*1000);
+    
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &stop);
+    // Kernel execution time in micro-seconds:
+    const double elapsed_us =
+      (stop.tv_sec - start.tv_sec) * 1.0e6
+      + (stop.tv_nsec - start.tv_nsec) / 1.0e3; 
+    printf("Kernel execution time: %fus\n\n", elapsed_us);
   }
 
   // Print a few entries in the resulting tensor 'C':
@@ -94,14 +99,14 @@ int main(int argc, char** argv) {
     printf("C(0,0,0,0)=%f \t C(0,0,0,%d)=%f\n",
            C[0],
            (m3-1),
-           C[(m3-1) + m2*(0 + m1*(0 + m0*(0)))]);
+           C[(m3-1) + m3*(0 + m2*(0 + m1*(0)))]);
 
     printf("C(%d,0,0,0)=%f \t C(%d,0,0,%d)=%f\n\n",
            (m0-1),
-           C[0 + m2*(0 + m1*(0 + m0*(m0-1)))],
+           C[0 + m3*(0 + m2*(0 + m1*(m0-1)))],
            (m0-1),
            (m3-1),
-           C[(m3-1) + m2*(0 + m1*(0 + m0*(m0-1)))]);
+           C[(m3-1) + m3*(0 + m2*(0 + m1*(m0-1)))]);
   }
 
   // Interfacing with the CFDlang library:
@@ -111,7 +116,7 @@ int main(int argc, char** argv) {
     TC.finalKernel(&kh);
   }
 
-  free(A); free(B); free(C);
+  free(C); free(A); free(B);
 
   return 0;
 }

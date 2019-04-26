@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
   // (code generation and kernel execution)
   {
     TensorContext::CodeGenHandle cgh;
-    void (*kernel)(double *A, double *u, double *v);
+    void (*kernel)(double*, double*, double*);
 
     // Kernel source code:
     const std::string Source = std::string(
@@ -97,12 +97,18 @@ int main(int argc, char** argv) {
 
     TC.initExecution(&eh, &kh);
 
-    const clock_t start_t = clock();
+    struct timespec start, stop;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+
     // Execute the kernel:
     kernel(&A[0], &u[0], &v[0]);
-    const clock_t end_t = clock();
-    printf("Kernel execution time: %f ms\n",
-           (double)(end_t - start_t)/CLOCKS_PER_SEC*1000);
+
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &stop);
+    // Kernel execution time in micro-seconds:
+    const double elapsed_us =
+      (stop.tv_sec - start.tv_sec) * 1.0e6
+      + (stop.tv_nsec - start.tv_nsec) / 1.0e3; 
+    printf("Kernel execution time: %fus\n\n", elapsed_us);
   }
 
 #if (PRINT_TENSORS)

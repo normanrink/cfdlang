@@ -34,4 +34,18 @@ void print_tensor_3(const double *tensor, const int d) {
   }
 }
 
+static inline
+void print_tensor_3d(const double *tensor, const int d0, 
+		     const int d1, const int d2) {
+  for (int i0 = 0; i0 < d0; i0++) {
+    for (int i1 = 0; i1 < d1; i1++) {
+      for (int i2 = 0; i2 < d2; i2++) {
+        printf("%6.2f ", tensor[i2 + d2*(i1 + d1*(i0))]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+}
+
 #endif /* __TEST_UTILITIES_H__ */
