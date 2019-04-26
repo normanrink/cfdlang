@@ -1,0 +1,6 @@
+var input  A : [200 50 60 70 80]
+var input  B : [200 50 60 70 80]
+var output C : [200 50 60 70 80]
+
+C = A + B
+
