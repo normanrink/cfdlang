@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 		          /* emitWrapper */false,
 		          /* restrictPointer */false,
 		          /* iccPragmas */false,
-		          /* ompPragmas */false);
+		          /* ompPragmas */true);
     emitter.codeGen(parser.getAST());
 
     std::cout << "DIRECT 'C' code generation:\n";
