@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
+project(CFDlang)
+
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
