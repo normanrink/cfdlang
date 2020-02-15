@@ -36,14 +36,14 @@ The only dependencies are
 the scanner generator [flex](https://github.com/westes/flex) and
 the parser generator [bison](https://www.gnu.org/software/bison/).
 
-After successfully running `make`, the build directory is populated with the following directories:
+After successfully running `make`, the build directory is populated with the following subdirectories:
 * `bin` contains the stand-alone CFDlang `compiler` and a number of executable end-to-end tests.
-  (In addition, the executables `lex`, `parse`, and `check` have been generated for running subphases of the CFDlang compiler frontend.)
+  (In addition, the executables `lex`, `parse`, and `check` will have been generated for running individual subphases of the CFDlang compiler frontend.)
   
 * `lib` contains the CFDlang runtime library (`libCFDlang.so` on a Linux system).
-  `lib' also contains the Fortran source file `Tensor_Wrappers.f` which defines subroutine interfaces that are bound to corresponding C functions in the CFDlang runtime library.
+  `lib` also contains the Fortran source file `Tensor_Wrappers.f` which defines subroutine interfaces that are bound to corresponding C functions in the CFDlang runtime library.
   
-The stand-alone compiler can than be run, for example, on one of the test inputs from the `<cfdlang>/tests` folder:
+The stand-alone compiler can then be run, for example, on one of the test inputs from the `<cfdlang>/tests` folder:
   ```
   <build>/bin/compiler <cfdlang>/tests/valid.in
   ```
@@ -60,10 +60,10 @@ From the CFDlang program in the input file the compiler generates C source code 
 
 The common use case of CFDlang is to generate efficient and parallel code for tensor kernels inside a larger simulation project.
 In this context, CFDlang kernels are typically compiled at simulation runtime.
-This requires linking against the CFDlang runtime library and managing a `TensorContext` context and various handles that are involved in compiling and executing CFDlang kernels.
+This requires linking against the CFDlang runtime library and managing a `TensorContext` and various handles that are involved in compiling and executing CFDlang kernels.
 
 Simple examples of CFDlang kernels and their integration into C++ applications can be found in the `tests` subdirectory.
-While the file `test.1.cpp` executes a very simple CFDlang kernel, while `test.AxAxA.cpp` implements the so-called _interpolation_ kernel from high-order CFD simulations.
+While the file `test.1.cpp` executes a very simple CFDlang kernel, the file `test.AxAxA.cpp` implements the so-called _interpolation_ kernel from high-order CFD simulations.
 Executable binaries for both tests are part of the default `make` target.
 Note that when running the binaries for these tests, command line arguments must be given that specify the dimensions of the tensors involved in the respective CFDlang kernel.
 
