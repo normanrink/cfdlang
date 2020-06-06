@@ -22,7 +22,7 @@ class ExprLowering : public ExprVisitor<ExprLowering> {
   CFDlang::DeclList *decls;
   CFDlang::StmtList *stmts;
 
-  std::set<const std::string> declaredVars;
+  std::set<std::string> declaredVars;
 
   bool isDeclared(const std::string &v) const {
     return declaredVars.count(v);
